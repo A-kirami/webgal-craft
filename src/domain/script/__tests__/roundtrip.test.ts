@@ -42,6 +42,7 @@ const SENTENCE_FIXTURES: SentenceFixture[] = [
   { name: 'return-with-value', raw: 'return:success;', expectedCommand: commandType.return },
   { name: 'call-scene-with-return-value', raw: 'callScene:battle.txt -enemy=slime -writeReturnTo=result;', expectedCommand: commandType.callScene },
   { name: 'change-bg', raw: 'changeBg: bg.jpg -next -duration=300;', expectedCommand: commandType.changeBg },
+  { name: 'change-figure-diff', raw: 'changeFigureDiff:smile.png -left -id=hero -animationFlag=on -mouthOpen=smile_open.png;', expectedCommand: commandType.changeFigureDiff },
 ]
 
 function pickComparableSentenceFields(sentence: NonNullable<ReturnType<typeof parseSentence>>) {
@@ -94,6 +95,18 @@ describe('脚本语句往返', () => {
       expect(pickComparableSentenceFields(second!)).toEqual(pickComparableSentenceFields(first!))
     })
   }
+})
+
+describe('立绘差分往返', () => {
+  it('参数顺序与写法在序列化后保持原样', () => {
+    for (const raw of [
+      'changeFigureDiff:smile.png -left -id=hero -animationFlag=on -mouthOpen=smile_open.png;',
+      'changeFigureDiff:smile.png -left -id=hero -animationFlag -mouthOpen=smile_open.png;',
+      'changeFigureDiff:smile.png -id=hero -continue;',
+    ]) {
+      expect(serializeSentence(parseSentence(raw)!)).toBe(raw)
+    }
+  })
 })
 
 describe('content', () => {
@@ -279,5 +292,35 @@ describe('sentence', () => {
     expect(perLine).toHaveLength(2)
     expect(buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toBe(perLine)
     expect(buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(multiline)
+  })
+
+  it('缺少场景语义的运行时把立绘差分退化为旁白但保留原命令名', () => {
+    const raw = 'changeFigureDiff:smile.png -left -id=hero;'
+    const legacy = parseSentence(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    // 缺少场景语义的运行时命令表最残缺：该命令退化成 say 简写，commandRaw 仍是原命令名，
+    // 序列化后文本不变，只是语义不再是命令。
+    expect(legacy).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'changeFigureDiff',
+      content: 'smile.png',
+    })
+    expect(serializeSentence(legacy!)).toBe(raw)
+  })
+
+  it('只缺立绘差分能力的运行时不认识该命令，但仍保留 return', () => {
+    const raw = 'changeFigureDiff:smile.png -left -id=hero;'
+    // 4.6.3 / 4.6.4 引擎：该命令必须按旧语法（旁白）解析
+    const withoutChangeFigureDiff = { changeFigureDiff: false, sceneSemantics: true }
+
+    expect(parseSentence(raw, withoutChangeFigureDiff)).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'changeFigureDiff',
+    })
+    // 同一次能力选择里 return 仍是命令，不能因为缺立绘差分而一起丢掉
+    expect(parseSentence('return;', withoutChangeFigureDiff)).toMatchObject({
+      command: commandType.return,
+    })
+    expect(serializeSentence(parseSentence(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)!)).toBe(raw)
   })
 })

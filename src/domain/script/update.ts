@@ -4,7 +4,7 @@ import { cloneArgs } from '~/domain/script/codec'
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent } from '~/domain/script/content'
 import { CommandParamDescriptor, getRegistryDependentKeys, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/domain/script/params'
 import { updateSayFigureTargetId } from '~/domain/script/say-figure'
-import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
+import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, FIGURE_POSITION_FLAG_COMMANDS, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -215,7 +215,7 @@ function updateFromFieldTable(
     return updateSayFigureTargetId(node, String(newValue))
   }
 
-  if (node.type === commandType.changeFigure && paramDef.key === 'position') {
+  if (isGenericNode(node) && FIGURE_POSITION_FLAG_COMMANDS.includes(node.type) && paramDef.key === 'position') {
     return updateChangeFigurePosition(node, newValue)
   }
 

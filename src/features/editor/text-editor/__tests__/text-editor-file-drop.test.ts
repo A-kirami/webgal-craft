@@ -113,6 +113,45 @@ describe('text-editor-file-drop', () => {
     })
   })
 
+  it('立绘投放到 changeFigureDiff 正文会替换图片并保留其余参数', () => {
+    const editor = createEditorDouble(['say:hello;', 'changeFigureDiff:smile.png -left -id=hero;'])
+    editor.getTargetAtClientPoint = vi.fn(() => createMouseTarget(2, 20))
+
+    const action = resolveTextEditorFileDropAction({
+      editor,
+      gamePath: AbsPath.from('/games/demo'),
+      payload: createPayload('/games/demo/game/figure/hero-angry.png'),
+      position: { x: 160, y: 40 },
+    })
+
+    expect(action).toMatchObject({
+      kind: 'update-statement',
+      payload: {
+        rawText: 'changeFigureDiff:hero-angry.png -left -id=hero;',
+      },
+      selectionLineNumber: 2,
+    })
+  })
+
+  it('落到命令头（行首）一律插入新语句，与命令无关', () => {
+    for (const line of ['changeFigure:hero.png -left;', 'changeFigureDiff:smile.png -left;']) {
+      const editor = createEditorDouble(['say:hello;', line])
+      editor.getTargetAtClientPoint = vi.fn(() => createMouseTarget(2, 1))
+
+      const action = resolveTextEditorFileDropAction({
+        editor,
+        gamePath: AbsPath.from('/games/demo'),
+        payload: createPayload('/games/demo/game/figure/hero-angry.png'),
+        position: { x: 2, y: 40 },
+      })
+
+      expect(action).toMatchObject({
+        kind: 'insert-statement-line',
+        text: 'changeFigure:hero-angry.png;\n',
+      })
+    }
+  })
+
   it('兼容的 say 行投放 vocal 会生成语句更新动作', () => {
     const editor = createEditorDouble(['say:hello;', 'say:world -speaker=Bob;'])
     editor.getTargetAtClientPoint = vi.fn(() => createMouseTarget(2, 10))

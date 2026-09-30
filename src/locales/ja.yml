@@ -789,6 +789,8 @@ edit:
     unsupportedCallSceneArgument: 「callScene」コマンドで子シーンに引数を渡すには WebGAL 4.6.3 以降が必要です。
     unsupportedLocalVariable: 「local」パラメータには WebGAL 4.6.3 以降が必要です。
     unsupportedSpine: 現在のエンジンは Spine モデルをサポートしていません。
+    unsupportedChangeFigureDiff: 立ち絵差分には WebGAL 4.6.5 以降が必要です。現在のエンジンはこの行をナレーションとして読み上げます。
+    skippedFigureDiffModel: 立ち絵差分は画像の差し替え専用のため、Live2D と Spine モデルには使えません。エンジンはこの行をスキップします。
     unsupportedColorFormat: "色値「{value}」の形式は表示・編集できません。"
     invalidColorFormat: "「{value}」は有効な色値ではありません。"
     reservedCallSceneArgument: '"{argument}" は予約済みのため、callScene では使用できません。'
@@ -1037,6 +1039,7 @@ edit:
       comment: コメント
       changeBg: 背景
       changeFigure: 立ち絵
+      changeFigureDiff: 立ち絵差分
       miniAvatar: ミニアバター
       bgm: BGM
       playEffect: 効果音
@@ -1072,6 +1075,7 @@ edit:
       comment: 編集時のみ表示されるコメントを追加します
       changeBg: 背景画像を追加または切り替えます
       changeFigure: キャラクターの立ち絵を追加または切り替えます
+      changeFigureDiff: 同じ立ち絵の画像を差し替え、位置・変形・入退場はそのまま保ちます
       miniAvatar: ダイアログ横のミニアバターを追加または切り替えます
       bgm: BGM を再生または切り替えます
       playEffect: 効果音を再生します

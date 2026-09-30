@@ -54,6 +54,22 @@ export interface UnsupportedSpineEditorDiagnostic extends SceneEditorDiagnosticB
   value: string
 }
 
+export interface UnsupportedChangeFigureDiffEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-change-figure-diff'
+  field: { kind: 'content' }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
+export interface SkippedFigureDiffModelEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'skipped-figure-diff-model'
+  field: { kind: 'content' }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
 export interface UnsupportedOpusVocalEditorDiagnostic extends SceneEditorDiagnosticBase {
   code: 'unsupported-opus-vocal'
   field: { kind: 'argument', key: 'vocal' }
@@ -139,6 +155,8 @@ export type SceneEditorDiagnostic =
   | MissingResourceEditorDiagnostic
   | UnsupportedLive2dEditorDiagnostic
   | UnsupportedSpineEditorDiagnostic
+  | UnsupportedChangeFigureDiffEditorDiagnostic
+  | SkippedFigureDiffModelEditorDiagnostic
   | UnsupportedOpusVocalEditorDiagnostic
   | UnsupportedFigurePositionEditorDiagnostic
   | ReservedCallSceneArgumentEditorDiagnostic
@@ -155,6 +173,8 @@ export type EditorFieldDiagnostic =
   | Omit<MissingResourceEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedLive2dEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedSpineEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedChangeFigureDiffEditorDiagnostic, 'statementIndex'>
+  | Omit<SkippedFigureDiffModelEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedOpusVocalEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedFigurePositionEditorDiagnostic, 'statementIndex'>
   | Omit<ReservedCallSceneArgumentEditorDiagnostic, 'statementIndex'>

@@ -6,7 +6,7 @@ import { classifyColorText } from '~/domain/script/color'
 import { parseChooseContent } from '~/domain/script/content'
 import { createReferencedAssetKey } from '~/services/resource-index/values'
 
-import { getCommandConfig } from './index'
+import { getCommandConfig, getCommandScriptString } from './index'
 import { deriveArgFieldsFromEditorFields, readArgFields, readEditorFields, readFieldResourceReference } from './schema'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -16,6 +16,18 @@ import type { AssetKey } from '~/services/resource-index/keys'
 import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
 
 export interface UnsupportedEngineModelReference {
+  modelType: EngineModelType
+  source: { kind: 'content' }
+  value: string
+}
+
+/**
+ * 命中引擎会整句跳过的立绘差分内容。
+ * 与 UnsupportedEngineModelReference 的区别在于「引擎不支持该模型类型」与
+ * 「该命令对模型不适用，不支持也没关系」是两回事，不复用同一个诊断码。
+ */
+export interface SkippedFigureDiffModelReference {
+  code: 'skipped-figure-diff-model'
   modelType: EngineModelType
   source: { kind: 'content' }
   value: string
@@ -41,6 +53,12 @@ export type UnsupportedSceneSemanticReference =
 export interface ReservedCallSceneArgument {
   argument: 'continue' | 'next'
   source: { kind: 'argument', key: string }
+}
+
+export interface ChangeFigureDiffCompatReference {
+  code: 'unsupported-change-figure-diff'
+  source: { kind: 'content' }
+  value: string
 }
 
 export interface ColorFormatReference {
@@ -133,6 +151,62 @@ export function findUnsupportedEngineModelReferences(
     source: { kind: 'content' },
     value,
   }]
+}
+
+/**
+ * 立绘差分只替换图片，Live2D / Spine 用各自的表情与动作系统，引擎对本命令会整句跳过。
+ * 与引擎是否支持该模型类型无关，因此不看 EngineModelCapabilities。
+ */
+export function findSkippedFigureDiffModelReferences(
+  sentence: ISentence,
+): SkippedFigureDiffModelReference[] {
+  if (sentence.command !== commandType.changeFigureDiff) {
+    return []
+  }
+
+  const value = sentence.content.trim()
+  const modelType = classifyEngineModelReference(value)
+  if (!modelType) {
+    return []
+  }
+
+  return [{
+    code: 'skipped-figure-diff-model',
+    modelType,
+    source: { kind: 'content' },
+    value,
+  }]
+}
+
+/**
+ * 立绘差分是 4.6.5 起的能力：旧引擎只把整句当旁白读出，不执行也不报错。
+ *
+ * 旧命令表里没有该命令，4.6.3 / 4.6.4 上这句会退化成 say 简写（commandRaw 就是原命令名），
+ * 因此不能只看 command，必须同时认 commandRaw —— 只看 command 时这两档引擎上不会触发诊断。
+ * 该命令在 domain/script/parser.ts 的 diff-legacy 档里被排除，两处判据必须同时成立。
+ */
+export function findChangeFigureDiffCompatReferences(
+  sentence: ISentence,
+  capabilities: Pick<EngineRuntimeCapabilities, 'changeFigureDiff'>,
+): ChangeFigureDiffCompatReference[] {
+  if (capabilities.changeFigureDiff || !isChangeFigureDiffStatement(sentence)) {
+    return []
+  }
+
+  return [{
+    code: 'unsupported-change-figure-diff',
+    source: { kind: 'content' },
+    value: sentence.content.trim(),
+  }]
+}
+
+function isChangeFigureDiffStatement(sentence: ISentence): boolean {
+  if (sentence.command === commandType.changeFigureDiff) {
+    return true
+  }
+  // 旧运行时解析器把不认识的命令退化成 say 简写，commandRaw 保留原命令名
+  return sentence.command === commandType.say
+    && sentence.commandRaw === getCommandScriptString(commandType.changeFigureDiff)
 }
 
 export function findUnsupportedEngineOpusVocalReferences(

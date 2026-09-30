@@ -165,4 +165,26 @@ describe('editor-file-drop', () => {
 
     expect(updateStatementTextForDroppedAsset('changeBg:room.png;', asset)).toBeUndefined()
   })
+
+  it('立绘投放到 changeFigureDiff 只替换图片并保留其余参数', () => {
+    const asset = resolveEditorDropAsset({
+      gamePath: AbsPath.from('/games/demo'),
+      payload: createPayload('/games/demo/game/figure/hero-angry.png'),
+    })!
+
+    expect(asset).toMatchObject({ assetType: 'figure', scriptPath: 'hero-angry.png' })
+    expect(updateStatementTextForDroppedAsset(
+      'changeFigureDiff:smile.png -left -id=hero -animationFlag -mouthOpen=open.png;',
+      asset,
+    )).toBe('changeFigureDiff:hero-angry.png -left -id=hero -animationFlag -mouthOpen=open.png;')
+  })
+
+  it('立绘投放到空白区仍插入 changeFigure 而不是差分', () => {
+    const asset = resolveEditorDropAsset({
+      gamePath: AbsPath.from('/games/demo'),
+      payload: createPayload('/games/demo/game/figure/hero.png'),
+    })!
+
+    expect(buildInsertedStatementText(asset)).toBe('changeFigure:hero.png;')
+  })
 })

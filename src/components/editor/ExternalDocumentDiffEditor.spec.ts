@@ -5,7 +5,8 @@ import { defineComponent, h } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
-import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
+import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
+import { resolveWebgalScriptLanguageId } from '~/features/editor/text-editor/text-editor-language'
 
 import ExternalDocumentDiffEditor from './ExternalDocumentDiffEditor.vue'
 
@@ -31,7 +32,7 @@ describe('ExternalDocumentDiffEditor', () => {
     })
 
     await expect.poll(() => editorHandle?.getModifiedEditor()?.getModel()?.getLanguageId())
-      .toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+      .toBe(resolveWebgalScriptLanguageId(resolveWebgalScriptConfigKey(LEGACY_ENGINE_RUNTIME_CAPABILITIES)))
   })
 
   it('采用左侧差异块后应用更新后的合并结果', async () => {

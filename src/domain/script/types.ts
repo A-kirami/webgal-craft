@@ -88,6 +88,15 @@ export type SayFigurePosition = (typeof SAY_FIGURE_POSITIONS)[number]
 
 export const CHANGE_FIGURE_POSITION_FLAGS = ['left', 'left14', 'left13', 'right13', 'right14', 'right'] as const
 
+/**
+ * 位置 flag 以「选项值」而非独立参数 key 存储，注册表无法表达互斥关系；
+ * 读取、互斥更新与低版本引擎诊断都以这份命令集合为准。
+ */
+export const FIGURE_POSITION_FLAG_COMMANDS: readonly commandType[] = [
+  commandType.changeFigure,
+  commandType.changeFigureDiff,
+]
+
 export const EXTENDED_FIGURE_POSITIONS = ['left13', 'left14', 'right13', 'right14'] as const
 export type ExtendedFigurePosition = (typeof EXTENDED_FIGURE_POSITIONS)[number]
 

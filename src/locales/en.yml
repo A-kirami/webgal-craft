@@ -789,6 +789,8 @@ edit:
     unsupportedCallSceneArgument: Passing arguments to a child scene with the "callScene" command requires WebGAL 4.6.3 or later.
     unsupportedLocalVariable: The "local" parameter requires WebGAL 4.6.3 or later.
     unsupportedSpine: The current engine does not support Spine models.
+    unsupportedChangeFigureDiff: Figure variants need WebGAL 4.6.5 or later. The current engine reads this line as narration.
+    skippedFigureDiffModel: Figure variants only replace images, so they do not apply to Live2D or Spine models. The engine skips this line.
     unsupportedColorFormat: 'The color format "{value}" cannot be displayed or edited.'
     invalidColorFormat: '"{value}" is not a valid color value.'
     reservedCallSceneArgument: '"{argument}" is reserved and cannot be used with callScene.'
@@ -1037,6 +1039,7 @@ edit:
       comment: Comment
       changeBg: Background
       changeFigure: Figure
+      changeFigureDiff: Figure Variant
       miniAvatar: Mini Avatar
       bgm: Background Music
       playEffect: Sound Effect
@@ -1072,6 +1075,7 @@ edit:
       comment: Add a comment, visible only while editing
       changeBg: Add or switch the background image
       changeFigure: Add or switch a character figure
+      changeFigureDiff: Replace the image of an existing figure and keep its position, transform, and enter or exit animations
       miniAvatar: Add or switch the mini avatar beside the dialogue box
       bgm: Play or switch background music
       playEffect: Play a sound effect

@@ -5,6 +5,8 @@ import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES 
 import { parseSentence } from '~/domain/script/parser'
 
 import {
+  findChangeFigureDiffCompatReferences,
+  findSkippedFigureDiffModelReferences,
   findTransformWriteModeCompatReferences,
   findUnsupportedEngineOpusVocalReferences,
   querySentenceResourceReferences,
@@ -16,6 +18,16 @@ describe('querySentenceResourceReferences', () => {
     expect(querySentenceResourceReferences(sentence!)).toEqual([{
       assetKey: { root: 'asset', assetType: 'background', relativePath: 'chapter1/night.png' },
       value: 'chapter1/night.png',
+      source: { kind: 'content' },
+    }])
+  })
+
+  it('把立绘差分的内容记为立绘引用', () => {
+    const sentence = parseSentence('changeFigureDiff:smile.png -left -id=hero;')
+    expect(sentence?.command).toBe(commandType.changeFigureDiff)
+    expect(querySentenceResourceReferences(sentence!)).toEqual([{
+      assetKey: { root: 'asset', assetType: 'figure', relativePath: 'smile.png' },
+      value: 'smile.png',
       source: { kind: 'content' },
     }])
   })
@@ -157,5 +169,83 @@ describe('findTransformWriteModeCompatReferences', () => {
       parseSentence('setTransition: -target=fig-left -ignoreDefault;')!,
       LATEST_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
+  })
+})
+
+describe('findChangeFigureDiffCompatReferences', () => {
+  it('旧引擎诊断语句里已有的立绘差分', () => {
+    expect(findChangeFigureDiffCompatReferences(
+      parseSentence('changeFigureDiff:smile.png -left -id=hero;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([{
+      code: 'unsupported-change-figure-diff',
+      source: { kind: 'content' },
+      value: 'smile.png',
+    }])
+  })
+
+  it('解析器不认识该命令时按 commandRaw 反查', () => {
+    // 4.6.3 / 4.6.4：唯一会走退化路径的能力组合，此时命令名只留在 commandRaw 里
+    const withoutChangeFigureDiff = { changeFigureDiff: false, sceneSemantics: true }
+    const legacyParsed = parseSentence('changeFigureDiff:smile.png -left -id=hero;', withoutChangeFigureDiff)!
+
+    expect(legacyParsed).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'changeFigureDiff',
+    })
+
+    expect(findChangeFigureDiffCompatReferences(legacyParsed, withoutChangeFigureDiff))
+      .toEqual([{
+        code: 'unsupported-change-figure-diff',
+        source: { kind: 'content' },
+        value: 'smile.png',
+      }])
+  })
+
+  it('普通对白不会被误判为立绘差分', () => {
+    const capabilities = { changeFigureDiff: false, sceneSemantics: true }
+
+    expect(findChangeFigureDiffCompatReferences(
+      parseSentence('Alice: changeFigureDiff 是什么;', capabilities)!,
+      capabilities,
+    )).toEqual([])
+    expect(findChangeFigureDiffCompatReferences(
+      parseSentence('changeFigure:hero.png -left;', capabilities)!,
+      capabilities,
+    )).toEqual([])
+  })
+
+  it('新引擎不诊断', () => {
+    expect(findChangeFigureDiffCompatReferences(
+      parseSentence('changeFigureDiff:smile.png -left;', LATEST_ENGINE_RUNTIME_CAPABILITIES)!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+  })
+})
+
+describe('findSkippedFigureDiffModelReferences', () => {
+  it('识别立绘差分里引擎会跳过的 Live2D 与 Spine 内容', () => {
+    expect(findSkippedFigureDiffModelReferences(
+      parseSentence('changeFigureDiff:live2d/hero.json -id=hero;')!,
+    )).toEqual([{
+      code: 'skipped-figure-diff-model',
+      modelType: 'live2d',
+      source: { kind: 'content' },
+      value: 'live2d/hero.json',
+    }])
+
+    expect(findSkippedFigureDiffModelReferences(
+      parseSentence('changeFigureDiff:spine/hero.skel -left;')!,
+    )).toEqual([{
+      code: 'skipped-figure-diff-model',
+      modelType: 'spine',
+      source: { kind: 'content' },
+      value: 'spine/hero.skel',
+    }])
+  })
+
+  it('只看命令本身，与其他命令的模型内容无关', () => {
+    expect(findSkippedFigureDiffModelReferences(parseSentence('changeFigure:hero.png -left;')!)).toEqual([])
+    expect(findSkippedFigureDiffModelReferences(parseSentence('changeFigureDiff:smile.png -left;')!)).toEqual([])
   })
 })

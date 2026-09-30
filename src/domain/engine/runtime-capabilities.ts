@@ -1,6 +1,7 @@
 import { compareVersions, validateStrict } from 'compare-versions'
 
 export interface EngineRuntimeCapabilities {
+  changeFigureDiff: boolean
   figurePositions: boolean
   multilineStatements: boolean
   opusVocalShorthand: boolean
@@ -13,6 +14,7 @@ export type EngineRuntimeCapability = keyof EngineRuntimeCapabilities
 export const MIN_WEBGAL_EDITOR_RUNTIME_VERSION = '4.6.2'
 
 const CAPABILITY_MINIMUM_VERSIONS: Record<EngineRuntimeCapability, string> = {
+  changeFigureDiff: '4.6.5',
   figurePositions: '4.6.3',
   multilineStatements: '4.6.3',
   opusVocalShorthand: '4.6.3',
@@ -20,7 +22,13 @@ const CAPABILITY_MINIMUM_VERSIONS: Record<EngineRuntimeCapability, string> = {
   transformFrom: '4.6.5',
 }
 
+/** 某项能力的最低引擎版本；受能力门控的语法按它推导档位，不要另抄一份 */
+export function capabilityMinimumVersion(capability: EngineRuntimeCapability): string {
+  return CAPABILITY_MINIMUM_VERSIONS[capability]
+}
+
 export const LEGACY_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
+  changeFigureDiff: false,
   figurePositions: false,
   multilineStatements: false,
   opusVocalShorthand: false,
@@ -29,6 +37,7 @@ export const LEGACY_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
 }
 
 export const LATEST_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
+  changeFigureDiff: true,
   figurePositions: true,
   multilineStatements: true,
   opusVocalShorthand: true,
@@ -67,6 +76,7 @@ export function resolveEngineRuntimeCapabilities(
   version: string | undefined,
 ): EngineRuntimeCapabilities {
   return {
+    changeFigureDiff: supportsEngineRuntimeCapability(version, 'changeFigureDiff'),
     figurePositions: supportsEngineRuntimeCapability(version, 'figurePositions'),
     multilineStatements: supportsEngineRuntimeCapability(version, 'multilineStatements'),
     opusVocalShorthand: supportsEngineRuntimeCapability(version, 'opusVocalShorthand'),

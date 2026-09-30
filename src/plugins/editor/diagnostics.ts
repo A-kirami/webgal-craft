@@ -98,7 +98,8 @@ function appendUnsupportedMultilineStatementMarkers(
 
 /**
  * marker 的定位范围按诊断的字段来源决定（标签定位到标签本身，参数默认定位到参数值）。
- * 「参数本身有问题」的诊断定位到整个参数 token，见 locateArgumentToken。
+ * 「参数本身有问题」的诊断定位到整个参数 token，见 locateArgumentToken；
+ * 「整条命令」有问题的诊断定位到整条语句，见 locateStatement。
  */
 function locateDiagnosticRange(
   lines: readonly string[],
@@ -120,6 +121,12 @@ function locateDiagnosticRange(
     case 'legacy-transform-write-arg': {
       return locateArgumentToken(lines, range, diagnostic.field.key)
     }
+    // 整条命令在当前引擎上不执行：只划内容会被读成「图片路径有问题」，
+    // 而用户要判断的是「这条命令能不能用」。
+    case 'unsupported-change-figure-diff':
+    case 'skipped-figure-diff-model': {
+      return locateStatement(lines, range)
+    }
 
     default: {
       return locateReference(lines, range, sentence, {
@@ -127,6 +134,27 @@ function locateDiagnosticRange(
         value: diagnostic.value,
       })
     }
+  }
+}
+
+/**
+ * 定位整条逻辑语句，覆盖它的全部物理行。
+ * 用于「整条命令」有问题的诊断：范围不受语句内取值位置影响。
+ */
+function locateStatement(
+  lines: readonly string[],
+  range: StatementSourceRange,
+): monaco.IRange {
+  const firstLine = lines[range.startLine] ?? ''
+  const lastLine = (lines[range.endLine] ?? '').trimEnd()
+  const startColumn = firstLine.search(/\S/)
+
+  return {
+    startLineNumber: range.startLine + 1,
+    startColumn: startColumn === -1 ? 1 : startColumn + 1,
+    endLineNumber: range.endLine + 1,
+    // 行尾列号（1-based，指向行尾之后一格），行尾空白不计入
+    endColumn: Math.max(lastLine.length, 1) + 1,
   }
 }
 

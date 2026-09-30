@@ -107,6 +107,27 @@ describe('命令节点参数更新器', () => {
     ])
   })
 
+  it('可将 changeFigureDiff position 互斥切换并保留未知参数', () => {
+    const node = parseCommandNode(mustParse('changeFigureDiff: smile.png -id=hero -left -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('position', 'select'), 'right13')
+
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'id', value: 'hero' },
+      { key: 'right13', value: true },
+      { key: 'x', value: 1 },
+    ])
+  })
+
+  it('关闭 changeFigureDiff 的 animationFlag 会清除五个口型眨眼图参数', () => {
+    const node = parseCommandNode(mustParse('changeFigureDiff: smile.png -id=hero -animationFlag -mouthOpen=open.png -mouthHalfOpen=half.png -mouthClose=close.png -eyesOpen=eyes_open.png -eyesClose=eyes_close.png -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('animationFlag', 'switch'), false)
+
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'id', value: 'hero' },
+      { key: 'x', value: 1 },
+    ])
+  })
+
   it('关闭 changeFigure 的 animationFlag 会清除五个口型眨眼图参数', () => {
     const sentence = mustParse('changeFigure: figure.png -id=fig-main -animationFlag -mouthOpen=open.png -mouthHalfOpen=half.png -mouthClose=close.png -eyesOpen=eyes_open.png -eyesClose=eyes_close.png -x=1;')
     const node = parseCommandNode(sentence)

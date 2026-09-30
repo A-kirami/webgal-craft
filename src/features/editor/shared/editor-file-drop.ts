@@ -59,7 +59,7 @@ const CONTENT_UPDATE_COMMANDS: Record<EditorDropAssetType, readonly commandType[
   animation: [commandType.setAnimation],
   background: [commandType.changeBg, commandType.unlockCg],
   bgm: [commandType.bgm, commandType.unlockBgm],
-  figure: [commandType.changeFigure, commandType.miniAvatar],
+  figure: [commandType.changeFigure, commandType.changeFigureDiff, commandType.miniAvatar],
   scene: [commandType.changeScene, commandType.callScene],
   video: [commandType.video],
   vocal: [commandType.playEffect],

@@ -1,5 +1,7 @@
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 
+import { UNSPECIFIED } from './schema'
+
 import type { AutocompleteTextField, ChoiceField, NumberField, ResourceReferenceConfig, SwitchField, TextField } from '~/features/editor/command-registry/schema'
 
 // ─── WebGAL 支持的文件扩展名 ───
@@ -84,6 +86,43 @@ export const KEEP: SwitchField = { key: 'keep', label: t => t('edit.visualEditor
 export const PARALLEL: SwitchField = { key: 'parallel', label: t => t('edit.visualEditor.params.parallel'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.parallel.on'), off: t => t('edit.visualEditor.paramTooltips.parallel.off') }, type: 'switch', defaultValue: false }
 export const IGNORE_DEFAULT: SwitchField = { key: 'ignoreDefault', label: t => t('edit.visualEditor.params.ignoreDefault'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.ignoreDefault.on'), off: t => t('edit.visualEditor.paramTooltips.ignoreDefault.off') }, type: 'switch', defaultValue: false }
 export const ORDER: NumberField = { key: 'order', label: t => t('edit.visualEditor.params.order'), type: 'number' }
+
+// ─── 图片立绘命令的共享字段（changeFigure / changeFigureDiff） ───
+
+// 位置是 flag-choice 的选项值而非独立参数 key：注册表 meta 里没有它，
+// 读取、互斥更新与低版本引擎诊断都由 domain/script 的位置语义单独处理。
+export const FIGURE_POSITION: ChoiceField = {
+  key: 'position',
+  label: t => t('edit.visualEditor.params.position'),
+  type: 'choice',
+  mode: 'flag',
+  variant: { panel: 'figure-position' },
+  options: [
+    { label: t => t('edit.visualEditor.options.left'), value: 'left' },
+    { label: t => t('edit.visualEditor.options.left14'), value: 'left14' },
+    { label: t => t('edit.visualEditor.options.left13'), value: 'left13' },
+    { label: t => t('edit.visualEditor.options.center'), value: UNSPECIFIED },
+    { label: t => t('edit.visualEditor.options.right13'), value: 'right13' },
+    { label: t => t('edit.visualEditor.options.right14'), value: 'right14' },
+    { label: t => t('edit.visualEditor.options.right'), value: 'right' },
+  ],
+}
+
+export const FIGURE_ANIMATION_FLAG: SwitchField = {
+  key: 'animationFlag',
+  label: t => t('edit.visualEditor.params.animationFlag'),
+  tooltip: { on: t => t('edit.visualEditor.paramTooltips.animationFlag.on'), off: t => t('edit.visualEditor.paramTooltips.animationFlag.off') },
+  type: 'switch',
+  defaultValue: false,
+  advanced: true,
+}
+
+// visibleWhen.animationFlag 不只是展示条件：update.ts 依赖它在该开关关闭时清除这五个参数
+export const MOUTH_OPEN: TextField = { key: 'mouthOpen', label: t => t('edit.visualEditor.params.mouthOpen'), type: 'text', advanced: true, visibleWhen: { key: 'animationFlag', value: true } }
+export const MOUTH_HALF_OPEN: TextField = { key: 'mouthHalfOpen', label: t => t('edit.visualEditor.params.mouthHalfOpen'), type: 'text', advanced: true, visibleWhen: { key: 'animationFlag', value: true } }
+export const MOUTH_CLOSE: TextField = { key: 'mouthClose', label: t => t('edit.visualEditor.params.mouthClose'), type: 'text', advanced: true, visibleWhen: { key: 'animationFlag', value: true } }
+export const EYES_OPEN: TextField = { key: 'eyesOpen', label: t => t('edit.visualEditor.params.eyesOpen'), type: 'text', advanced: true, visibleWhen: { key: 'animationFlag', value: true } }
+export const EYES_CLOSE: TextField = { key: 'eyesClose', label: t => t('edit.visualEditor.params.eyesClose'), type: 'text', advanced: true, visibleWhen: { key: 'animationFlag', value: true } }
 
 // ─── 变换写入模式（引擎 resolveTransformArgs） ───
 
