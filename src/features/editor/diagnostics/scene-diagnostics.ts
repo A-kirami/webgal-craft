@@ -4,6 +4,7 @@ import {
   findColorFormatReferences,
   findMissingSentenceResourceReferences,
   findReservedCallSceneArguments,
+  findTransformWriteModeCompatReferences,
   findUnsupportedEngineModelReferences,
   findUnsupportedEngineOpusVocalReferences,
   findUnsupportedSceneSemanticReferences,
@@ -13,7 +14,7 @@ import type { SceneEditorDiagnostic } from './types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
-import type { ColorFormatReference, UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
+import type { ColorFormatReference, TransformWriteModeCompatReference, UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
 import type { AssetKey } from '~/services/resource-index/keys'
 
 interface DiagnoseSceneOptions {
@@ -39,6 +40,39 @@ function createUnsupportedSceneSemanticDiagnostic(
     }
     case 'unsupported-call-scene-argument': {
       return { ...base, code: reference.code, field: reference.source }
+    }
+    default: {
+      const exhaustiveCheck: never = reference
+      return exhaustiveCheck
+    }
+  }
+}
+
+function createTransformWriteModeCompatDiagnostic(
+  reference: TransformWriteModeCompatReference,
+  statementIndex: number,
+): SceneEditorDiagnostic {
+  switch (reference.code) {
+    case 'unsupported-transform-from': {
+      return {
+        code: reference.code,
+        field: reference.source,
+        severity: 'warning',
+        source: 'engine',
+        statementIndex,
+        value: reference.value,
+      }
+    }
+    case 'legacy-transform-write-arg': {
+      return {
+        code: reference.code,
+        field: reference.source,
+        overriddenByTransformFrom: reference.overriddenByTransformFrom,
+        severity: 'warning',
+        source: 'engine',
+        statementIndex,
+        value: reference.value,
+      }
     }
     default: {
       const exhaustiveCheck: never = reference
@@ -195,6 +229,10 @@ export function diagnoseScene(
 
     for (const reference of findUnsupportedSceneSemanticReferences(sentence, options.runtimeCapabilities)) {
       diagnostics.push(createUnsupportedSceneSemanticDiagnostic(reference, statementIndex))
+    }
+
+    for (const reference of findTransformWriteModeCompatReferences(sentence, options.runtimeCapabilities)) {
+      diagnostics.push(createTransformWriteModeCompatDiagnostic(reference, statementIndex))
     }
   }
 

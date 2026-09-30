@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { userEvent } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
@@ -100,6 +101,7 @@ const narrowStartKeyframes: AnimationEditorKeyframe[] = [
 async function renderTimeline(options: {
   keyframes: readonly AnimationEditorKeyframe[]
   onResizeDuration?: (payload: { duration: number, flush: boolean, id: number }) => void
+  onSelect?: (id: number) => void
   selectedId?: number
   totalDuration: number
 }) {
@@ -107,6 +109,7 @@ async function renderTimeline(options: {
     props: {
       keyframes: options.keyframes,
       onResizeDuration: options.onResizeDuration,
+      onSelect: options.onSelect,
       selectedId: options.selectedId ?? 1,
       totalDuration: options.totalDuration,
     },
@@ -190,6 +193,38 @@ describe('AnimationTimeline', () => {
 
     expect(endMarkerLabel).not.toBeNull()
     expect(endMarkerLabel?.className).toContain('-translate-x-full')
+  })
+
+  it('帧块不进入 Tab 序列且不绘制焦点环，避免快捷键暴露残留焦点', async () => {
+    await renderTimeline({
+      keyframes: linearTwoKeyframes,
+      totalDuration: 320,
+    })
+
+    const frameBlocks = [...document.querySelectorAll<HTMLElement>('button[type="button"]')]
+
+    expect(frameBlocks).toHaveLength(2)
+    for (const block of frameBlocks) {
+      expect(block.tabIndex).toBe(-1)
+      expect(block).toHaveClass('focus-visible:outline-none')
+    }
+  })
+
+  it('点击帧块仍会选中该帧', async () => {
+    const onSelect = vi.fn()
+
+    await renderTimeline({
+      keyframes: linearTwoKeyframes,
+      onSelect,
+      totalDuration: 320,
+    })
+
+    const secondBlock = [...document.querySelectorAll<HTMLElement>('button[type="button"]')][1]
+
+    expect(secondBlock).toBeDefined()
+    await userEvent.click(secondBlock!)
+
+    expect(onSelect).toHaveBeenCalledWith(2)
   })
 
   it('被最小宽度撑开的 9ms 起始帧可以继续拖拽回 0ms', async () => {

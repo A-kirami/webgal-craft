@@ -8,11 +8,27 @@ import {
   selectTransformBaseline,
 } from '../model'
 
+import type { TransformWriteMode } from '~/domain/engine/transform-args'
+
+/** 等价 transformFrom=current、旧引擎无参数与显式 -writeDefault=false */
+const CURRENT_WRITE_MODE: TransformWriteMode = {
+  transformFrom: 'current',
+  writeDefault: false,
+  writeFullEffect: false,
+}
+
+/** 等价 transformFrom=default（非并行） */
+const DEFAULT_WRITE_MODE: TransformWriteMode = {
+  transformFrom: 'default',
+  writeDefault: true,
+  writeFullEffect: true,
+}
+
 describe('selectTransformBaseline', () => {
   it('专用变换命令继承模式会深合并基础值与目标覆盖值', () => {
     const result = selectTransformBaseline({
       command: commandType.setTransform,
-      writeDefault: false,
+      writeMode: CURRENT_WRITE_MODE,
       baseTransform: {
         position: { x: 0, y: 20 },
         scale: { x: 1, y: 1 },
@@ -37,7 +53,7 @@ describe('selectTransformBaseline', () => {
   it('普通命令会按基础默认值处理', () => {
     const result = selectTransformBaseline({
       command: commandType.changeFigure,
-      writeDefault: false,
+      writeMode: CURRENT_WRITE_MODE,
       baseTransform: {
         position: { x: 0, y: 20 },
       },
@@ -57,7 +73,7 @@ describe('selectTransformBaseline', () => {
   it('缺少基础变换时不会把目标覆盖值伪造成基线', () => {
     const result = selectTransformBaseline({
       command: commandType.setTransform,
-      writeDefault: false,
+      writeMode: CURRENT_WRITE_MODE,
       targetTransform: {
         position: { x: 1000 },
       },
@@ -65,6 +81,50 @@ describe('selectTransformBaseline', () => {
 
     expect(result).toEqual({
       baselineSource: 'unknown',
+    })
+  })
+
+  it('写入默认值但非完整写入时改用语句前基线', () => {
+    const result = selectTransformBaseline({
+      command: commandType.setTransform,
+      writeMode: {
+        transformFrom: 'default',
+        writeDefault: true,
+        writeFullEffect: false,
+      },
+      baseTransform: {
+        position: { x: 0, y: 20 },
+      },
+      targetTransform: {
+        position: { x: 1000 },
+      },
+    })
+
+    expect(result).toEqual({
+      baselineSource: 'protocol',
+      baselineTransform: {
+        position: { x: 1000, y: 20 },
+      },
+    })
+  })
+
+  it('写入默认值且完整写入时使用基础默认值', () => {
+    const result = selectTransformBaseline({
+      command: commandType.setTransform,
+      writeMode: DEFAULT_WRITE_MODE,
+      baseTransform: {
+        position: { x: 0, y: 20 },
+      },
+      targetTransform: {
+        position: { x: 1000 },
+      },
+    })
+
+    expect(result).toEqual({
+      baselineSource: 'base',
+      baselineTransform: {
+        position: { x: 0, y: 20 },
+      },
     })
   })
 })

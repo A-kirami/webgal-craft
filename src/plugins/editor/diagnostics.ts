@@ -96,7 +96,10 @@ function appendUnsupportedMultilineStatementMarkers(
   }
 }
 
-/** marker 的定位范围按诊断的字段来源决定（标签定位到标签本身，参数定位到参数值） */
+/**
+ * marker 的定位范围按诊断的字段来源决定（标签定位到标签本身，参数默认定位到参数值）。
+ * 「参数本身有问题」的诊断定位到整个参数 token，见 locateArgumentToken。
+ */
 function locateDiagnosticRange(
   lines: readonly string[],
   range: StatementSourceRange,
@@ -108,11 +111,14 @@ function locateDiagnosticRange(
     case 'missing-label': {
       return locateContent(lines, range, diagnostic.label)
     }
-    case 'reserved-call-scene-argument': {
-      return locateReference(lines, range, sentence, {
-        source: diagnostic.field,
-        value: diagnostic.argument,
-      })
+    // 参数名本身有问题的诊断：保留参数、当前引擎不认的参数、旧写入参数。
+    // 用户要判断的是「这个参数能不能写」，取值是否合法不是诊断对象。
+    case 'reserved-call-scene-argument':
+    case 'unsupported-local-variable':
+    case 'unsupported-call-scene-argument':
+    case 'unsupported-transform-from':
+    case 'legacy-transform-write-arg': {
+      return locateArgumentToken(lines, range, diagnostic.field.key)
     }
 
     default: {
@@ -122,6 +128,38 @@ function locateDiagnosticRange(
       })
     }
   }
+}
+
+/**
+ * 定位整个参数 token（`-key` 或 `-key=value`）。
+ * 用于「参数名本身」有问题的诊断：取值合法但参数不该出现，
+ * 只划取值会读成「取值有错」，且裸 flag 与 `=value` 两种写法的范围不一致。
+ */
+function locateArgumentToken(
+  lines: readonly string[],
+  range: StatementSourceRange,
+  key: string,
+): monaco.IRange {
+  const escapedKey = escapeRegExp(key)
+  const valuePattern = new RegExp(String.raw`(?:^|\s)-${escapedKey}=([^;\s]*)`)
+  const flagPattern = new RegExp(String.raw`(?:^|\s)-${escapedKey}(?=\s|;|$)`)
+
+  for (let line = range.startLine; line <= range.endLine; line++) {
+    const text = lines[line] ?? ''
+    const valueMatch = valuePattern.exec(text)
+    if (valueMatch?.index !== undefined) {
+      const start = valueMatch.index + valueMatch[0].lastIndexOf('-')
+      return createMarkerRange({ line, start }, key.length + 2 + (valueMatch[1]?.length ?? 0))
+    }
+
+    const flagMatch = flagPattern.exec(text)
+    if (flagMatch?.index !== undefined) {
+      const start = flagMatch.index + flagMatch[0].lastIndexOf('-')
+      return createMarkerRange({ line, start }, key.length + 1)
+    }
+  }
+
+  return locateContent(lines, range, key)
 }
 
 function locateReference(
@@ -146,16 +184,9 @@ function locateReference(
   if (reference.source.kind === 'argument') {
     const key = reference.source.key
     const argument = sentence.args.find(item => item.key === key)
+    // 裸 flag 的「取值」就是参数本身，整 token 与取值同范围
     if (argument?.value === true) {
-      const argumentPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(key)}(?=\s|;|$)`)
-      for (let line = range.startLine; line <= range.endLine; line++) {
-        const text = lines[line] ?? ''
-        const match = argumentPattern.exec(text)
-        if (match?.index !== undefined) {
-          const start = match.index + match[0].lastIndexOf('-')
-          return createMarkerRange({ line, start }, key.length + 1)
-        }
-      }
+      return locateArgumentToken(lines, range, key)
     }
 
     const argumentPattern = new RegExp(String.raw`(?:^|\s)-${escapeRegExp(key)}=([^;\s]*)`)

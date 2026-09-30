@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { resolveTransformWriteMode } from '~/domain/engine/transform-args'
 import { readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { fieldsToTransform, isTransformEqual, parseTransformJson } from '~/features/editor/effect-editor/effect-editor-config'
@@ -7,11 +9,14 @@ import { resolveTransformBaselineSession } from '~/features/editor/transform-res
 import { debugCommander } from '~/services/debug-commander'
 import { isPreviewPanelOpen } from '~/services/preview-protocol-client'
 import { useEditSettingsStore } from '~/stores/edit-settings'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
 import { useModalStore } from '~/stores/modal'
 import { usePreviewSyncStore } from '~/stores/preview-sync'
 import { createAsyncQueue } from '~/utils/async-queue'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+import type { TransformWriteMode } from '~/domain/engine/transform-args'
 import type { Transform } from '~/domain/stage/types'
 import type { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import type { TransformBaselineSessionClient } from '~/features/editor/transform-resolution/baseline-session'
@@ -40,6 +45,8 @@ type EffectEditorPreviewTransform = Transform | (() => Transform)
 export interface EffectEditorOpenTarget {
   baseSentence: ISentence
   effectTarget?: string
+  /** 语句所属场景的引擎能力；缺省按最新引擎语义解析写入模式 */
+  runtimeCapabilities?: EngineRuntimeCapabilities
   scenePath: string
   sentenceId: number
   onApply: (result: EffectEditorDraft) => void | Promise<void>
@@ -61,7 +68,11 @@ export interface EffectEditorSession {
   baselineResolved: boolean
   baselineSource: TransformBaselineSource
   baselineTransform?: Transform
-  writeDefault: boolean
+  /** 会话打开时文档已有未保存改动，或会话期间场景被外部改写：内容落地后引擎会重跑，基线必须重建 */
+  baselineContentStale: boolean
+  /** 本会话自己产生或打开时就已存在的场景文本；与它不同的内容变化视为外来改动 */
+  ownContent?: string
+  writeMode: TransformWriteMode
   onApply: (result: EffectEditorDraft) => void | Promise<void>
 }
 
@@ -149,10 +160,6 @@ function resolveEffectTarget(target: EffectEditorOpenTarget): string {
   return target.effectTarget?.trim() || readSentenceArgString(target.baseSentence, 'target').trim()
 }
 
-function resolveWriteDefault(sentence: ISentence): boolean {
-  return sentence.args.some(arg => arg.key === 'writeDefault' && arg.value === true)
-}
-
 function isDraftEqual(left: EffectEditorDraft, right: EffectEditorDraft): boolean {
   return left.duration === right.duration
     && left.ease === right.ease
@@ -167,6 +174,7 @@ function isDraftEmpty(draft: EffectEditorDraft): boolean {
 
 export function createEffectEditorProvider(options: CreateEffectEditorProviderOptions = {}) {
   const editSettings = useEditSettingsStore()
+  const editorStore = useEditorStore()
   const previewSyncStore = usePreviewSyncStore()
   const { t } = useI18n()
   const baselineClient = options.baselineClient ?? {
@@ -191,6 +199,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
   let previewSyncState: PreviewRuntimeSyncState = 'ready'
   let previewSyncStateWarned = false
   let isClosing = false
+  let baselineResolutionRevision = 0
 
   function canSendPreview(): boolean {
     return editSettings.enableLivePreview
@@ -300,16 +309,12 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     cancelBaselineResolution = undefined
   }
 
-  function scheduleSessionBaselineResolution(
-    currentSessionId: number,
-    target: EffectEditorOpenTarget,
-    lineCommandString: string,
-  ): void {
+  function scheduleSessionBaselineResolution(currentSessionId: number): void {
     cancelScheduledBaselineResolution()
 
     const run = () => {
       cancelBaselineResolution = undefined
-      void resolveSessionBaseline(currentSessionId, target, lineCommandString)
+      void resolveSessionBaseline(currentSessionId)
     }
 
     if (typeof requestAnimationFrame === 'function') {
@@ -347,7 +352,10 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     }
 
     try {
-      await currentSession.onApply(draftSnapshot)
+      const applyResult = currentSession.onApply(draftSnapshot)
+      // 同步写完文档后立刻记录本次提交的内容，避免内容 watcher 把它当成外来变化
+      currentSession.ownContent = readSceneTextContent(currentSession.scenePath)
+      await applyResult
     } catch (error) {
       logger.error(`${errorMessage}: ${error}`)
       return false
@@ -751,46 +759,70 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     return true
   }
 
-  async function resolveSessionBaseline(
-    currentSessionId: number,
-    target: EffectEditorOpenTarget,
-    lineCommandString: string,
-  ): Promise<void> {
+  /** 场景文档文本：与当前投影无关，文本/可视化投影共用同一份内容 */
+  function readSceneTextContent(scenePath: string): string | undefined {
+    const textProjection = editorStore.currentTextProjection
+    return textProjection?.path === scenePath ? textProjection.textContent : undefined
+  }
+
+  /**
+   * 只有仍属于同一会话、且没有被更新的解析请求取代的结果才允许写回。
+   * 就绪重建 / 内容变化都会触发重新解析，可能同时存在两次解析，先返回的那次必须丢弃。
+   */
+  function readResolvableSession(currentSessionId: number, resolutionRevision: number): EffectEditorSession | undefined {
+    const currentSession = session
+    if (
+      !currentSession
+      || currentSession.sessionId !== currentSessionId
+      || resolutionRevision !== baselineResolutionRevision
+    ) {
+      return undefined
+    }
+
+    return currentSession
+  }
+
+  async function resolveSessionBaseline(currentSessionId: number): Promise<void> {
     const currentSession = session
     if (!currentSession || currentSession.sessionId !== currentSessionId) {
       return
     }
+
+    const resolutionRevision = ++baselineResolutionRevision
 
     try {
       const result = await resolveTransformBaselineSession({
         client: baselineClient,
         request: {
           command: currentSession.command,
-          lineCommandString,
-          scenePath: target.scenePath,
-          sentenceId: target.sentenceId,
+          lineCommandString: currentSession.lineCommandString,
+          scenePath: currentSession.scenePath,
+          sentenceId: currentSession.sentenceId,
           target: currentSession.effectTarget,
-          writeDefault: currentSession.writeDefault,
+          writeMode: currentSession.writeMode,
         },
       })
 
-      if (!session || session.sessionId !== currentSessionId) {
+      const resolvedSession = readResolvableSession(currentSessionId, resolutionRevision)
+      if (!resolvedSession) {
         return
       }
 
-      session.baselineSource = result.baselineSource
-      session.baselineTransform = result.baselineTransform
+      resolvedSession.baselineSource = result.baselineSource
+      resolvedSession.baselineTransform = result.baselineTransform
     } catch (error) {
-      if (!session || session.sessionId !== currentSessionId) {
+      const resolvedSession = readResolvableSession(currentSessionId, resolutionRevision)
+      if (!resolvedSession) {
         return
       }
 
       logger.warn(`解析效果编辑器 transform baseline 失败，已降级为 unknown: ${error}`)
-      session.baselineSource = 'unknown'
-      session.baselineTransform = undefined
+      resolvedSession.baselineSource = 'unknown'
+      resolvedSession.baselineTransform = undefined
     } finally {
-      if (session && session.sessionId === currentSessionId) {
-        session.baselineResolved = true
+      const resolvedSession = readResolvableSession(currentSessionId, resolutionRevision)
+      if (resolvedSession) {
+        resolvedSession.baselineResolved = true
       }
     }
   }
@@ -1111,6 +1143,12 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     const sessionId = ++nextSessionId
     const lineCommandString = serializeSentence(baseSentence)
 
+    const activeState = editorStore.currentState
+    const sessionSceneDirty = activeState !== undefined
+      && isEditableEditor(activeState)
+      && activeState.path === target.scenePath
+      && activeState.isDirty
+
     session = {
       sessionId,
       command: baseSentence.command,
@@ -1125,7 +1163,12 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       missingTargetWarned: false,
       baselineResolved: false,
       baselineSource: 'unknown',
-      writeDefault: resolveWriteDefault(baseSentence),
+      baselineContentStale: sessionSceneDirty,
+      ownContent: readSceneTextContent(target.scenePath),
+      writeMode: resolveTransformWriteMode(
+        baseSentence,
+        target.runtimeCapabilities ?? LATEST_ENGINE_RUNTIME_CAPABILITIES,
+      ),
       onApply: target.onApply,
     }
 
@@ -1137,7 +1180,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
     visualPreviewDirty = false
     resetPreviewSyncState()
     isClosing = false
-    scheduleSessionBaselineResolution(sessionId, target, lineCommandString)
+    scheduleSessionBaselineResolution(sessionId)
     return true
   }
 
@@ -1147,6 +1190,60 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       discardPreviewSession()
     }
   }
+
+  // 预览运行时可能在会话打开后才就绪：打开时那次解析会因运行时不可用而降级，就绪后必须重新解析。
+  watch(
+    () => previewSyncStore.isPreviewReady,
+    (isReady, wasReady) => {
+      if (!isReady || wasReady || !session || !isOpen) {
+        return
+      }
+
+      scheduleSessionBaselineResolution(session.sessionId)
+    },
+  )
+
+  // 会话期间的外来内容变化（外部文件替换、其它来源的编辑）会让运行时用新内容重跑，基线必须重建。
+  // 保守起见不区分指针前后（指针之后的改动本可不动基线，多付一次 sync + query 可接受）；
+  // 本会话自己的提交与打开时的内容由 ownContent 排除。
+  watch(
+    () => {
+      const textProjection = editorStore.currentTextProjection
+      const currentSession = session
+      return currentSession && textProjection?.path === currentSession.scenePath
+        ? textProjection.textContent
+        : undefined
+    },
+    (content) => {
+      if (!session || content === undefined || content === session.ownContent) {
+        return
+      }
+
+      session.baselineContentStale = true
+      scheduleSessionBaselineResolution(session.sessionId)
+    },
+  )
+
+  // 打开会话时文档已有未保存改动（会话打开前排队的自动保存）：改动随保存落地会改变引擎的语句前状态。
+  watch(
+    () => {
+      const state = editorStore.currentState
+      const currentSession = session
+      if (!currentSession || !state || !isEditableEditor(state) || state.path !== currentSession.scenePath) {
+        return
+      }
+
+      return state.lastSavedTime?.getTime()
+    },
+    (savedAt, previousSavedAt) => {
+      if (!session || !session.baselineContentStale || savedAt === undefined || savedAt === previousSavedAt) {
+        return
+      }
+
+      session.baselineContentStale = false
+      scheduleSessionBaselineResolution(session.sessionId)
+    },
+  )
 
   if (getCurrentScope()) {
     onScopeDispose(() => {

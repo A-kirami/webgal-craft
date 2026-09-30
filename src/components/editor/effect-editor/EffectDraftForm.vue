@@ -101,6 +101,7 @@ const { emitTransform } = createEffectPreviewEmitter({
 
 const {
   updateDuration,
+  handleDurationLabelClick,
   handleDurationLabelPointerDown,
   updateEase,
   stopDurationScrub,
@@ -158,6 +159,7 @@ const controlDeps: EffectControlDeps = {
 const {
   updateNumberField,
   canScrubNumber,
+  handleNumberLabelClick,
   handleNumberLabelPointerDown,
   numberScrub,
   getSliderTrackValue,
@@ -270,6 +272,7 @@ const categoryControls: EffectDraftCategoryControls = {
   getNumberValue,
   updateNumberField,
   canScrubNumber,
+  handleNumberLabelClick,
   handleNumberLabelPointerDown,
   getSliderTrackValue,
   getSliderMin,
@@ -318,6 +321,7 @@ onUnmounted(() => {
         <Label
           :for="durationInputId"
           class="text-xs text-muted-foreground shrink-0 cursor-ew-resize select-none touch-none"
+          @click="handleDurationLabelClick"
           @pointerdown="handleDurationLabelPointerDown"
         >
           {{ $t('edit.visualEditor.params.duration') }}

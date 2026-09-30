@@ -317,6 +317,73 @@ describe('VisualEditorAnimation', () => {
     expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/game/animation/opening.json')
   })
 
+  it('当前活跃页是动画可视化时会响应帧编辑快捷键', async () => {
+    const applyAnimationFrameInsert = vi.fn()
+    const applyAnimationFrameUpdate = vi.fn()
+    const scheduleAutoSaveIfEnabled = vi.fn()
+    const tabsStore = reactive({
+      activeTab: {
+        path: '/game/animation/opening.json',
+      },
+      shouldFocusEditor: false,
+    })
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      applyAnimationFrameDelete: vi.fn(),
+      applyAnimationFrameInsert,
+      applyAnimationFrameReorder: vi.fn(),
+      applyAnimationFrameUpdate,
+      canRedoDocument: vi.fn(() => false),
+      canUndoDocument: vi.fn(() => true),
+      currentState: {
+        kind: 'animation',
+        path: '/game/animation/opening.json',
+        projection: 'visual',
+      },
+      redoDocument: vi.fn(() => ({ applied: false })),
+      scheduleAutoSaveIfEnabled,
+      undoDocument: vi.fn(() => ({ applied: false })),
+    }))
+    useTabsStoreMock.mockReturnValue(tabsStore)
+
+    await renderInBrowser(createShortcutHarness(
+      createAnimationState('/game/animation/opening.json'),
+      {
+        editorMode: 'visual',
+        visualType: 'animation',
+      },
+    ), {
+      global: {
+        plugins: [createPinia()],
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'animation-editor-pane' }).click()
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', {
+      bubbles: true,
+      ctrlKey: true,
+      key: 'd',
+    }))
+
+    expect(applyAnimationFrameInsert).toHaveBeenCalledWith(
+      '/game/animation/opening.json',
+      0,
+      { duration: 200 },
+    )
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Home' }))
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'H', shiftKey: true }))
+
+    expect(applyAnimationFrameUpdate).toHaveBeenCalledWith(
+      '/game/animation/opening.json',
+      0,
+      { scale: { x: -1 } },
+    )
+    expect(scheduleAutoSaveIfEnabled).toHaveBeenCalledWith('/game/animation/opening.json')
+  })
+
   it('视觉模式请求焦点时会把焦点恢复到动画编辑器', async () => {
     const tabsStore = reactive({
       activeTab: {

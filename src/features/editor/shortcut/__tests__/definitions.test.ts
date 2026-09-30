@@ -30,7 +30,7 @@ describe('createEditorShortcutDefinitions', () => {
     expect(definitions.find(item => item.id === 'editor.save')).toMatchObject({
       keys: 'Mod+S',
       overrideMonaco: true,
-      when: { editorMode: '!none' },
+      when: { editorMode: '!none', effectEditorOpen: false },
     })
     expect(definitions.find(item => item.id === 'editor.commandPanel')).toMatchObject({
       keys: 'Mod+P',
@@ -40,6 +40,7 @@ describe('createEditorShortcutDefinitions', () => {
     expect(definitions.find(item => item.id === 'editor.togglePreview')).toMatchObject({
       keys: 'Mod+J',
       overrideMonaco: true,
+      when: { effectEditorOpen: false },
     })
   })
 

@@ -9,6 +9,7 @@ import {
   unsetValueByPath,
 } from '~/features/editor/effect-editor/effect-editor-config'
 
+import type { TransformWriteMode } from '~/domain/engine/transform-args'
 import type { Transform } from '~/domain/stage/types'
 
 export type TransformFieldPath = string
@@ -19,7 +20,7 @@ export interface SelectTransformBaselineOptions {
   baseTransform?: Transform
   command: commandType
   targetTransform?: Transform
-  writeDefault: boolean
+  writeMode: TransformWriteMode
 }
 
 export interface ResolveTransformDraftDisplayOptions {
@@ -68,6 +69,15 @@ const EDITOR_DEFAULT_TRANSFORM = createEditorDefaultTransform()
 
 export function isSetTransformCommand(command: commandType): boolean {
   return command === commandType.setTransform
+}
+
+/**
+ * 写入模式是否把未显式字段落到 base default 上：
+ * writeDefault 决定写回源，writeFullEffect 决定动画未定义的字段是否一并写回；
+ * 只有两者同时成立时，语句执行后未显式字段才来自 baseTransform 而不是语句前的当前变换。
+ */
+export function usesBaseTransformBaseline(writeMode: TransformWriteMode): boolean {
+  return writeMode.writeDefault && writeMode.writeFullEffect
 }
 
 function resolveTransformFieldPaths(): TransformFieldPath[] {
@@ -197,7 +207,7 @@ export function mergeTransformBaseline(
 export function selectTransformBaseline(
   options: SelectTransformBaselineOptions,
 ): ResolvedTransformBaseline {
-  if (!isSetTransformCommand(options.command) || options.writeDefault) {
+  if (!isSetTransformCommand(options.command) || usesBaseTransformBaseline(options.writeMode)) {
     return {
       baselineSource: options.baseTransform ? 'base' : 'unknown',
       baselineTransform: options.baseTransform ? cloneTransform(options.baseTransform) : undefined,

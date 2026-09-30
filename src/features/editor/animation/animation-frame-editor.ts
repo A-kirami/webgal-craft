@@ -47,6 +47,30 @@ export function deleteAnimationFrameAtSelection(
   }
 }
 
+export function moveAnimationFrameAtSelection(
+  frames: readonly AnimationFrame[],
+  selectedFrameIndex: number,
+  offset: -1 | 1,
+): AnimationFrameMutationResult | undefined {
+  const targetIndex = selectedFrameIndex + offset
+  if (selectedFrameIndex < 0 || targetIndex < 0 || targetIndex >= frames.length) {
+    return
+  }
+
+  const nextFrames = cloneAnimationFrames(frames)
+  const [movedFrame] = nextFrames.splice(selectedFrameIndex, 1)
+  if (!movedFrame) {
+    return
+  }
+
+  nextFrames.splice(targetIndex, 0, movedFrame)
+
+  return {
+    nextFrames,
+    selectedFrameId: targetIndex + 1,
+  }
+}
+
 export function updateAnimationFrameAt(
   frames: readonly AnimationFrame[],
   frameIndex: number,

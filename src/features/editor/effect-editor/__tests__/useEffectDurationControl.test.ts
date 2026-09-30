@@ -7,10 +7,12 @@ import type { ImmediatePointerDragEvent } from '~/composables/useImmediatePointe
 const { dragRuntime } = vi.hoisted(() => ({
   dragRuntime: {
     callbacks: undefined as undefined | {
+      onCancel?: (state: { lastValue: number, startValue: number, startX: number }) => void
       onEnd: (event: ImmediatePointerDragEvent | undefined, state: { lastValue: number, startValue: number, startX: number }) => void
       onMove: (event: ImmediatePointerDragEvent, state: { lastValue: number, startValue: number, startX: number }) => void
       onStart: (event: ImmediatePointerDragEvent) => { lastValue: number, startValue: number, startX: number } | undefined
     },
+    cancel: undefined as undefined | (() => void),
     state: undefined as undefined | { lastValue: number, startValue: number, startX: number },
     stop: undefined as undefined | ((event?: ImmediatePointerDragEvent) => void),
   },
@@ -18,6 +20,7 @@ const { dragRuntime } = vi.hoisted(() => ({
 
 vi.mock('~/composables/useImmediatePointerDrag', () => ({
   useImmediatePointerDrag<S>(callbacks: {
+    onCancel?: (state: S) => void
     onEnd: (event: ImmediatePointerDragEvent | undefined, state: S) => void
     onMove: (event: ImmediatePointerDragEvent, state: S) => void
     onStart: (event: ImmediatePointerDragEvent) => S | undefined
@@ -32,10 +35,22 @@ vi.mock('~/composables/useImmediatePointerDrag', () => ({
       dragRuntime.state = undefined
       callbacks.onEnd(event, currentState as S)
     }
+    dragRuntime.cancel = () => {
+      if (!dragRuntime.state) {
+        return
+      }
+
+      const currentState = dragRuntime.state
+      dragRuntime.state = undefined
+      callbacks.onCancel?.(currentState as S)
+    }
 
     return {
       get active() {
         return dragRuntime.state !== undefined
+      },
+      cancel() {
+        dragRuntime.cancel?.()
       },
       get state() {
         return dragRuntime.state as S | undefined
@@ -70,6 +85,7 @@ function createPointerEvent(overrides: Partial<PointerEvent> = {}): PointerEvent
 describe('useEffectDurationControl', () => {
   beforeEach(() => {
     dragRuntime.callbacks = undefined
+    dragRuntime.cancel = undefined
     dragRuntime.state = undefined
     dragRuntime.stop = undefined
 
@@ -117,6 +133,46 @@ describe('useEffectDurationControl', () => {
 
     expect(emitDuration).toHaveBeenCalledTimes(1)
     expect(emitDuration).toHaveBeenLastCalledWith('12')
+  })
+
+  it('拖动时长 label 之后的点击会被阻止一次', () => {
+    const control = useEffectDurationControl({
+      getDuration: () => '10',
+      emitDuration: vi.fn(),
+      emitEase: vi.fn(),
+      defaultEaseValue: '__default__',
+    })
+
+    control.handleDurationLabelPointerDown(createPointerEvent())
+    dragRuntime.callbacks?.onMove(createPointerEvent({ clientX: 5 }), dragRuntime.state!)
+
+    const dragClick = createPointerEvent()
+    control.handleDurationLabelClick(dragClick)
+
+    expect(dragClick.preventDefault).toHaveBeenCalledOnce()
+
+    const nextClick = createPointerEvent()
+    control.handleDurationLabelClick(nextClick)
+
+    expect(nextClick.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it('拖拽取消后不会吞掉下一次点击', () => {
+    const control = useEffectDurationControl({
+      getDuration: () => '10',
+      emitDuration: vi.fn(),
+      emitEase: vi.fn(),
+      defaultEaseValue: '__default__',
+    })
+
+    control.handleDurationLabelPointerDown(createPointerEvent())
+    dragRuntime.callbacks?.onMove(createPointerEvent({ clientX: 5 }), dragRuntime.state!)
+    dragRuntime.cancel?.()
+
+    const click = createPointerEvent()
+    control.handleDurationLabelClick(click)
+
+    expect(click.preventDefault).not.toHaveBeenCalled()
   })
 
   it('重复开始拖拽时先提交上一次拖拽的最终值', () => {

@@ -10,6 +10,9 @@ import type { AnimationFrame } from '~/domain/stage/types'
 export function useStatementAnimationDialog() {
   let isOpen = $ref(false)
   let draftFrames = $ref<AnimationFrame[]>([])
+  // 每次打开都是一次独立会话，宿主用它作为面板的 key：退场动画期间重新打开会复用同一个面板实例，
+  // 面板里的撤销历史属于上一份草稿，必须随会话重建
+  let sessionId = $ref(0)
   let applyCallback: ((frames: AnimationFrame[]) => void) | undefined
   let initialSnapshot = '[]'
 
@@ -45,6 +48,7 @@ export function useStatementAnimationDialog() {
     draftFrames = cloneAnimationFrames(frames)
     initialSnapshot = snapshotFrames(frames)
     applyCallback = onApply
+    sessionId += 1
     isOpen = true
   }
 
@@ -87,6 +91,7 @@ export function useStatementAnimationDialog() {
       draftFrames,
       isDirty,
       isDefault,
+      sessionId,
     }),
     updateFrames,
     handleApply,

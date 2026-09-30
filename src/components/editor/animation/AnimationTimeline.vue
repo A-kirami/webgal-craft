@@ -479,10 +479,16 @@ onUnmounted(() => {
           v-for="(item, index) in layout"
           :key="`span-${item.span.id}`"
         >
+          <!--
+            帧块不进 Tab 序列，也不绘制焦点环：点击后焦点会留在被点的帧块上，之后只要按任意键
+            （Home/End、Ctrl+方向键等），Chromium 就会把它的 :focus-visible 焦点环显出来，
+            看起来像选中了错误的帧。选中状态才是这个控件唯一有效的状态，与可视化语句卡片一致。
+          -->
           <button
             type="button"
+            tabindex="-1"
             :data-animation-frame-selected="item.span.id === props.selectedId ? 'true' : undefined"
-            class="px-2 text-left border rounded-md h-10 transition-colors top-9 absolute overflow-hidden"
+            class="px-2 text-left border rounded-md h-10 transition-colors top-9 absolute overflow-hidden focus-visible:outline-none"
             :class="item.span.id === props.selectedId
               ? 'bg-primary/12 border-primary/70 hover:bg-primary/20'
               : item.span.isHold

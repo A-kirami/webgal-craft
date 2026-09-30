@@ -19,6 +19,8 @@ import { useShortcutDispatcher } from '../useShortcutDispatcher'
 
 import type { ComponentPublicInstance } from 'vue'
 
+const effectEditorOpen = ref(false)
+
 const shortcutActions = vi.hoisted(() => ({
   rename: vi.fn(),
   save: vi.fn(),
@@ -99,6 +101,7 @@ function createHarnessComponent() {
       useShortcutContext({
         commandPanelOpen: false,
         editorMode: 'visual',
+        effectEditorOpen,
         hasSelection: true,
         isDirty: true,
         isModalOpen: false,
@@ -285,6 +288,105 @@ function createStatementEditorSelectHarnessComponent() {
   })
 }
 
+function createRootHostDispatcherHarnessComponent() {
+  const EditorContributorTarget = defineComponent({
+    name: 'RootHostEditorContributor',
+    setup() {
+      // 路由视图：静态绑定 + 自己的执行上下文，统一交给应用根的宿主派发
+      useShortcutDispatcher({
+        bindings: [{
+          execute: (context: { undo: () => void }) => {
+            context.undo()
+          },
+          i18nKey: 'shortcut.visual.undo',
+          id: 'editor.undo',
+          keys: 'Mod+Z',
+          when: { panelFocus: 'effectEditor' },
+        }],
+        executeContext: { undo: shortcutActions.undo },
+        platform: 'windows',
+      })
+
+      useShortcutContext({ panelFocus: 'effectEditor' }, { trackFocus: true })
+
+      return () => h('button', {
+        type: 'button',
+      }, 'editor-surface')
+    },
+  })
+
+  const ModalShortcutTarget = defineComponent({
+    name: 'RootHostModalShortcutTarget',
+    setup() {
+      // 根窗模态：与路由视图同级，自己注册焦点上下文与快捷键
+      useShortcutContext({ isModalOpen: true, panelFocus: 'effectEditor' }, { trackFocus: true })
+
+      useShortcut({
+        allowInModal: true,
+        execute: () => {
+          shortcutActions.undoEffect()
+        },
+        i18nKey: 'shortcut.effect.undo',
+        id: 'effectDialog.undo',
+        keys: 'Mod+Z',
+        when: { panelFocus: 'effectEditor' },
+      })
+
+      return () => h('button', {
+        type: 'button',
+      }, 'modal-surface')
+    },
+  })
+
+  const isModalOpen = ref(false)
+
+  const component = defineComponent({
+    name: 'RootHostDispatcherHarness',
+    setup() {
+      useShortcutDispatcher({
+        bindings: [{
+          execute: () => {
+            shortcutActions.togglePreviewPanel()
+          },
+          i18nKey: 'shortcut.togglePreview',
+          id: 'host.togglePreview',
+          keys: 'Mod+Z',
+          when: { panelFocus: 'effectEditor' },
+        }],
+        executeContext: undefined,
+        platform: 'windows',
+      })
+
+      return () => h('div', [
+        h(EditorContributorTarget),
+        isModalOpen.value ? h(ModalShortcutTarget) : undefined,
+      ])
+    },
+  })
+
+  return { component, isModalOpen }
+}
+
+function createEffectEditorFocusStubs() {
+  return {
+    Button: defineComponent({
+      name: 'TestButtonStub',
+      setup(_, { attrs, slots }) {
+        return () => h('button', {
+          ...attrs,
+          type: 'button',
+        }, slots.default?.())
+      },
+    }),
+    EffectDraftForm: defineComponent({
+      name: 'EffectDraftForm',
+      setup() {
+        return () => h('div', 'effect-draft-form')
+      },
+    }),
+  }
+}
+
 function createEffectEditorFocusHarness() {
   const EditorShortcutTarget = defineComponent({
     name: 'EffectEditorFocusEditorTarget',
@@ -319,7 +421,13 @@ function createEffectEditorFocusHarness() {
 
   const EffectEditorShortcutTarget = defineComponent({
     name: 'EffectEditorFocusEffectTarget',
-    setup() {
+    props: {
+      open: {
+        type: Boolean,
+        required: true,
+      },
+    },
+    setup(props) {
       const canClear = ref(true)
 
       useShortcut({
@@ -335,7 +443,7 @@ function createEffectEditorFocusHarness() {
       })
 
       return () => h(EditorDrawer, {
-        open: true,
+        open: props.open,
         panelFocus: 'effectEditor',
       }, {
         default: () => h(EffectEditorPanel, {
@@ -373,9 +481,7 @@ function createEffectEditorFocusHarness() {
 
       return () => h('div', [
         h(EditorShortcutTarget),
-        isEffectEditorOpen.value
-          ? h(EffectEditorShortcutTarget)
-          : undefined,
+        h(EffectEditorShortcutTarget, { open: isEffectEditorOpen.value }),
       ])
     },
   })
@@ -450,9 +556,26 @@ function createComponentTargetHarnessComponent() {
 
 describe('useShortcutDispatcher', () => {
   beforeEach(() => {
+    effectEditorOpen.value = false
     for (const action of Object.values(shortcutActions)) {
       action.mockReset()
     }
+  })
+
+  it('效果编辑器打开时屏蔽会打扰会话的全局快捷键', async () => {
+    effectEditorOpen.value = true
+
+    await renderInBrowser(createHarnessComponent(), {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    await userEvent.keyboard('{Control>}s{/Control}')
+    await userEvent.keyboard('{Control>}j{/Control}')
+
+    expect(shortcutActions.save).not.toHaveBeenCalled()
+    expect(shortcutActions.togglePreviewPanel).not.toHaveBeenCalled()
   })
 
   it('会响应静态注册的全局快捷键', async () => {
@@ -601,23 +724,7 @@ describe('useShortcutDispatcher', () => {
     await renderInBrowser(component, {
       global: {
         plugins: [createPinia()],
-        stubs: {
-          Button: defineComponent({
-            name: 'TestButtonStub',
-            setup(_, { attrs, slots }) {
-              return () => h('button', {
-                ...attrs,
-                type: 'button',
-              }, slots.default?.())
-            },
-          }),
-          EffectDraftForm: defineComponent({
-            name: 'EffectDraftForm',
-            setup() {
-              return () => h('div', 'effect-draft-form')
-            },
-          }),
-        },
+        stubs: createEffectEditorFocusStubs(),
       },
     })
 
@@ -627,6 +734,7 @@ describe('useShortcutDispatcher', () => {
     editorElement.focus()
     expect(document.activeElement).toBe(editorElement)
 
+    // 抽屉先以关闭状态挂载、之后才被打开：内容元素要等挂载提交后才可用
     openEffectEditor()
 
     await expect.element(page.getByText('effect-draft-form')).toBeVisible()
@@ -643,29 +751,44 @@ describe('useShortcutDispatcher', () => {
     expect(shortcutActions.undo).not.toHaveBeenCalled()
   })
 
+  it('与路由视图同级挂载的根窗模态也能注册并响应快捷键', async () => {
+    const { component, isModalOpen } = createRootHostDispatcherHarnessComponent()
+
+    await renderInBrowser(component, {
+      global: {
+        plugins: [createPinia()],
+      },
+    })
+
+    const editorSurfaceElement = await page.getByRole('button', { name: 'editor-surface' }).element()
+    editorSurfaceElement.focus()
+    await userEvent.keyboard('{Control>}z{/Control}')
+
+    // 宿主与贡献者的绑定在同一张表里：同键冲突按后注册优先，只会派发一条，不会各派发一次
+    expect(shortcutActions.undo).toHaveBeenCalledOnce()
+    expect(shortcutActions.togglePreviewPanel).not.toHaveBeenCalled()
+    expect(shortcutActions.undoEffect).not.toHaveBeenCalled()
+
+    isModalOpen.value = true
+
+    const modalSurface = page.getByRole('button', { name: 'modal-surface' })
+    await expect.element(modalSurface).toBeVisible()
+    const modalSurfaceElement = await modalSurface.element()
+    modalSurfaceElement.focus()
+    await userEvent.keyboard('{Control>}z{/Control}')
+
+    // 模态打开时编辑视图那条绑定被 isModalOpen 拦下，只执行模态自己的绑定
+    expect(shortcutActions.undoEffect).toHaveBeenCalledOnce()
+    expect(shortcutActions.undo).toHaveBeenCalledOnce()
+  })
+
   it('点击清除后仍保持效果编辑器快捷键焦点上下文', async () => {
     const { component, openEffectEditor } = createEffectEditorFocusHarness()
 
     await renderInBrowser(component, {
       global: {
         plugins: [createPinia()],
-        stubs: {
-          Button: defineComponent({
-            name: 'TestButtonStub',
-            setup(_, { attrs, slots }) {
-              return () => h('button', {
-                ...attrs,
-                type: 'button',
-              }, slots.default?.())
-            },
-          }),
-          EffectDraftForm: defineComponent({
-            name: 'EffectDraftForm',
-            setup() {
-              return () => h('div', 'effect-draft-form')
-            },
-          }),
-        },
+        stubs: createEffectEditorFocusStubs(),
       },
     })
 

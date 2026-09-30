@@ -296,6 +296,7 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
           </SheetHeader>
           <Separator class="mb-4 mt-2" />
           <StatementAnimationEditorPanel
+            :key="statementAnimationDialog.sessionId"
             class="flex-1 min-h-0"
             :frames="statementAnimationDialog.draftFrames"
             @update:frames="statementAnimationDialog.updateFrames"

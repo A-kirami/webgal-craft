@@ -38,7 +38,7 @@
         "vue-router": "^5.3.1",
         "vue-sonner": "^2.0.9",
         "wavesurfer.js": "^8.0.1",
-        "webgal-parser": "4.6.3",
+        "webgal-parser": "4.6.5",
         "zod": "^4.6.5",
       },
       "devDependencies": {
@@ -1600,7 +1600,7 @@
 
     "wavesurfer.js": ["wavesurfer.js@8.0.1", "", {}, "sha512-h0OnRWSVTqIYLSw3/IVrBtsun/xw9L5u4FA3bjfSDTFMX/xswVWS1JwK4fFu3ulmxRUSHg8zQORl6zENG983eg=="],
 
-    "webgal-parser": ["webgal-parser@4.6.3", "", {}, "sha512-edfz2pROjUEtZXQqqTS/2RIFocU5Att8Ei82Dl2Gl0FBQAhvmyP1v+aWOhQIW55nTy0IZ54L5tR3BXopM9SC9w=="],
+    "webgal-parser": ["webgal-parser@4.6.5", "", {}, "sha512-e/cimA4uUA4tY3cJc7yGTosS2MuhgVc8zVGo6lBBOXDrz4z8a4oq4kYOpj0FMJalWQ/0rFoa5bf+OibT3VliBQ=="],
 
     "webpack-virtual-modules": ["webpack-virtual-modules@0.6.2", "", {}, "sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ=="],
 

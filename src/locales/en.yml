@@ -792,6 +792,9 @@ edit:
     unsupportedColorFormat: 'The color format "{value}" cannot be displayed or edited.'
     invalidColorFormat: '"{value}" is not a valid color value.'
     reservedCallSceneArgument: '"{argument}" is reserved and cannot be used with callScene.'
+    unsupportedTransformFrom: This parameter is ignored by the current engine; the transform starting point requires WebGAL 4.6.5 or later.
+    legacyTransformWriteArg: This statement uses legacy write parameters, which the current engine still follows. Writing a transform starting point makes them apply only on WebGAL 4.6.4 or earlier.
+    legacyTransformWriteArgOverridden: This statement sets both a transform starting point and legacy write parameters. The current engine uses the transform starting point; the legacy parameters only apply on WebGAL 4.6.4 or earlier.
   errors:
     fileSyncFailed: Failed to sync the file. Try again shortly.
     previewUnavailable: Preview URL is not available. Start the preview first.
@@ -1193,6 +1196,7 @@ edit:
       focusY: Focus Y
       focusInstant: Instant
       zIndex: Z-Index
+      transformFrom: Transform From
       writeDefault: Write Default
       keep: Keep Playing
     paramTooltips:
@@ -1321,6 +1325,8 @@ edit:
       effectCherryBlossoms: Cherry Blossoms
       universalSoftIn: Fade In
       universalSoftOff: Fade Out
+      transformFromCurrent: Current state
+      transformFromDefault: Default state
     effectEditor: Effect Editor
     statementList: Statement list
     noSelection: Select a statement to start editing
@@ -1476,7 +1482,16 @@ shortcut:
     apply: Apply Changes
     close: Cancel and Close
   animation:
+    addFrame: New Frame
+    copyFrame: Copy Frame
+    cutFrame: Cut Frame
+    pasteFrame: Paste Frame
+    duplicateFrame: Duplicate Frame
     deleteFrame: Delete Frame
+    moveEarlier: Move Frame Earlier
+    moveLater: Move Frame Later
+    selectFirstFrame: Select First Frame
+    selectLastFrame: Select Last Frame
     apply: Apply Changes
     close: Cancel and Close
   transform:

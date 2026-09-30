@@ -344,11 +344,14 @@ function getStorageArgKey(storage: CommandFieldStorage): string | undefined {
   return typeof storage === 'object' ? storage.arg : undefined
 }
 
-/** 从 CommandEntry 提取并展平所有 arg 字段 */
-export function readArgFields(entry: CommandEntry, capabilities: EngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES): ArgField[] {
+/** 从 CommandEntry 提取并展平 arg 字段；includeField 决定每个字段（含展平后的子字段）是否入选 */
+function collectArgFields(
+  entry: CommandEntry,
+  includeField: (field: FieldDef) => boolean,
+): ArgField[] {
   const result: ArgField[] = []
   for (const { storage, field } of entry.fields) {
-    if (!isRuntimeCapabilitySupported(field, capabilities)) {
+    if (!includeField(field)) {
       continue
     }
     const argKey = getStorageArgKey(storage)
@@ -358,7 +361,7 @@ export function readArgFields(entry: CommandEntry, capabilities: EngineRuntimeCa
     if (field.type === 'json-object') {
       for (const sub of field.fields) {
         const flattenedField = normalizeFlattenedJsonSubField(argKey, field, sub)
-        if (!isRuntimeCapabilitySupported(flattenedField, capabilities)) {
+        if (!includeField(flattenedField)) {
           continue
         }
         result.push({
@@ -372,6 +375,20 @@ export function readArgFields(entry: CommandEntry, capabilities: EngineRuntimeCa
     }
   }
   return result
+}
+
+/** 从 CommandEntry 提取当前运行时能力下可见并展平的 arg 字段 */
+export function readArgFields(entry: CommandEntry, capabilities: EngineRuntimeCapabilities = LATEST_ENGINE_RUNTIME_CAPABILITIES): ArgField[] {
+  return collectArgFields(entry, field => isRuntimeCapabilitySupported(field, capabilities))
+}
+
+/**
+ * 读取注册表声明的全部 arg 字段，忽略能力门控。
+ * 只供存储元信息（resolveRegistryFieldMeta / getRegistryKnownKeys）使用：
+ * 能力只决定是否展示控件，不能改变参数是否已知，「隐藏」也不改变参数顺序与未知参数判定。
+ */
+export function readAllArgFields(entry: CommandEntry): ArgField[] {
+  return collectArgFields(entry, () => true)
 }
 
 /** 从 CommandEntry 提取统一渲染字段（content / commandRaw / arg） */

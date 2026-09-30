@@ -129,4 +129,27 @@ describe('useStatementAnimationDialog', () => {
       },
     ])
   })
+
+  it('每次打开都新建会话标识，同一会话内改动草稿不会改变它', () => {
+    const { dialog, openDialog } = mountDialogHarness()
+
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '[{"duration":120}]',
+    }), vi.fn())
+    const firstSessionId = dialog.sessionId
+
+    dialog.updateFrames([{ duration: 240 }])
+    expect(dialog.sessionId).toBe(firstSessionId)
+
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '[{"duration":60}]',
+    }), vi.fn())
+
+    // 会话标识用于让宿主重建面板，避免上一份草稿的撤销历史落进新草稿
+    expect(dialog.sessionId).not.toBe(firstSessionId)
+  })
 })
