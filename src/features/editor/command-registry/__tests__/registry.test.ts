@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+
 import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig, getCommandId } from '../index'
 import { readArgFields, readContentField, readEditorFields, resolveI18n } from '../schema'
 
@@ -225,6 +227,26 @@ describe('命令注册表完整性', () => {
       'heavySnow',
       'cherryBlossoms',
     ])
+  })
+
+  it('变换写入模式控件只按引擎能力切换', () => {
+    // 控件列表由注册表静态派生、与语句 args 无关，所以新引擎上旧参数残余不会改变控件数量
+    const writeModeKeys = (type: commandType, capabilities: typeof LATEST_ENGINE_RUNTIME_CAPABILITIES) =>
+      readArgFields(getCommandConfig(type), capabilities)
+        .map(item => item.field.key)
+        .filter(key => ['transformFrom', 'writeDefault', 'ignoreDefault'].includes(key))
+
+    for (const type of [commandType.setTransform, commandType.setAnimation, commandType.setTempAnimation]) {
+      expect(writeModeKeys(type, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toEqual(['transformFrom'])
+      expect(writeModeKeys(type, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toEqual(['writeDefault', 'ignoreDefault'])
+    }
+  })
+
+  it('setTransition 的 ignoreDefault 语义独立于变换写入模式', () => {
+    const keys = readArgFields(getCommandConfig(commandType.setTransition), LATEST_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.field.key)
+
+    expect(keys).toContain('ignoreDefault')
   })
 
   it('filmMode 开关关闭时写入空内容以恢复普通画面', () => {

@@ -196,10 +196,10 @@ describe('useResourceStore', () => {
     workspaceStoreState.currentGame = createTestGame({ engineId: 'webgal-462' })
 
     const store = useResourceStore()
-    expect(store.currentEngineRuntimeCapabilities).toEqual({ figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false })
+    expect(store.currentEngineRuntimeCapabilities).toEqual({ figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false, transformFrom: false })
 
     workspaceStoreState.currentGame = createTestGame({ engineId: 'webgal-463' })
-    expect(store.currentEngineRuntimeCapabilities).toEqual({ figurePositions: true, multilineStatements: true, opusVocalShorthand: true, sceneSemantics: true })
+    expect(store.currentEngineRuntimeCapabilities).toEqual({ figurePositions: true, multilineStatements: true, opusVocalShorthand: true, sceneSemantics: true, transformFrom: false })
   })
 
   it('会把独立模板和引擎内置模板整理为模板族展示模型', () => {

@@ -100,6 +100,7 @@ function sameEngineRuntimeCapabilities(
   return current.figurePositions === next.figurePositions
     && current.multilineStatements === next.multilineStatements
     && current.opusVocalShorthand === next.opusVocalShorthand
+    && current.transformFrom === next.transformFrom
 }
 
 async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {

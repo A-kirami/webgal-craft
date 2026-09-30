@@ -1,6 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { classifyEngineModelReference } from '~/domain/engine/model-capabilities'
+import { readTransformFromMode } from '~/domain/engine/transform-args'
 import { classifyColorText } from '~/domain/script/color'
 import { parseChooseContent } from '~/domain/script/content'
 import { createReferencedAssetKey } from '~/services/resource-index/values'
@@ -8,7 +9,7 @@ import { createReferencedAssetKey } from '~/services/resource-index/values'
 import { getCommandConfig } from './index'
 import { deriveArgFieldsFromEditorFields, readArgFields, readEditorFields, readFieldResourceReference } from './schema'
 
-import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities, EngineModelType } from '~/domain/engine/model-capabilities'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import type { AssetKey } from '~/services/resource-index/keys'
@@ -48,7 +49,30 @@ export interface ColorFormatReference {
   value: string
 }
 
+export type TransformWriteModeCompatReference =
+  | {
+    code: 'unsupported-transform-from'
+    source: { kind: 'argument', key: 'transformFrom' }
+    value: string
+  }
+  | {
+    code: 'legacy-transform-write-arg'
+    source: { kind: 'argument', key: string }
+    value: string
+    /** 同句的 transformFrom 被引擎识别到非空取值：旧参数被忽略；否则旧参数仍是生效写法 */
+    overriddenByTransformFrom: boolean
+  }
+
 const RESERVED_CALL_SCENE_ARGUMENTS = ['next', 'continue'] as const
+
+/** 只有引擎 resolveTransformArgs 的三个消费方受变换写入模式参数影响 */
+const TRANSFORM_WRITE_MODE_COMMANDS: ReadonlySet<commandType> = new Set([
+  commandType.setTransform,
+  commandType.setAnimation,
+  commandType.setTempAnimation,
+])
+
+const LEGACY_TRANSFORM_WRITE_ARG_KEYS: ReadonlySet<string> = new Set(['writeDefault', 'ignoreDefault'])
 
 export function querySentenceResourceReferences(sentence: ISentence): ResourceReferenceQuery[] {
   const entry = getCommandConfig(sentence.command)
@@ -131,6 +155,47 @@ export function findUnsupportedEngineOpusVocalReferences(
   }]
 }
 
+/**
+ * 变换写入参数的跨版本兼容诊断：
+ * 旧参数按 key 存在判定（不看取值）；它是否被当前引擎忽略，按 transformFrom 是否被识别到非空取值判定。
+ * 4.6.5 之前不认 transformFrom；4.6.5+ 以 transformFrom 为准，旧参数只为 4.6.4 或更低版本保留。
+ * changeFigure / changeBg / setTransition 的 ignoreDefault 与写入模式无关，不在此列。
+ */
+export function findTransformWriteModeCompatReferences(
+  sentence: ISentence,
+  capabilities: Pick<EngineRuntimeCapabilities, 'transformFrom'>,
+): TransformWriteModeCompatReference[] {
+  if (!TRANSFORM_WRITE_MODE_COMMANDS.has(sentence.command)) {
+    return []
+  }
+
+  if (!capabilities.transformFrom) {
+    const item = sentence.args.find(arg => arg.key === 'transformFrom')
+    return item
+      ? [{
+          code: 'unsupported-transform-from',
+          source: { kind: 'argument', key: 'transformFrom' },
+          value: toReferenceValue(item),
+        }]
+      : []
+  }
+
+  const overriddenByTransformFrom = readTransformFromMode(sentence) !== undefined
+
+  return sentence.args
+    .filter(item => LEGACY_TRANSFORM_WRITE_ARG_KEYS.has(item.key))
+    .map(item => ({
+      code: 'legacy-transform-write-arg' as const,
+      source: { kind: 'argument', key: item.key },
+      value: toReferenceValue(item),
+      overriddenByTransformFrom,
+    }))
+}
+
+function toReferenceValue(item: arg): string {
+  return typeof item.value === 'string' ? item.value : item.key
+}
+
 export function findReservedCallSceneArguments(sentence: ISentence): ReservedCallSceneArgument[] {
   if (sentence.command !== commandType.callScene) {
     return []
@@ -169,7 +234,7 @@ export function findUnsupportedSceneSemanticReferences(
     .map(item => ({
       code: 'unsupported-call-scene-argument' as const,
       source: { kind: 'argument', key: item.key },
-      value: typeof item.value === 'string' ? item.value : item.key,
+      value: toReferenceValue(item),
     }))
 }
 

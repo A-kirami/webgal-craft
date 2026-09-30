@@ -126,6 +126,30 @@ describe('useStatementEditorParams', () => {
     expect(updates.at(-1)?.parsed.args).toEqual([])
   })
 
+  it('语句含旧写入参数时选择「当前状态」会显式写入 transformFrom', () => {
+    const { editor, updates } = createHarness('setTransform: {} -target=fig-center -writeDefault;')
+    const transformFromField = requireArgField(editor, 'transformFrom')
+
+    expect(editor.params.getArgSelectValue(transformFromField)).toBe('current')
+
+    editor.params.handleArgFieldChange(transformFromField, 'current')
+
+    expect(updates.at(-1)?.parsed.args).toEqual([
+      { key: 'target', value: 'fig-center' },
+      { key: 'writeDefault', value: true },
+      { key: 'transformFrom', value: 'current' },
+    ])
+  })
+
+  it('语句不含旧写入参数时选择「当前状态」会省略 transformFrom', () => {
+    const { editor, updates } = createHarness('setTransform: {} -transformFrom=default;')
+    const transformFromField = requireArgField(editor, 'transformFrom')
+
+    editor.params.handleArgFieldChange(transformFromField, 'current')
+
+    expect(updates.at(-1)?.parsed.args).toEqual([])
+  })
+
   it('无冒号 say 清空最后一个参数时会直接回写规范化后的 commandRaw', () => {
     const emittedPatches: Partial<ISentence>[] = []
     const sentence = mustParse(' -concat;')

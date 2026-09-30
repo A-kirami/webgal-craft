@@ -1,5 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { resolveTransformWriteMode } from '~/domain/engine/transform-args'
 import { readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { fieldsToTransform, isTransformEqual, parseTransformJson } from '~/features/editor/effect-editor/effect-editor-config'
@@ -13,6 +15,8 @@ import { usePreviewSyncStore } from '~/stores/preview-sync'
 import { createAsyncQueue } from '~/utils/async-queue'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+import type { TransformWriteMode } from '~/domain/engine/transform-args'
 import type { Transform } from '~/domain/stage/types'
 import type { EmitTransformOptions } from '~/features/editor/effect-editor/types'
 import type { TransformBaselineSessionClient } from '~/features/editor/transform-resolution/baseline-session'
@@ -41,6 +45,8 @@ type EffectEditorPreviewTransform = Transform | (() => Transform)
 export interface EffectEditorOpenTarget {
   baseSentence: ISentence
   effectTarget?: string
+  /** 语句所属场景的引擎能力；缺省按最新引擎语义解析写入模式 */
+  runtimeCapabilities?: EngineRuntimeCapabilities
   scenePath: string
   sentenceId: number
   onApply: (result: EffectEditorDraft) => void | Promise<void>
@@ -66,7 +72,7 @@ export interface EffectEditorSession {
   baselineContentStale: boolean
   /** 本会话自己产生或打开时就已存在的场景文本；与它不同的内容变化视为外来改动 */
   ownContent?: string
-  writeDefault: boolean
+  writeMode: TransformWriteMode
   onApply: (result: EffectEditorDraft) => void | Promise<void>
 }
 
@@ -152,10 +158,6 @@ function readTransformJson(sentence: ISentence): string {
 
 function resolveEffectTarget(target: EffectEditorOpenTarget): string {
   return target.effectTarget?.trim() || readSentenceArgString(target.baseSentence, 'target').trim()
-}
-
-function resolveWriteDefault(sentence: ISentence): boolean {
-  return sentence.args.some(arg => arg.key === 'writeDefault' && arg.value === true)
 }
 
 function isDraftEqual(left: EffectEditorDraft, right: EffectEditorDraft): boolean {
@@ -797,7 +799,7 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
           scenePath: currentSession.scenePath,
           sentenceId: currentSession.sentenceId,
           target: currentSession.effectTarget,
-          writeDefault: currentSession.writeDefault,
+          writeMode: currentSession.writeMode,
         },
       })
 
@@ -1163,7 +1165,10 @@ export function createEffectEditorProvider(options: CreateEffectEditorProviderOp
       baselineSource: 'unknown',
       baselineContentStale: sessionSceneDirty,
       ownContent: readSceneTextContent(target.scenePath),
-      writeDefault: resolveWriteDefault(baseSentence),
+      writeMode: resolveTransformWriteMode(
+        baseSentence,
+        target.runtimeCapabilities ?? LATEST_ENGINE_RUNTIME_CAPABILITIES,
+      ),
       onApply: target.onApply,
     }
 

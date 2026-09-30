@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
+import { serializeSentence } from '~/domain/script/serialize'
 import { updateCommandNodeParam } from '~/domain/script/update'
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 
@@ -407,5 +408,41 @@ describe('命令节点参数更新器', () => {
     const node = parseCommandNode(sentence)
     const updated = updateCommandNodeParam(node, makeParamDef('unknown', 'text'), 'abc')
     expect(updated).toBeUndefined()
+  })
+
+  it('编辑旧写入参数时保留语句里已有的 transformFrom', () => {
+    const node = parseCommandNode(mustParse('setTransform: {"alpha":1} -transformFrom=default -writeDefault -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('writeDefault', 'switch'), false)
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'transformFrom', value: 'default' },
+      { key: 'x', value: 1 },
+    ])
+    expect(serializeSentence(serializeCommandNode(updated!)))
+      .toBe('setTransform:{"alpha":1} -transformFrom=default -x=1;')
+  })
+
+  it('选择默认的 transformFrom=current 只移除该参数', () => {
+    const node = parseCommandNode(mustParse('setTransform: {"alpha":1} -transformFrom=default -ignoreDefault -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('transformFrom', 'select', 'current'), 'current')
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'ignoreDefault', value: true },
+      { key: 'x', value: 1 },
+    ])
+  })
+
+  it('写入 transformFrom=default 时只新增该显式参数', () => {
+    const node = parseCommandNode(mustParse('setTransform: {"alpha":1} -target=fig-left -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('transformFrom', 'select', 'current'), 'default')
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'target', value: 'fig-left' },
+      { key: 'transformFrom', value: 'default' },
+      { key: 'x', value: 1 },
+    ])
   })
 })

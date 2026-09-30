@@ -133,6 +133,7 @@ export function useStatementEffectEditorBridge(options: UseStatementEffectEditor
     void effectEditorProvider.open({
       baseSentence: parsed.value,
       effectTarget: resolveEffectPreviewTarget(parsed.value),
+      runtimeCapabilities: state.runtimeCapabilities,
       scenePath: state.path,
       sentenceId,
       onApply: applyEffectEditorResult,

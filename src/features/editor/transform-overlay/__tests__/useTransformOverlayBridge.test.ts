@@ -45,7 +45,11 @@ function createSession(options: {
     baselineResolved: options.baselineResolved ?? true,
     baselineSource: 'unknown',
     baselineContentStale: false,
-    writeDefault: false,
+    writeMode: {
+      transformFrom: 'current',
+      writeDefault: false,
+      writeFullEffect: false,
+    },
     onApply() { /* no-op */ },
   }) as EffectEditorSession
 }

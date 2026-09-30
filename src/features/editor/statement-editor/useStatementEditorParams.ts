@@ -1,3 +1,4 @@
+import { hasLegacyTransformWriteArgs } from '~/domain/engine/transform-args'
 import { removeArg, setOrRemoveArg, upsertArg } from '~/domain/script/arg-utils'
 import { serializeCommandNode } from '~/domain/script/codec'
 import { readCommandNodeParamValue } from '~/domain/script/params'
@@ -32,17 +33,35 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     return field.storage === 'arg' ? field.argField : undefined
   }
 
+  /** 展示缺省值：参数未写时控件显示的值 */
   function readArgDefaultValue(argField: ArgField): string | boolean | number {
     return ('defaultValue' in argField.field && argField.field.defaultValue !== undefined)
       ? argField.field.defaultValue
       : ''
   }
 
+  /**
+   * 写入缺省值：判定「等于默认值即可省略」用的默认值。
+   * transformFrom=current 只有在语句没有显式旧写入参数时才等价于省略，
+   * 否则引擎缺省会回退到旧参数，选择「当前状态」会被静默降级。
+   */
+  function readArgWriteDefaultValue(argField: ArgField): string | boolean | number | undefined {
+    const defaultValue = 'defaultValue' in argField.field ? argField.field.defaultValue : undefined
+    if (
+      argField.field.key === 'transformFrom'
+      && opts.parsed.value
+      && hasLegacyTransformWriteArgs(opts.parsed.value)
+    ) {
+      return undefined
+    }
+    return defaultValue
+  }
+
   function toScriptParam(argField: ArgField): { key: string, type: string, defaultValue?: string | boolean | number } {
     return {
       key: argField.field.key,
       type: argField.field.type === 'choice' ? 'select' : argField.field.type,
-      defaultValue: 'defaultValue' in argField.field ? argField.field.defaultValue : undefined,
+      defaultValue: readArgWriteDefaultValue(argField),
     }
   }
 
@@ -193,7 +212,7 @@ export function useStatementEditorParams(opts: UseStatementEditorParamsOptions) 
     newArgs: arg[],
   ) {
     const storageKey = readArgFieldStorageKey(argField)
-    const defaultValue = 'defaultValue' in argField.field ? argField.field.defaultValue : undefined
+    const defaultValue = readArgWriteDefaultValue(argField)
 
     if (argField.field.type === 'switch') {
       if (normalizedValue === true) {

@@ -101,6 +101,24 @@ export interface UnsupportedColorFormatEditorDiagnostic extends SceneEditorDiagn
   value: string
 }
 
+export interface UnsupportedTransformFromEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'unsupported-transform-from'
+  field: { kind: 'argument', key: 'transformFrom' }
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
+export interface LegacyTransformWriteArgEditorDiagnostic extends SceneEditorDiagnosticBase {
+  code: 'legacy-transform-write-arg'
+  field: { kind: 'argument', key: string }
+  /** 同句已写 transformFrom：当前引擎忽略旧参数；未写则旧参数仍是生效写法 */
+  overriddenByTransformFrom: boolean
+  severity: 'warning'
+  source: 'engine'
+  value: string
+}
+
 export interface InvalidColorFormatEditorDiagnostic extends SceneEditorDiagnosticBase {
   code: 'invalid-color-format'
   field: { kind: 'argument', key: string }
@@ -128,6 +146,8 @@ export type SceneEditorDiagnostic =
   | UnsupportedCallSceneArgumentEditorDiagnostic
   | UnsupportedColorFormatEditorDiagnostic
   | InvalidColorFormatEditorDiagnostic
+  | UnsupportedTransformFromEditorDiagnostic
+  | LegacyTransformWriteArgEditorDiagnostic
 
 export type EditorFieldDiagnostic =
   | Omit<DuplicateLabelEditorDiagnostic, 'statementIndex'>
@@ -142,6 +162,8 @@ export type EditorFieldDiagnostic =
   | Omit<UnsupportedCallSceneArgumentEditorDiagnostic, 'statementIndex'>
   | Omit<UnsupportedColorFormatEditorDiagnostic, 'statementIndex'>
   | Omit<InvalidColorFormatEditorDiagnostic, 'statementIndex'>
+  | Omit<UnsupportedTransformFromEditorDiagnostic, 'statementIndex'>
+  | Omit<LegacyTransformWriteArgEditorDiagnostic, 'statementIndex'>
 
 export type EditorDiagnostic =
   | SceneEditorDiagnostic

@@ -85,6 +85,29 @@ export const PARALLEL: SwitchField = { key: 'parallel', label: t => t('edit.visu
 export const IGNORE_DEFAULT: SwitchField = { key: 'ignoreDefault', label: t => t('edit.visualEditor.params.ignoreDefault'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.ignoreDefault.on'), off: t => t('edit.visualEditor.paramTooltips.ignoreDefault.off') }, type: 'switch', defaultValue: false }
 export const ORDER: NumberField = { key: 'order', label: t => t('edit.visualEditor.params.order'), type: 'number' }
 
+// ─── 变换写入模式（引擎 resolveTransformArgs） ───
+
+/**
+ * 4.6.5 起 setTransform / setAnimation / setTempAnimation 以 transformFrom 表达写入模式：
+ * current = 只写动画定义的字段，default = 以 baseTransform 为基准完整写入。
+ * 只有支持该能力的引擎才写入此参数；显式旧参数（writeDefault / ignoreDefault）由引擎继续兼容。
+ */
+export const TRANSFORM_FROM: ChoiceField = {
+  key: 'transformFrom',
+  label: t => t('edit.visualEditor.params.transformFrom'),
+  type: 'choice',
+  options: [
+    { label: t => t('edit.visualEditor.options.transformFromCurrent'), value: 'current' },
+    { label: t => t('edit.visualEditor.options.transformFromDefault'), value: 'default' },
+  ],
+  defaultValue: 'current',
+  requiredCapability: 'transformFrom',
+}
+
+// 旧开关只在旧引擎显示；新引擎上语句里的旧参数残余只走诊断，不因识别 transformFrom 而改写或删除
+export const LEGACY_WRITE_DEFAULT: SwitchField = { ...WRITE_DEFAULT, hiddenWhenCapability: 'transformFrom' }
+export const LEGACY_IGNORE_DEFAULT: SwitchField = { ...IGNORE_DEFAULT, hiddenWhenCapability: 'transformFrom' }
+
 // ─── 效果编辑器托管的参数副本 ───
 
 export const EFFECT_TRANSFORM: TextField = { ...TRANSFORM, managedByEffectEditor: true }

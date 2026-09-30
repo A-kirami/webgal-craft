@@ -74,6 +74,14 @@ export function getEditorDiagnosticMessage(
     case 'invalid-color-format': {
       return t('edit.diagnostics.invalidColorFormat', { value: diagnostic.value })
     }
+    case 'unsupported-transform-from': {
+      return t('edit.diagnostics.unsupportedTransformFrom')
+    }
+    case 'legacy-transform-write-arg': {
+      return diagnostic.overriddenByTransformFrom
+        ? t('edit.diagnostics.legacyTransformWriteArgOverridden')
+        : t('edit.diagnostics.legacyTransformWriteArg')
+    }
     default: {
       const exhaustiveCheck: never = diagnostic
       return exhaustiveCheck

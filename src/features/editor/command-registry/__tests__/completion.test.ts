@@ -38,7 +38,8 @@ describe('buildArgumentCompletionInfo', () => {
     expect(keysFor(commandType.changeBg)).not.toContain('parallel')
     expect(keysFor(commandType.unlockCg)).toContain('order')
     expect(keysFor(commandType.unlockBgm)).not.toContain('order')
-    expect(keysFor(commandType.setAnimation)).toEqual(expect.arrayContaining(['continue', 'parallel', 'ignoreDefault']))
+    expect(keysFor(commandType.setAnimation)).toEqual(expect.arrayContaining(['continue', 'parallel', 'transformFrom']))
+    expect(keysFor(commandType.setAnimation)).not.toContain('ignoreDefault')
   })
 
   it('保留只属于文本语法的既有补全', () => {
@@ -61,6 +62,15 @@ describe('buildArgumentCompletionInfo', () => {
       .map(item => item.key)).not.toContain('writeReturnTo')
     expect(buildCommandCompletionInfo(t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.commandRaw)).not.toContain('return')
+  })
+
+  it('旧运行时的变换写入参数补全不出现 transformFrom', () => {
+    const legacySetAnimationKeys = buildArgumentCompletionInfo(commandType.setAnimation, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.key)
+
+    expect(legacySetAnimationKeys).toContain('ignoreDefault')
+    expect(legacySetAnimationKeys).toContain('writeDefault')
+    expect(legacySetAnimationKeys).not.toContain('transformFrom')
   })
 
   it('命令候选直接来自注册表并保留脚本关键字', () => {

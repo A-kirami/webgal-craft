@@ -4,7 +4,11 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 
-import { findUnsupportedEngineOpusVocalReferences, querySentenceResourceReferences } from '../diagnostics'
+import {
+  findTransformWriteModeCompatReferences,
+  findUnsupportedEngineOpusVocalReferences,
+  querySentenceResourceReferences,
+} from '../diagnostics'
 
 describe('querySentenceResourceReferences', () => {
   it('从注册表字段读取内容资源引用', () => {
@@ -68,6 +72,89 @@ describe('findUnsupportedEngineOpusVocalReferences', () => {
 
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('say:hello -voice.opus;')!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+  })
+})
+
+describe('findTransformWriteModeCompatReferences', () => {
+  it('旧引擎按 key 存在诊断语句里的 transformFrom', () => {
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setTransform: {} -target=fig-center -transformFrom=default;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([{
+      code: 'unsupported-transform-from',
+      source: { kind: 'argument', key: 'transformFrom' },
+      value: 'default',
+    }])
+
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setAnimation: bounce -transformFrom;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([{
+      code: 'unsupported-transform-from',
+      source: { kind: 'argument', key: 'transformFrom' },
+      value: 'transformFrom',
+    }])
+  })
+
+  it('旧引擎只诊断 resolveTransformArgs 的三个消费方', () => {
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('changeFigure: hero.png -transformFrom=default;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setTempAnimation: {} -transformFrom=current;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toHaveLength(1)
+  })
+
+  it('新引擎诊断语句里遗留的旧写入参数', () => {
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setTransform: {} -writeDefault -ignoreDefault=false -x=1;')!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([
+      {
+        code: 'legacy-transform-write-arg',
+        source: { kind: 'argument', key: 'writeDefault' },
+        value: 'writeDefault',
+        overriddenByTransformFrom: false,
+      },
+      {
+        code: 'legacy-transform-write-arg',
+        source: { kind: 'argument', key: 'ignoreDefault' },
+        value: 'ignoreDefault',
+        overriddenByTransformFrom: false,
+      },
+    ])
+
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setTransform: {} -transformFrom=current;')!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+  })
+
+  it('同句已写 transformFrom 时旧写入参数标记为被当前引擎忽略', () => {
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setTransform: {} -transformFrom=current -writeDefault -x=1;')!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([{
+      code: 'legacy-transform-write-arg',
+      source: { kind: 'argument', key: 'writeDefault' },
+      value: 'writeDefault',
+      overriddenByTransformFrom: true,
+    }])
+  })
+
+  it('新引擎不把 changeFigure 与 setTransition 的 ignoreDefault 当作写入模式残留', () => {
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('changeBg: bg.png -ignoreDefault;')!,
+      LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+
+    expect(findTransformWriteModeCompatReferences(
+      parseSentence('setTransition: -target=fig-left -ignoreDefault;')!,
       LATEST_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
   })

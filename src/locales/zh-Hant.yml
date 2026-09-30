@@ -792,6 +792,9 @@ edit:
     unsupportedColorFormat: "色值「{value}」的格式無法顯示和編輯。"
     invalidColorFormat: "「{value}」不是有效的顏色值。"
     reservedCallSceneArgument: "「{argument}」為保留參數，不能用於 callScene。"
+    unsupportedTransformFrom: 該參數會被目前引擎忽略：變換起點需要 WebGAL 4.6.5 或更新版本。
+    legacyTransformWriteArg: 本句使用舊寫入參數，目前引擎仍依它執行；寫入變換起點後，舊參數只在 WebGAL 4.6.4 或更低版本上生效。
+    legacyTransformWriteArgOverridden: 本句同時寫了變換起點與舊寫入參數，目前引擎以變換起點為準；舊參數只在 WebGAL 4.6.4 或更低版本上生效。
   errors:
     fileSyncFailed: 檔案同步失敗，稍後重試
     previewUnavailable: 預覽網址不存在，先啟動預覽
@@ -1193,6 +1196,7 @@ edit:
       focusY: 注視點 Y
       focusInstant: 立即注視
       zIndex: 顯示層級
+      transformFrom: 變換起點
       writeDefault: 繼承預設
       keep: 跨語句播放
     paramTooltips:
@@ -1321,6 +1325,8 @@ edit:
       effectCherryBlossoms: 櫻花
       universalSoftIn: 通用透明度淡入
       universalSoftOff: 通用透明度淡出
+      transformFromCurrent: 目前狀態
+      transformFromDefault: 預設狀態
     effectEditor: 效果編輯器
     statementList: 語句列表
     noSelection: 選擇一條語句開始編輯
