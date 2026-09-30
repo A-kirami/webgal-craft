@@ -616,14 +616,9 @@ useShortcutContext({
 
 onMounted(() => {
   void fitViewportToCurrentStage()
-  // 浏览器里跑前端时没有 Tauri 运行时，拿不到窗口，预览本身照常工作
-  try {
-    previewFullscreenDriver = createPreviewFullscreenDriver(getCurrentWebviewWindow(), (error: unknown) => {
-      logger.warn(`预览全屏的窗口处理失败: ${error}`)
-    })
-  } catch {
-    // 没有窗口就只保留画布内的全屏
-  }
+  previewFullscreenDriver = createPreviewFullscreenDriver(getCurrentWebviewWindow(), (error: unknown) => {
+    logger.warn(`预览全屏的窗口处理失败: ${error}`)
+  })
 })
 
 onBeforeUnmount(() => {
@@ -668,6 +663,7 @@ onBeforeUnmount(() => {
             class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
             :style="previewCanvasStyle"
           >
+            <!-- 跨源 iframe 默认拿不到 fullscreen 能力，引擎据此判断环境支不支持，缺了就不显示全屏按钮 -->
             <iframe
               ref="iframeRef"
               :key="refreshKey"
@@ -675,7 +671,6 @@ onBeforeUnmount(() => {
               :title="previewTitle"
               class="border-0 size-full"
               :style="previewIframeStyle"
-              allow="fullscreen"
               allowfullscreen
               @load="postPreviewOutputSettings"
             />

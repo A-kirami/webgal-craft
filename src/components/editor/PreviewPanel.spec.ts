@@ -17,6 +17,7 @@ import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overla
 import { usePreferenceStore } from '~/stores/preference'
 
 const {
+  appWindowMock,
   getGameConfigMock,
   modalOpenMock,
   openUrlMock,
@@ -33,6 +34,12 @@ const {
   useSceneEntryStatusMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  appWindowMock: {
+    isMaximized: vi.fn(async () => false),
+    maximize: vi.fn(async () => undefined),
+    setFullscreen: vi.fn(async () => undefined),
+    unmaximize: vi.fn(async () => undefined),
+  },
   getGameConfigMock: vi.fn(),
   modalOpenMock: vi.fn(),
   openUrlMock: vi.fn(),
@@ -48,6 +55,10 @@ const {
   usePreviewSyncStoreMock: vi.fn(),
   useSceneEntryStatusMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/api/webviewWindow', () => ({
+  getCurrentWebviewWindow: () => appWindowMock,
 }))
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
@@ -227,6 +238,15 @@ function expectCloseToCssNumber(actual: number, expected: number): void {
   expect(Math.abs(actual - expected)).toBeLessThan(0.01)
 }
 
+/** 元素全屏由浏览器写进 document.fullscreenElement，测试里替换它并派发事件，afterEach 清掉 */
+function setPreviewFullscreenElement(element: Element): void {
+  Object.defineProperty(document, 'fullscreenElement', {
+    configurable: true,
+    get: () => element,
+  })
+  document.dispatchEvent(new Event('fullscreenchange'))
+}
+
 function getPreviewIframe(): {
   iframe: HTMLIFrameElement
   iframeWindow: Window
@@ -298,6 +318,7 @@ function dispatchPreviewPointerMessage(
 
 describe('PreviewPanel', () => {
   afterEach(() => {
+    Reflect.deleteProperty(document, 'fullscreenElement')
     vi.clearAllMocks()
   })
 
@@ -958,6 +979,55 @@ describe('PreviewPanel', () => {
     await nextTick()
 
     expect(outputSurface.style.filter).toBe('')
+  })
+
+  it('预览 iframe 全屏时让开画布变换与亮度滤镜，并让窗口进入全屏', async () => {
+    const rendered = await renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+    await vi.waitFor(() => {
+      expect(getGameConfigMock).toHaveBeenCalledTimes(1)
+    })
+
+    const { iframe } = getPreviewIframe()
+    const canvas = document.querySelector<HTMLElement>('[data-testid="preview-canvas"]')
+    const outputSurface = document.querySelector<HTMLElement>('[data-testid="preview-output-surface"]')
+    // 跨源 iframe 必须显式授权 fullscreen，否则引擎认为环境不支持，连全屏按钮都不显示
+    expect(iframe.hasAttribute('allowfullscreen')).toBe(true)
+    expect(canvas).not.toBeNull()
+    expect(outputSurface).not.toBeNull()
+
+    const preferenceStore = usePreferenceStore(rendered.pinia)
+    preferenceStore.previewBrightness = [65]
+    preferenceStore.previewBrightnessEnabled = true
+    await nextTick()
+
+    expect(outputSurface?.style.filter).toBe('brightness(0.65)')
+    const canvasTransform = canvas?.style.transform
+    expect(canvasTransform).not.toBe('')
+
+    setPreviewFullscreenElement(iframe)
+    await nextTick()
+
+    // transform 与 filter 都会成为全屏 iframe 的包含块，全屏期间必须让开
+    expect(canvas?.style.transform).toBe('')
+    expect(outputSurface?.style.filter).toBe('')
+    await vi.waitFor(() => {
+      expect(appWindowMock.setFullscreen).toHaveBeenCalledWith(true)
+    })
+
+    // 全屏元素换成别的节点：元素全屏结束时 document.fullscreenElement 不再指向预览 iframe
+    setPreviewFullscreenElement(document.body)
+    await nextTick()
+
+    expect(canvas?.style.transform).toBe(canvasTransform)
+    expect(outputSurface?.style.filter).toBe('brightness(0.65)')
+    await vi.waitFor(() => {
+      expect(appWindowMock.setFullscreen).toHaveBeenCalledWith(false)
+    })
   })
 
   it('偏好变化时只向同源内嵌预览同步有效音量', async () => {
