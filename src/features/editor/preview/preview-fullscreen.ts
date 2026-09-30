@@ -1,43 +1,18 @@
-// 预览全屏的窗口侧处理：把 iframe 的全屏状态折算成窗口动作，并串行执行。
+// 预览全屏的窗口侧处理：把 iframe 的元素全屏折算成窗口全屏，并串行执行窗口动作。
 //
-// Windows 上 Tauri 会把「webview 里有全屏元素」映射成窗口全屏，而从最大化窗口进无边框全屏时
-// tao 不会清掉最大化状态，客户端区停在任务栏之上，底部会留下一条未绘制的黑边（tao#1087）。
-// 补正只能让窗口在进入全屏那一刻不是最大化：先退窗口全屏，再离开最大化，最后重新进全屏。
+// iframe 与编辑器跨源，引擎在 iframe 里拿不到窗口权限，元素全屏只铺满 webview，窗口全屏得由编辑器
+// 这一侧自己叫。
+//
+// Windows 上从最大化窗口进无边框全屏时，tao 不会清掉最大化状态，客户端区停在任务栏之上，底部会留下
+// 一条未绘制的黑边（tao#1087）。补正只能让窗口在进入全屏那一刻不是最大化：先退窗口全屏，再离开最大化，
+// 最后重新进全屏；退出时把最大化还原。
 //
 // 需要 core:window:allow-set-fullscreen / allow-maximize / allow-unmaximize（capabilities/desktop.json）。
 
-/** 一次 fullscreenchange 之后，窗口这边要做的唯一一件事。 */
-export type PreviewFullscreenAction =
-  | { kind: 'none' }
-  | { kind: 'enter-fullscreen' }
-  | { kind: 'leave-fullscreen' }
-  | { kind: 'correct-maximized' }
-  | { kind: 'restore-maximized' }
-
-/** 上一次算出来的状态。 */
-export interface PreviewFullscreenStatus {
-  /** 预览 iframe 现在是不是全屏元素 */
-  mirrored: boolean
-  /** 窗口形态被预览改过（取消过最大化），还欠一次还原 */
-  corrected: boolean
-}
-
-export interface PreviewFullscreenInput {
-  /** 预览 iframe 现在是不是全屏元素 */
-  fullscreenActive: boolean
-  /** 进入全屏之前窗口是不是最大化 */
-  windowWasMaximized: boolean
-}
-
-export interface PreviewFullscreenTransition extends PreviewFullscreenStatus {
-  action: PreviewFullscreenAction
-}
-
-/** 窗口接口：Tauri 的 WebviewWindow 结构上就满足它，单独写出来是为了注入假实现断言顺序。 */
-export interface PreviewFullscreenWindow {
+/** 窗口接口：Tauri 的 WebviewWindow 结构上满足它，单独写出来是为了注入假窗口断言调用顺序。 */
+export interface PreviewFullscreenWindowLike {
   isMaximized(): Promise<boolean>
   maximize(): Promise<void>
-  onResized(handler: () => void): Promise<() => void>
   setFullscreen(value: boolean): Promise<void>
   unmaximize(): Promise<void>
 }
@@ -49,188 +24,88 @@ export interface PreviewFullscreenDriver {
   dispose(): Promise<void>
 }
 
-/** 折算状态与动作；windowWasMaximized 必须是进入全屏之前的形态。 */
-export function previewFullscreenTransition(
-  previous: PreviewFullscreenStatus,
-  input: PreviewFullscreenInput,
-): PreviewFullscreenTransition {
-  // 状态没变（同一状态下的重复事件）就什么都不做
-  if (input.fullscreenActive === previous.mirrored) {
-    return { ...previous, action: { kind: 'none' } }
-  }
-
-  if (input.fullscreenActive) {
-    return input.windowWasMaximized
-      ? { mirrored: true, corrected: true, action: { kind: 'correct-maximized' } }
-      : { mirrored: true, corrected: false, action: { kind: 'enter-fullscreen' } }
-  }
-
-  return {
-    mirrored: false,
-    corrected: false,
-    action: previous.corrected ? { kind: 'restore-maximized' } : { kind: 'leave-fullscreen' },
-  }
-}
-
-/** 执行动作；两个补正动作都先退窗口全屏，顺序不能换（见文件头）。 */
-export async function applyPreviewFullscreenAction(
-  appWindow: PreviewFullscreenWindow,
-  action: PreviewFullscreenAction,
-): Promise<void> {
-  switch (action.kind) {
-    case 'enter-fullscreen': {
-      await appWindow.setFullscreen(true)
-      return
-    }
-    case 'leave-fullscreen': {
-      await appWindow.setFullscreen(false)
-      return
-    }
-    case 'correct-maximized': {
-      await appWindow.setFullscreen(false)
-      await appWindow.unmaximize()
-      await appWindow.setFullscreen(true)
-      return
-    }
-    case 'restore-maximized': {
-      await appWindow.setFullscreen(false)
-      await appWindow.maximize()
-      return
-    }
-    default: {
-      return
-    }
-  }
-}
-
-/**
- * 接上窗口，返回一个只在 editor 侧驱动窗口的驱动器。
- *
- * 窗口动作串行执行：快速进出全屏或面板卸载都不会让两次动作交错，失败时保留「窗口形态由预览改过」
- * 的所有权，交给 dispose 兜底。
- *
- * isMaximized 要跨 IPC，初始形态还没落定时进来的一次全屏事件会等到查询落定再折算，避免拿默认的
- * 「非最大化」进全屏而漏掉补正。
- */
 export function createPreviewFullscreenDriver(
-  appWindow: PreviewFullscreenWindow,
+  appWindow: PreviewFullscreenWindowLike,
   onError?: (error: unknown) => void,
 ): PreviewFullscreenDriver {
-  let status: PreviewFullscreenStatus = { mirrored: false, corrected: false }
-  let windowWasMaximized = false
-  let needsWindowCleanup = false
-  let queue = Promise.resolve()
-  let unlistenResize: (() => void) | undefined
+  /** 最新事件要求的窗口形态；同一形态下的重复事件靠它去重 */
+  let desiredFullscreen = false
+  /** 窗口全屏已经确认收敛到的形态：窗口动作成功才推进，失败时留在原处，交给后续事件或 dispose 重试 */
+  let appliedFullscreen = false
+  /** 补正时取消过最大化，还欠一次还原 */
+  let owesMaximizeRestore = false
   let disposed = false
-  /** 形态查询的序号：只有最后一次查询的结果算数 */
-  let maximizedQueryId = 0
-  /** 还有一次 isMaximized 没落定，windowWasMaximized 暂时不可信 */
-  let maximizedQueryPending = false
-  /** 查询在途时收到的最新全屏事件，等查询落定后再按解析出来的形态折算 */
-  let deferredFullscreen: boolean | undefined
+  /** 窗口动作串行执行：快速进出全屏或卸载都不会让两次动作交错 */
+  let queue = Promise.resolve()
 
-  function handleFullscreenChange(fullscreenActive: boolean): void {
-    const next = previewFullscreenTransition(status, { fullscreenActive, windowWasMaximized })
-    status = { mirrored: next.mirrored, corrected: next.corrected }
-    if (next.action.kind !== 'none') {
-      run(next.action)
-    }
-  }
-
-  function flushDeferredFullscreen(): void {
-    const fullscreenActive = deferredFullscreen
-    deferredFullscreen = undefined
-    if (fullscreenActive === undefined || disposed) {
-      return
-    }
-
-    handleFullscreenChange(fullscreenActive)
-  }
-
-  // 全屏那一次 resize 正是要修的形态变化，只在非全屏时记录
-  function syncWindowWasMaximized(): void {
-    if (status.mirrored) {
-      return
-    }
-
-    const id = ++maximizedQueryId
-    maximizedQueryPending = true
-    void appWindow.isMaximized()
-      .then((maximized) => {
-        // 过期查询不覆盖形态；已经镜像到全屏时也不再改，那正是进入全屏前的记录
-        if (id !== maximizedQueryId || status.mirrored) {
-          return
-        }
-        windowWasMaximized = maximized
-      })
-      .catch(() => {
-        // 问不到就按非最大化处理
-      })
-      .finally(() => {
-        if (id !== maximizedQueryId) {
-          return
-        }
-        maximizedQueryPending = false
-        flushDeferredFullscreen()
-      })
-  }
-
-  function run(action: PreviewFullscreenAction): void {
-    queue = queue
-      .catch(() => undefined)
-      .then(async () => {
-        try {
-          await applyPreviewFullscreenAction(appWindow, action)
-        } catch (error) {
-          needsWindowCleanup = true
-          if (action.kind === 'restore-maximized') {
-            status = { ...status, corrected: true }
-          }
-          onError?.(error)
-        }
-      })
-  }
-
-  syncWindowWasMaximized()
-  void appWindow.onResized(syncWindowWasMaximized)
-    .then((unlisten) => {
-      if (disposed) {
-        unlisten()
-        return
-      }
-      unlistenResize = unlisten
-    })
-    .catch((error: unknown) => {
+  function scheduleSync(): void {
+    queue = queue.then(syncWindow).catch((error: unknown) => {
       onError?.(error)
     })
+  }
+
+  /**
+   * 把窗口收敛到当前要求的形态。动作执行时才读 desiredFullscreen，队列里排着的动作不会用过期的决策；
+   * 卸载后不再动窗口，交给 dispose 收尾。
+   */
+  async function syncWindow(): Promise<void> {
+    if (disposed || desiredFullscreen === appliedFullscreen) {
+      return
+    }
+
+    if (desiredFullscreen) {
+      await enterWindowFullscreen()
+      appliedFullscreen = true
+      return
+    }
+
+    await appWindow.setFullscreen(false)
+    appliedFullscreen = false
+    if (owesMaximizeRestore) {
+      await appWindow.maximize()
+      owesMaximizeRestore = false
+    }
+  }
+
+  async function enterWindowFullscreen(): Promise<void> {
+    // 形态必须在动窗口之前问：这时窗口还没被这次全屏碰过，答案就是进全屏前的样子
+    const wasMaximized = await appWindow.isMaximized().catch((error: unknown) => {
+      onError?.(error)
+      return false
+    })
+
+    if (!wasMaximized) {
+      await appWindow.setFullscreen(true)
+      return
+    }
+
+    owesMaximizeRestore = true
+    await appWindow.setFullscreen(false)
+    await appWindow.unmaximize()
+    await appWindow.setFullscreen(true)
+  }
 
   return {
     notify(fullscreenActive) {
-      if (disposed) {
+      if (disposed || fullscreenActive === desiredFullscreen) {
         return
       }
 
-      // 形态还没问出来就按「非最大化」折算会漏掉最大化补正（进入全屏后底部留黑边）：
-      // 先只记住最新事件，等查询落定再算
-      if (maximizedQueryPending) {
-        deferredFullscreen = fullscreenActive
-        return
-      }
-
-      handleFullscreenChange(fullscreenActive)
+      desiredFullscreen = fullscreenActive
+      scheduleSync()
     },
+
     async dispose() {
       disposed = true
-      unlistenResize?.()
-      await queue.catch(() => undefined)
+      await queue
 
-      if (!needsWindowCleanup && !status.mirrored && !status.corrected) {
+      if (!appliedFullscreen && !owesMaximizeRestore) {
         return
       }
 
       try {
         await appWindow.setFullscreen(false)
-        if (status.corrected) {
+        if (owesMaximizeRestore) {
           await appWindow.maximize()
         }
       } catch (error) {
