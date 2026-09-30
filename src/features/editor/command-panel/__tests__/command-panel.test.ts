@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { commandEntries } from '~/features/editor/command-registry'
 
 import {
   buildCommandPanelGroupTagEntries,
   resolveCommandPanelVisibleCommands,
 } from '../command-panel'
+
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 describe('commandPanel', () => {
   it('会在全部和语句组视图中返回全部命令，在分类视图中过滤命令', () => {
@@ -43,6 +45,19 @@ describe('commandPanel', () => {
     )
 
     expect(entries.map(entry => entry.type)).not.toContain(commandType.return)
+  })
+
+  it('立绘差分只在 4.6.5 及以上的运行时的命令面板里出现', () => {
+    const typesFor = (capabilities?: EngineRuntimeCapabilities) =>
+      resolveCommandPanelVisibleCommands('all', [], commandEntries, capabilities).map(entry => entry.type)
+
+    // 上下文缺失时按最新能力处理，因此首启游戏也能看到该命令
+    expect(typesFor(undefined)).toContain(commandType.changeFigureDiff)
+    expect(typesFor(LEGACY_ENGINE_RUNTIME_CAPABILITIES)).not.toContain(commandType.changeFigureDiff)
+    expect(typesFor(LATEST_ENGINE_RUNTIME_CAPABILITIES)).toContain(commandType.changeFigureDiff)
+    // 只缺该能力（如 4.6.4）时同样不出现
+    expect(typesFor({ ...LATEST_ENGINE_RUNTIME_CAPABILITIES, changeFigureDiff: false }))
+      .not.toContain(commandType.changeFigureDiff)
   })
 
   it('会按命令标签聚合同类语句组条目', () => {

@@ -1,9 +1,11 @@
 import { diagnoseDuplicateSceneLabels, diagnoseMissingSceneLabels } from '~/domain/script/diagnostics'
 import { findUnsupportedFigurePositionReferences } from '~/domain/script/figure-position-diagnostics'
 import {
+  findChangeFigureDiffCompatReferences,
   findColorFormatReferences,
   findMissingSentenceResourceReferences,
   findReservedCallSceneArguments,
+  findSkippedFigureDiffModelReferences,
   findTransformWriteModeCompatReferences,
   findUnsupportedEngineModelReferences,
   findUnsupportedEngineOpusVocalReferences,
@@ -14,7 +16,7 @@ import type { SceneEditorDiagnostic } from './types'
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineModelCapabilities } from '~/domain/engine/model-capabilities'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
-import type { ColorFormatReference, TransformWriteModeCompatReference, UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
+import type { ChangeFigureDiffCompatReference, ColorFormatReference, SkippedFigureDiffModelReference, TransformWriteModeCompatReference, UnsupportedSceneSemanticReference } from '~/features/editor/command-registry/diagnostics'
 import type { AssetKey } from '~/services/resource-index/keys'
 
 interface DiagnoseSceneOptions {
@@ -78,6 +80,34 @@ function createTransformWriteModeCompatDiagnostic(
       const exhaustiveCheck: never = reference
       return exhaustiveCheck
     }
+  }
+}
+
+function createChangeFigureDiffCompatDiagnostic(
+  reference: ChangeFigureDiffCompatReference,
+  statementIndex: number,
+): SceneEditorDiagnostic {
+  return {
+    code: reference.code,
+    field: reference.source,
+    severity: 'warning',
+    source: 'engine',
+    statementIndex,
+    value: reference.value,
+  }
+}
+
+function createSkippedFigureDiffModelDiagnostic(
+  reference: SkippedFigureDiffModelReference,
+  statementIndex: number,
+): SceneEditorDiagnostic {
+  return {
+    code: reference.code,
+    field: reference.source,
+    severity: 'warning',
+    source: 'engine',
+    statementIndex,
+    value: reference.value,
   }
 }
 
@@ -147,6 +177,17 @@ export function diagnoseScene(
           value: reference.value,
         })
       }
+    }
+  }
+
+  // 模型跳过的判据是命令本身，与引擎能力无关，因此不受下面的能力上下文守卫影响
+  for (const [statementIndex, sentence] of sentences.entries()) {
+    if (!sentence) {
+      continue
+    }
+
+    for (const reference of findSkippedFigureDiffModelReferences(sentence)) {
+      diagnostics.push(createSkippedFigureDiffModelDiagnostic(reference, statementIndex))
     }
   }
 
@@ -229,6 +270,10 @@ export function diagnoseScene(
 
     for (const reference of findUnsupportedSceneSemanticReferences(sentence, options.runtimeCapabilities)) {
       diagnostics.push(createUnsupportedSceneSemanticDiagnostic(reference, statementIndex))
+    }
+
+    for (const reference of findChangeFigureDiffCompatReferences(sentence, options.runtimeCapabilities)) {
+      diagnostics.push(createChangeFigureDiffCompatDiagnostic(reference, statementIndex))
     }
 
     for (const reference of findTransformWriteModeCompatReferences(sentence, options.runtimeCapabilities)) {

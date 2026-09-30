@@ -1,3 +1,5 @@
+import { usesLegacySceneParser } from '~/domain/script/parser'
+
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
 export const WEBGAL_SCRIPT_LANGUAGE_ID = 'webgalscript'
@@ -10,7 +12,7 @@ export const WEBGAL_SCRIPT_LANGUAGE_IDS = [
 export interface TextEditorLanguageState {
   kind: string
   path: string
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'changeFigureDiff' | 'sceneSemantics'>
 }
 
 export interface RegisteredTextEditorLanguage {
@@ -24,7 +26,8 @@ export function resolveTextEditorLanguage(
 ): string {
   switch (state.kind) {
     case 'scene': {
-      return state.runtimeCapabilities?.sceneSemantics === false
+      // 高亮必须与实际解析该文本的解析器同源，否则命令表与颜色对不上
+      return usesLegacySceneParser(state.runtimeCapabilities)
         ? LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID
         : WEBGAL_SCRIPT_LANGUAGE_ID
     }

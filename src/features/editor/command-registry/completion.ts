@@ -67,6 +67,11 @@ export function buildArgumentCompletionInfo(
   capabilities?: EngineRuntimeCapabilities,
 ): ArgumentCompletionInfo[] {
   const entry = getCommandConfig(command)
+  // 命令整体不可用时（能力门控），它的参数也一律不推荐
+  if (!isRuntimeCapabilitySupported(entry, capabilities)) {
+    return []
+  }
+
   const result: ArgumentCompletionInfo[] = []
   if (command !== commandType.callScene) {
     result.push({
@@ -151,6 +156,10 @@ function getFieldForCompletion(
   capabilities?: EngineRuntimeCapabilities,
 ): FieldDef | undefined {
   const entry = getCommandConfig(command)
+  // 命令整体不可用时（能力门控），它的参数值也不提供候选
+  if (!isRuntimeCapabilitySupported(entry, capabilities)) {
+    return
+  }
   if (key === 'content') {
     return readContentField(entry)
   }

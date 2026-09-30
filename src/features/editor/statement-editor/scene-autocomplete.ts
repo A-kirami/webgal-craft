@@ -66,7 +66,7 @@ function collectSentenceAutocompleteOptions(
     return
   }
 
-  if (sentence.command === commandType.changeFigure) {
+  if (sentence.command === commandType.changeFigure || sentence.command === commandType.changeFigureDiff) {
     addOption(buckets.figureIds, readSentenceArgString(sentence, 'id'))
     return
   }

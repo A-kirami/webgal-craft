@@ -67,4 +67,29 @@ describe('rebuildReferenceSource', () => {
       statementId: 1,
     }])
   })
+
+  it('把立绘差分的内容记为该场景来源的立绘引用', async () => {
+    readTextFileMock.mockResolvedValue('changeFigureDiff:figures/smile.png -left -id=hero;')
+    const gamePath = AbsPath.from('/project')
+    const sourcePath = AbsPath.from('/project/game/scene/start.txt')
+
+    const result = await rebuildReferenceSource(
+      createEmptyAssetReferenceIndexSnapshot(),
+      gamePath,
+      sourcePath,
+      querySentenceResourceReferences,
+    )
+
+    expect(result.snapshot.records).toEqual([{
+      sourcePath,
+      sourceKind: 'scene',
+      assetKey: {
+        root: 'asset',
+        assetType: 'figure',
+        relativePath: 'figures/smile.png',
+      },
+      fieldKey: '__content__',
+      statementId: 1,
+    }])
+  })
 })

@@ -178,4 +178,68 @@ describe('buildArgumentCompletionInfo', () => {
 
     expect(options.map(option => option.value)).toEqual(['fig-left', 'fig-center', 'fig-right'])
   })
+
+  it('立绘差分的命令、参数键与文件建议按 4.6.5 能力提供', async () => {
+    expect(buildCommandCompletionInfo(t).map(item => item.commandRaw)).toContain('changeFigureDiff')
+
+    const keys = buildArgumentCompletionInfo(commandType.changeFigureDiff, t).map(item => item.key)
+    expect(keys).toEqual(expect.arrayContaining([
+      'left',
+      'right',
+      'id',
+      'animationFlag',
+      'mouthOpen',
+      'eyesClose',
+      'next',
+      'continue',
+    ]))
+
+    const files = await queryArgumentValueCompletions(commandType.changeFigureDiff, 'content', {
+      content: '',
+      listResources: () => [
+        { label: 'smile.png', value: 'smile.png' },
+        { label: 'hero.json', value: 'hero.json' },
+      ],
+    }, t)
+
+    expect(files).toEqual([{ label: 'smile.png', value: 'smile.png' }])
+  })
+
+  it('旧引擎不提供立绘差分的命令与参数补全', async () => {
+    expect(buildCommandCompletionInfo(t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+      .map(item => item.commandRaw)).not.toContain('changeFigureDiff')
+    expect(buildArgumentCompletionInfo(commandType.changeFigureDiff, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES))
+      .toEqual([])
+
+    const files = await queryArgumentValueCompletions(commandType.changeFigureDiff, 'content', {
+      content: '',
+      listResources: () => [{ label: 'smile.png', value: 'smile.png' }],
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    }, t)
+
+    expect(files).toEqual([])
+  })
+
+  it('命令级能力门控同时关掉参数键与参数值候选', async () => {
+    // 只靠字段级门控时，未声明 hiddenWhenCapability 的字段仍会漏出候选
+    const legacy = LEGACY_ENGINE_RUNTIME_CAPABILITIES
+    expect(buildArgumentCompletionInfo(commandType.changeFigureDiff, t, legacy)).toEqual([])
+
+    const results = await Promise.all(
+      ['content', 'position', 'id', 'animationFlag'].map(key =>
+        queryArgumentValueCompletions(commandType.changeFigureDiff, key, {
+          content: '',
+          listResources: () => [{ label: 'smile.png', value: 'smile.png' }],
+          runtimeCapabilities: legacy,
+          sceneOptions: {
+            figureIds: [{ label: 'hero', value: 'hero' }],
+            sceneLabels: [],
+            soundEffectIds: [],
+          },
+        }, t),
+      ),
+    )
+
+    expect(results).toEqual([[], [], [], []])
+  })
 })

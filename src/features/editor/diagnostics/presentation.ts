@@ -53,6 +53,12 @@ export function getEditorDiagnosticMessage(
     case 'unsupported-spine': {
       return t('edit.diagnostics.unsupportedSpine')
     }
+    case 'unsupported-change-figure-diff': {
+      return t('edit.diagnostics.unsupportedChangeFigureDiff')
+    }
+    case 'skipped-figure-diff-model': {
+      return t('edit.diagnostics.skippedFigureDiffModel')
+    }
     case 'unsupported-opus-vocal': {
       return t('edit.diagnostics.unsupportedOpusVocal')
     }

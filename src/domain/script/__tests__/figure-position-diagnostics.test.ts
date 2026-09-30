@@ -13,6 +13,13 @@ describe('findUnsupportedFigurePositionReferences', () => {
     ])
   })
 
+  it('识别 changeFigureDiff 的位置 flag', () => {
+    expect(findUnsupportedFigurePositionReferences(parseSentence('changeFigureDiff: smile.png -left14;')!)).toEqual([
+      { fieldKey: 'position', value: 'left14' },
+    ])
+    expect(findUnsupportedFigurePositionReferences(parseSentence('changeFigureDiff: smile.png -left -id=hero;')!)).toEqual([])
+  })
+
   it('识别动画和效果目标中的扩展立绘 target ID', () => {
     expect(findUnsupportedFigurePositionReferences(parseSentence('setAnimation: bounce -target=fig-left14;')!)).toEqual([
       { fieldKey: 'target', value: 'fig-left14' },

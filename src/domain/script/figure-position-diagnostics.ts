@@ -1,6 +1,7 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import {
+  FIGURE_POSITION_FLAG_COMMANDS,
   isExtendedFigurePosition,
   isExtendedFigurePositionTargetId,
 } from '~/domain/script/types'
@@ -23,7 +24,7 @@ export function findUnsupportedFigurePositionReferences(
     if (argument.value === true && isExtendedFigurePosition(argument.key)) {
       if (sentence.command === commandType.say) {
         references.push({ fieldKey: 'figureId', value: argument.key })
-      } else if (sentence.command === commandType.changeFigure) {
+      } else if (FIGURE_POSITION_FLAG_COMMANDS.includes(sentence.command)) {
         references.push({ fieldKey: 'position', value: argument.key })
       }
     }

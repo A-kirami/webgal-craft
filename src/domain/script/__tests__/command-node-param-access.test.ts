@@ -64,6 +64,24 @@ describe('命令节点参数访问', () => {
     expect(hasCommandNodeParam(node, position)).toBe(true)
   })
 
+  it('读取类型化 changeFigureDiff 参数', () => {
+    const node = parseCommandNode(mustParse('changeFigureDiff: smile.png -id=fig-main -right -animationFlag -mouthOpen=open.png -next;'))
+
+    expect(readCommandNodeParamValue(node, makeParamDef('id', 'text'))).toBe('fig-main')
+    expect(readCommandNodeParamValue(node, makeParamDef('position', 'select'))).toBe('right')
+    expect(readCommandNodeParamValue(node, makeParamDef('animationFlag', 'switch'))).toBe(true)
+    expect(readCommandNodeParamValue(node, makeParamDef('mouthOpen', 'text'))).toBe('open.png')
+    expect(readCommandNodeParamValue(node, makeParamDef('next', 'switch'))).toBe(true)
+    expect(readCommandNodeParamValue(node, makeParamDef('motion', 'text'))).toBeUndefined()
+    expect(hasCommandNodeParam(node, 'right')).toBe(true)
+  })
+
+  it.each(['left13', 'left14', 'right13', 'right14'])('读取 changeFigureDiff 扩展位置 -%s', (position) => {
+    const node = parseCommandNode(mustParse(`changeFigureDiff: smile.png -${position};`))
+    expect(readCommandNodeParamValue(node, makeParamDef('position', 'select'))).toBe(position)
+    expect(hasCommandNodeParam(node, position)).toBe(true)
+  })
+
   it('读取类型化 setAnimation 参数', () => {
     const sentence = mustParse('setAnimation: bounce -target=fig-left -writeDefault -keep -next;')
     const node = parseCommandNode(sentence)

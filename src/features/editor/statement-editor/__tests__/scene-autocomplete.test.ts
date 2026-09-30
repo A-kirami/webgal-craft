@@ -61,6 +61,19 @@ describe('buildSceneAutocompleteOptionsFromStatements', () => {
     expect(options.soundEffectIds).toEqual([{ label: 'fx-main', value: 'fx-main' }])
     expect(options.sceneLabels).toEqual([{ label: 'start', value: 'start' }])
   })
+
+  it('把立绘差分的 id 一并收进 figureIds', () => {
+    const statements = buildStatements([
+      'changeFigure: hero.png -id=hero;',
+      'changeFigureDiff: smile.png -id=hero -left;',
+      'changeFigureDiff: angry.png -id=hero-angry;',
+    ].join('\n'))
+
+    expect(buildSceneAutocompleteOptionsFromStatements(statements).figureIds).toEqual([
+      { label: 'hero', value: 'hero' },
+      { label: 'hero-angry', value: 'hero-angry' },
+    ])
+  })
 })
 
 describe('buildSceneAutocompleteOptionsFromText', () => {

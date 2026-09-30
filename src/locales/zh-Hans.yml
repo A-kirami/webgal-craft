@@ -789,6 +789,8 @@ edit:
     unsupportedCallSceneArgument: “调用场景”命令向子场景传递参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedLocalVariable: “局部变量”参数需要 WebGAL 4.6.3 或更高版本。
     unsupportedSpine: 当前引擎不支持 Spine 模型。
+    unsupportedChangeFigureDiff: 立绘差分需要 WebGAL 4.6.5 或更高版本；当前引擎会把这句当旁白读出。
+    skippedFigureDiffModel: 立绘差分只替换图片，不能用于 Live2D 或 Spine 模型；引擎会跳过本句。
     unsupportedColorFormat: "色值“{value}”的格式无法显示和编辑。"
     invalidColorFormat: "“{value}”不是有效的颜色值。"
     reservedCallSceneArgument: "“{argument}”为保留参数，不能用于 callScene。"
@@ -1037,6 +1039,7 @@ edit:
       comment: 注释
       changeBg: 背景
       changeFigure: 立绘
+      changeFigureDiff: 立绘差分
       miniAvatar: 小头像
       bgm: 背景音乐
       playEffect: 音效
@@ -1072,6 +1075,7 @@ edit:
       comment: 添加一条仅供编辑时查看的注释
       changeBg: 添加或切换背景图片
       changeFigure: 添加或切换角色立绘
+      changeFigureDiff: 替换同一立绘的图片，保留位置、变换与入退场
       miniAvatar: 添加或切换对话框旁的角色小头像
       bgm: 播放或切换背景音乐
       playEffect: 播放一段音效

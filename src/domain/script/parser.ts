@@ -7,8 +7,6 @@ import { handleError } from '~/utils/error-handler'
 import type { IScene, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 
-type SceneSyntaxCapabilities = Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
-
 function createBareReturnSentence(): ISentence {
   return {
     command: commandType.return,
@@ -49,16 +47,36 @@ function createWebgalParser(scriptConfig = SCRIPT_CONFIG): SceneParser {
 
 export const webgalParser = createWebgalParser()
 
+// 旧引擎不认识的命令要在解析器层面缺席：认识它就会把它当成可编辑命令改写，
+// 而旧引擎只会把整句当旁白读出；缺席后该行退化成 say 简写，commandRaw 保留原命令名，
+// 序列化后文本不变。诊断侧靠 commandRaw 反查该命令，见 command-registry/diagnostics.ts。
+function isUnsupportedByLegacyEngine(type: commandType): boolean {
+  return type === commandType.return || type === commandType.changeFigureDiff
+}
+
 export const LEGACY_WEBGAL_SCRIPT_CONFIG = SCRIPT_CONFIG.filter(
-  config => config.scriptType !== commandType.return,
+  config => !isUnsupportedByLegacyEngine(config.scriptType),
 )
 
 const legacyWebgalParser = createWebgalParser(
   LEGACY_WEBGAL_SCRIPT_CONFIG,
 )
 
+/** 选择解析器只需知道决定命令表的两项能力 */
+export type SceneSyntaxCapabilities = Pick<EngineRuntimeCapabilities, 'changeFigureDiff' | 'sceneSemantics'>
+
+/**
+ * 该引擎的脚本语法是否缺少完整命令表。
+ *
+ * 两个能力各自决定一部分命令是否缺席：sceneSemantics 决定 return，changeFigureDiff 决定立绘差分。
+ * 缺任一都只能用旧命令表；文本编辑器选高亮语言时也以此为准，避免两处判据漂移。
+ */
+export function usesLegacySceneParser(capabilities?: SceneSyntaxCapabilities): boolean {
+  return capabilities?.sceneSemantics === false || capabilities?.changeFigureDiff === false
+}
+
 function resolveWebgalParser(capabilities?: SceneSyntaxCapabilities): SceneParser {
-  return capabilities?.sceneSemantics === false ? legacyWebgalParser : webgalParser
+  return usesLegacySceneParser(capabilities) ? legacyWebgalParser : webgalParser
 }
 
 export function parseScene(

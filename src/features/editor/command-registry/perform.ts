@@ -3,7 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { classifyEngineModelReference } from '~/domain/engine/model-capabilities'
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 
-import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, CONTINUE, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, FIGURE_EXTENSIONS, FIGURE_ID, IGNORE_DEFAULT, IMAGE_EXTENSIONS, NEXT, ORDER, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
+import { AUDIO_EXTENSIONS, BACKGROUND_EXTENSIONS, CONTINUE, DEFAULT_ENTER_DURATION, DEFAULT_EXIT_DURATION, EFFECT_DURATION, EFFECT_EASE, EFFECT_TRANSFORM, ENTER_ANIMATION, EXIT_ANIMATION, EYES_CLOSE, EYES_OPEN, FIGURE_ANIMATION_FLAG, FIGURE_EXTENSIONS, FIGURE_ID, FIGURE_POSITION, IGNORE_DEFAULT, IMAGE_EXTENSIONS, MOUTH_CLOSE, MOUTH_HALF_OPEN, MOUTH_OPEN, NEXT, ORDER, SERIES, SOUND_EFFECT_ID, UNLOCK_NAME, VOLUME } from './common-params'
 import { arg, commandRaw, content, UNSPECIFIED } from './schema'
 
 import type { CommandEntry } from './schema'
@@ -120,22 +120,7 @@ export const performEntries: CommandEntry[] = [
     hasEffectEditor: true,
     fields: [
       content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'figure', extensions: FIGURE_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.figure') } }),
-      arg({
-        key: 'position',
-        label: t => t('edit.visualEditor.params.position'),
-        type: 'choice',
-        mode: 'flag',
-        variant: { panel: 'figure-position' },
-        options: [
-          { label: t => t('edit.visualEditor.options.left'), value: 'left' },
-          { label: t => t('edit.visualEditor.options.left14'), value: 'left14' },
-          { label: t => t('edit.visualEditor.options.left13'), value: 'left13' },
-          { label: t => t('edit.visualEditor.options.center'), value: UNSPECIFIED },
-          { label: t => t('edit.visualEditor.options.right13'), value: 'right13' },
-          { label: t => t('edit.visualEditor.options.right14'), value: 'right14' },
-          { label: t => t('edit.visualEditor.options.right'), value: 'right' },
-        ],
-      }),
+      arg(FIGURE_POSITION),
       arg({ key: 'zIndex', label: t => t('edit.visualEditor.params.zIndex'), type: 'number' }),
       arg({ ...FIGURE_ID, key: 'id', label: t => t('edit.visualEditor.params.figureId') }),
       arg({
@@ -172,12 +157,12 @@ export const performEntries: CommandEntry[] = [
       arg(EXIT_ANIMATION),
       arg(DEFAULT_ENTER_DURATION),
       arg(DEFAULT_EXIT_DURATION),
-      arg({ key: 'animationFlag', label: t => t('edit.visualEditor.params.animationFlag'), tooltip: { on: t => t('edit.visualEditor.paramTooltips.animationFlag.on'), off: t => t('edit.visualEditor.paramTooltips.animationFlag.off') }, type: 'switch', defaultValue: false, visibleWhenContent: isImageContent, advanced: true }),
-      arg({ key: 'mouthOpen', label: t => t('edit.visualEditor.params.mouthOpen'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
-      arg({ key: 'mouthHalfOpen', label: t => t('edit.visualEditor.params.mouthHalfOpen'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
-      arg({ key: 'mouthClose', label: t => t('edit.visualEditor.params.mouthClose'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
-      arg({ key: 'eyesOpen', label: t => t('edit.visualEditor.params.eyesOpen'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
-      arg({ key: 'eyesClose', label: t => t('edit.visualEditor.params.eyesClose'), type: 'text', visibleWhenContent: isImageContent, advanced: true, visibleWhen: { key: 'animationFlag', value: true } }),
+      arg({ ...FIGURE_ANIMATION_FLAG, visibleWhenContent: isImageContent }),
+      arg({ ...MOUTH_OPEN, visibleWhenContent: isImageContent }),
+      arg({ ...MOUTH_HALF_OPEN, visibleWhenContent: isImageContent }),
+      arg({ ...MOUTH_CLOSE, visibleWhenContent: isImageContent }),
+      arg({ ...EYES_OPEN, visibleWhenContent: isImageContent }),
+      arg({ ...EYES_CLOSE, visibleWhenContent: isImageContent }),
       arg({ key: 'bounds', label: t => t('edit.visualEditor.params.bounds'), type: 'text', visibleWhenContent: isLive2dContent, advanced: true }),
       arg({
         key: 'blink',
@@ -215,6 +200,31 @@ export const performEntries: CommandEntry[] = [
         ],
       }),
       arg(IGNORE_DEFAULT),
+      arg(NEXT),
+      arg(CONTINUE),
+    ],
+  },
+  {
+    // 引擎只替换图片，位置、变换、层级、混合模式与入退场都由既有立绘保留：
+    // 本命令既不写变换参数，也不提供效果编辑器。
+    type: commandType.changeFigureDiff,
+    label: t => t('edit.visualEditor.commands.changeFigureDiff'),
+    description: t => t('edit.visualEditor.commandDescriptions.changeFigureDiff'),
+    // 图标与 changeFigure 同族（user 系列），点明它改的是既有立绘而不是新增图片资源
+    icon: 'i-lucide-user-plus',
+    category: 'perform',
+    requiredCapability: 'changeFigureDiff',
+    fields: [
+      content({ key: 'file', label: t => t('edit.visualEditor.params.fileName'), type: 'file', fileConfig: { assetType: 'figure', extensions: IMAGE_EXTENSIONS, title: t => t('edit.visualEditor.filePicker.figure') } }),
+      arg(FIGURE_POSITION),
+      arg({ ...FIGURE_ID, key: 'id', label: t => t('edit.visualEditor.params.figureId') }),
+      // 与 changeFigure 一致：模型内容会被引擎整句跳过，不提供口型眨眼图写入入口
+      arg({ ...FIGURE_ANIMATION_FLAG, visibleWhenContent: isImageContent }),
+      arg({ ...MOUTH_OPEN, visibleWhenContent: isImageContent }),
+      arg({ ...MOUTH_HALF_OPEN, visibleWhenContent: isImageContent }),
+      arg({ ...MOUTH_CLOSE, visibleWhenContent: isImageContent }),
+      arg({ ...EYES_OPEN, visibleWhenContent: isImageContent }),
+      arg({ ...EYES_CLOSE, visibleWhenContent: isImageContent }),
       arg(NEXT),
       arg(CONTINUE),
     ],

@@ -22,7 +22,7 @@ describe('resolveTextEditorLanguage', () => {
     expect(resolveTextEditorLanguage({
       kind: 'scene',
       path: '/game/scene.txt',
-      runtimeCapabilities: { sceneSemantics: true },
+      runtimeCapabilities: { changeFigureDiff: true, sceneSemantics: true },
     }, registeredLanguages)).toBe(WEBGAL_SCRIPT_LANGUAGE_ID)
   })
 
@@ -30,7 +30,15 @@ describe('resolveTextEditorLanguage', () => {
     expect(resolveTextEditorLanguage({
       kind: 'scene',
       path: '/game/scene.txt',
-      runtimeCapabilities: { sceneSemantics: false },
+      runtimeCapabilities: { changeFigureDiff: false, sceneSemantics: false },
+    }, registeredLanguages)).toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+  })
+
+  it('只缺立绘差分能力的运行时同样使用旧语法高亮', () => {
+    expect(resolveTextEditorLanguage({
+      kind: 'scene',
+      path: '/game/scene.txt',
+      runtimeCapabilities: { changeFigureDiff: false, sceneSemantics: true },
     }, registeredLanguages)).toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
   })
 

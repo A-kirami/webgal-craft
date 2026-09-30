@@ -25,7 +25,7 @@ const {
   allowMerge: boolean
   localContent: string
   externalContent: string
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'changeFigureDiff' | 'sceneSemantics'>
   onKeepLocal?: () => void | Promise<void>
   onLoadExternal?: () => void | Promise<void>
   onMerge?: (content: string) => void | Promise<void>

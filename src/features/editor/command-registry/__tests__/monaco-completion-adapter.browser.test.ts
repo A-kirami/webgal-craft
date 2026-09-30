@@ -185,6 +185,7 @@ describe('getArgKeyCompletions', () => {
 
   it('旧引擎不提供扩展立绘位置参数', () => {
     const completions = getArgKeyCompletions(range, commandType.say, true, {
+      changeFigureDiff: false,
       figurePositions: false,
       multilineStatements: false,
       opusVocalShorthand: false,

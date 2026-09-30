@@ -42,6 +42,7 @@ const SENTENCE_FIXTURES: SentenceFixture[] = [
   { name: 'return-with-value', raw: 'return:success;', expectedCommand: commandType.return },
   { name: 'call-scene-with-return-value', raw: 'callScene:battle.txt -enemy=slime -writeReturnTo=result;', expectedCommand: commandType.callScene },
   { name: 'change-bg', raw: 'changeBg: bg.jpg -next -duration=300;', expectedCommand: commandType.changeBg },
+  { name: 'change-figure-diff', raw: 'changeFigureDiff:smile.png -left -id=hero -animationFlag=on -mouthOpen=smile_open.png;', expectedCommand: commandType.changeFigureDiff },
 ]
 
 function pickComparableSentenceFields(sentence: NonNullable<ReturnType<typeof parseSentence>>) {
@@ -94,6 +95,18 @@ describe('脚本语句往返', () => {
       expect(pickComparableSentenceFields(second!)).toEqual(pickComparableSentenceFields(first!))
     })
   }
+})
+
+describe('立绘差分往返', () => {
+  it('参数顺序与写法在序列化后保持原样', () => {
+    for (const raw of [
+      'changeFigureDiff:smile.png -left -id=hero -animationFlag=on -mouthOpen=smile_open.png;',
+      'changeFigureDiff:smile.png -left -id=hero -animationFlag -mouthOpen=smile_open.png;',
+      'changeFigureDiff:smile.png -id=hero -continue;',
+    ]) {
+      expect(serializeSentence(parseSentence(raw)!)).toBe(raw)
+    }
+  })
 })
 
 describe('content', () => {
@@ -279,5 +292,43 @@ describe('sentence', () => {
     expect(perLine).toHaveLength(2)
     expect(buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toBe(perLine)
     expect(buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(multiline)
+  })
+
+  it('立绘差分只在支持它的运行时按命令解析', () => {
+    const raw = 'changeFigureDiff:smile.png -left -id=hero;'
+
+    const latest = parseSentence(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+    expect(latest).toMatchObject({
+      command: commandType.changeFigureDiff,
+      content: 'smile.png',
+    })
+    expect(serializeSentence(latest!)).toBe(raw)
+
+    // 旧运行时的解析器不认识该命令，整句退化为旁白；commandRaw 仍是原命令名，
+    // 序列化后文本不变，只是语义不再是命令。
+    const legacy = parseSentence(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    expect(legacy).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'changeFigureDiff',
+      content: 'smile.png',
+    })
+    expect(serializeSentence(legacy!)).toBe(raw)
+  })
+
+  it('只缺立绘差分能力的运行时按旧语法解析', () => {
+    const raw = 'changeFigureDiff:smile.png -left -id=hero;'
+
+    // 4.6.3 引擎有场景语义但没有立绘差分，该命令必须按旧语法（旁白）解析
+    expect(parseSentence(raw, { changeFigureDiff: false, sceneSemantics: true })).toMatchObject({
+      command: commandType.say,
+      commandRaw: 'changeFigureDiff',
+    })
+    // 能力是 4.6.5 起的整体开关：sceneSemantics 未开启时不会单独启用新命令
+    expect(parseSentence(raw, { changeFigureDiff: true, sceneSemantics: false })).toMatchObject({
+      command: commandType.say,
+    })
+    expect(parseSentence(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject({
+      command: commandType.changeFigureDiff,
+    })
   })
 })

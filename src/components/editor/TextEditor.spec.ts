@@ -372,14 +372,14 @@ describe('TextEditor', () => {
 
   it('会将场景运行时能力传入诊断器', async () => {
     const { state } = createHarness()
-    state.runtimeCapabilities = { figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false, transformFrom: false }
+    state.runtimeCapabilities = { changeFigureDiff: false, figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false, transformFrom: false }
 
     await renderTextEditor(state)
     await nextTick()
 
     expect(updateEditorDiagnosticsMock).toHaveBeenCalledWith(
       { id: 'model-1' },
-      { figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false, transformFrom: false },
+      { changeFigureDiff: false, figurePositions: false, multilineStatements: false, opusVocalShorthand: false, sceneSemantics: false, transformFrom: false },
     )
   })
 
@@ -812,7 +812,7 @@ describe('TextEditor', () => {
 
   it('出现非空选区时会清除多行语句高亮', async () => {
     const { state } = createHarness('/project/scene-statement-highlight.txt')
-    state.runtimeCapabilities = { figurePositions: true, multilineStatements: true, opusVocalShorthand: true, sceneSemantics: true, transformFrom: true }
+    state.runtimeCapabilities = { changeFigureDiff: true, figurePositions: true, multilineStatements: true, opusVocalShorthand: true, sceneSemantics: true, transformFrom: true }
     monacoMockState.editorInstance.getModel.mockReturnValue(createMonacoModel([
       'changeFigure:stand.webp',
       '  -id=hero;',

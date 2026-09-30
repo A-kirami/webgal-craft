@@ -3,7 +3,7 @@ import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LEGACY_WEBGAL_SCRIPT_CONFIG, parseSceneOrEmpty } from '~/domain/script/parser'
-import { buildStatementSourceRanges } from '~/domain/script/sentence'
+import { buildStatementSourceRanges, createParseCapabilitiesKey } from '~/domain/script/sentence'
 import { getCommandConfig } from '~/features/editor/command-registry'
 import { editorDynamicOptionSources } from '~/features/editor/command-registry/dynamic-options'
 import { readContentField } from '~/features/editor/command-registry/schema'
@@ -33,8 +33,8 @@ const TEMP_SCENE_URL = 'tempUrl'
 const CONTINUATION_MARKER_PATTERN = /^\s+([-|])/
 
 interface CompletionSourceRangesCacheEntry {
-  multilineStatements: boolean | undefined
-  sceneSemantics: boolean | undefined
+  /** 由 createParseCapabilitiesKey 生成，与整篇解析缓存用同一份能力列表 */
+  capabilitiesKey: string
   ranges: StatementSourceRange[]
   version: number
 }
@@ -718,21 +718,15 @@ function getCompletionStatementSourceRanges(
   capabilities: StatementSyntaxCapabilities | undefined,
 ): StatementSourceRange[] {
   const version = model.getVersionId()
-  const multilineStatements = capabilities?.multilineStatements
-  const sceneSemantics = capabilities?.sceneSemantics
+  const capabilitiesKey = createParseCapabilitiesKey(capabilities)
   const cached = completionSourceRangesCache.get(model)
-  if (
-    cached?.version === version
-    && cached.multilineStatements === multilineStatements
-    && cached.sceneSemantics === sceneSemantics
-  ) {
+  if (cached?.version === version && cached.capabilitiesKey === capabilitiesKey) {
     return cached.ranges
   }
 
   const ranges = buildStatementSourceRanges(model.getValue(), capabilities)
   completionSourceRangesCache.set(model, {
-    multilineStatements,
-    sceneSemantics,
+    capabilitiesKey,
     ranges,
     version,
   })
