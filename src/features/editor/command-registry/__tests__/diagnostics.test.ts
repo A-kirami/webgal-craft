@@ -184,18 +184,17 @@ describe('findChangeFigureDiffCompatReferences', () => {
     }])
   })
 
-  it('旧运行时解析器不认识该命令时按 commandRaw 反查', () => {
-    const legacyParsed = parseSentence(
-      'changeFigureDiff:smile.png -left -id=hero;',
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
-    )!
-    // 前置条件：旧运行时下它确实是 say 简写，命令名只留在 commandRaw 里
+  it('解析器不认识该命令时按 commandRaw 反查', () => {
+    // 4.6.3 / 4.6.4：唯一会走退化路径的能力组合，此时命令名只留在 commandRaw 里
+    const withoutChangeFigureDiff = { changeFigureDiff: false, sceneSemantics: true }
+    const legacyParsed = parseSentence('changeFigureDiff:smile.png -left -id=hero;', withoutChangeFigureDiff)!
+
     expect(legacyParsed).toMatchObject({
       command: commandType.say,
       commandRaw: 'changeFigureDiff',
     })
 
-    expect(findChangeFigureDiffCompatReferences(legacyParsed, LEGACY_ENGINE_RUNTIME_CAPABILITIES))
+    expect(findChangeFigureDiffCompatReferences(legacyParsed, withoutChangeFigureDiff))
       .toEqual([{
         code: 'unsupported-change-figure-diff',
         source: { kind: 'content' },
@@ -204,13 +203,15 @@ describe('findChangeFigureDiffCompatReferences', () => {
   })
 
   it('普通对白不会被误判为立绘差分', () => {
+    const capabilities = { changeFigureDiff: false, sceneSemantics: true }
+
     expect(findChangeFigureDiffCompatReferences(
-      parseSentence('Alice: changeFigureDiff 是什么;', LEGACY_ENGINE_RUNTIME_CAPABILITIES)!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      parseSentence('Alice: changeFigureDiff 是什么;', capabilities)!,
+      capabilities,
     )).toEqual([])
     expect(findChangeFigureDiffCompatReferences(
-      parseSentence('changeFigure:hero.png -left;', LEGACY_ENGINE_RUNTIME_CAPABILITIES)!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      parseSentence('changeFigure:hero.png -left;', capabilities)!,
+      capabilities,
     )).toEqual([])
   })
 

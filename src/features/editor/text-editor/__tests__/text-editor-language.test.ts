@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
+import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
 import {
-  LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID,
   resolveTextEditorLanguage,
+  resolveWebgalScriptLanguageId,
   WEBGAL_SCRIPT_LANGUAGE_ID,
 } from '~/features/editor/text-editor/text-editor-language'
+
+import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+
+const languageIdFor = (capabilities: Pick<EngineRuntimeCapabilities, 'changeFigureDiff' | 'sceneSemantics'>) =>
+  resolveWebgalScriptLanguageId(resolveWebgalScriptConfigKey(capabilities))
 
 describe('resolveTextEditorLanguage', () => {
   const registeredLanguages = [
@@ -27,19 +33,23 @@ describe('resolveTextEditorLanguage', () => {
   })
 
   it('旧运行时场景文件使用不含 return 命令的语法高亮', () => {
+    const capabilities = { changeFigureDiff: false, sceneSemantics: false }
+
     expect(resolveTextEditorLanguage({
       kind: 'scene',
       path: '/game/scene.txt',
-      runtimeCapabilities: { changeFigureDiff: false, sceneSemantics: false },
-    }, registeredLanguages)).toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+      runtimeCapabilities: capabilities,
+    }, registeredLanguages)).toBe(languageIdFor(capabilities))
   })
 
-  it('只缺立绘差分能力的运行时同样使用旧语法高亮', () => {
+  it('只缺立绘差分能力的运行时保留 return，只降级该命令的高亮', () => {
+    const capabilities = { changeFigureDiff: false, sceneSemantics: true }
+
     expect(resolveTextEditorLanguage({
       kind: 'scene',
       path: '/game/scene.txt',
-      runtimeCapabilities: { changeFigureDiff: false, sceneSemantics: true },
-    }, registeredLanguages)).toBe(LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+      runtimeCapabilities: capabilities,
+    }, registeredLanguages)).toBe(languageIdFor(capabilities))
   })
 
   it('动画文件固定返回 json', () => {

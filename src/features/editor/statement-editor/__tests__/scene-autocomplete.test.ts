@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildStatements } from '~/domain/script/sentence'
 
 import { buildSceneAutocompleteOptionsFromStatements, buildSceneAutocompleteOptionsFromText } from '../scene-autocomplete'
@@ -86,9 +85,12 @@ describe('buildSceneAutocompleteOptionsFromText', () => {
     })
   })
 
-  it('按运行时能力解析文本，旧运行时将 return 保持为对白', () => {
+  it('按运行时能力解析文本，缺少场景语义的运行时将 return 保持为对白', () => {
     expect(buildSceneAutocompleteOptionsFromText('return:success;').speakers).toEqual([])
-    expect(buildSceneAutocompleteOptionsFromText('return:success;', LEGACY_ENGINE_RUNTIME_CAPABILITIES).speakers).toEqual([
+    expect(buildSceneAutocompleteOptionsFromText(
+      'return:success;',
+      { changeFigureDiff: false, multilineStatements: false, sceneSemantics: false },
+    ).speakers).toEqual([
       { label: 'return', value: 'return' },
     ])
   })

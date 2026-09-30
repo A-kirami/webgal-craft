@@ -181,9 +181,9 @@ export function findSkippedFigureDiffModelReferences(
 /**
  * 立绘差分是 4.6.5 起的能力：旧引擎只把整句当旁白读出，不执行也不报错。
  *
- * 旧运行时的解析器不认识该命令，这句会退化成 say 简写（commandRaw 就是原命令名），
- * 因此不能只看 command，必须同时认 commandRaw —— 否则版本诊断在任何旧引擎上都不会触发。
- * 该命令在 domain/script/parser.ts 的 LEGACY_WEBGAL_SCRIPT_CONFIG 里被排除，两处判据必须同时成立。
+ * 旧命令表里没有该命令，4.6.3 / 4.6.4 上这句会退化成 say 简写（commandRaw 就是原命令名），
+ * 因此不能只看 command，必须同时认 commandRaw —— 只看 command 时这两档引擎上不会触发诊断。
+ * 该命令在 domain/script/parser.ts 的 diff-legacy 档里被排除，两处判据必须同时成立。
  */
 export function findChangeFigureDiffCompatReferences(
   sentence: ISentence,

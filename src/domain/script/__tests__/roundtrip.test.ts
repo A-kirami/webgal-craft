@@ -294,19 +294,12 @@ describe('sentence', () => {
     expect(buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(multiline)
   })
 
-  it('立绘差分只在支持它的运行时按命令解析', () => {
+  it('缺少场景语义的运行时把立绘差分退化为旁白但保留原命令名', () => {
     const raw = 'changeFigureDiff:smile.png -left -id=hero;'
-
-    const latest = parseSentence(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)
-    expect(latest).toMatchObject({
-      command: commandType.changeFigureDiff,
-      content: 'smile.png',
-    })
-    expect(serializeSentence(latest!)).toBe(raw)
-
-    // 旧运行时的解析器不认识该命令，整句退化为旁白；commandRaw 仍是原命令名，
-    // 序列化后文本不变，只是语义不再是命令。
     const legacy = parseSentence(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    // 缺少场景语义的运行时命令表最残缺：该命令退化成 say 简写，commandRaw 仍是原命令名，
+    // 序列化后文本不变，只是语义不再是命令。
     expect(legacy).toMatchObject({
       command: commandType.say,
       commandRaw: 'changeFigureDiff',
@@ -315,20 +308,19 @@ describe('sentence', () => {
     expect(serializeSentence(legacy!)).toBe(raw)
   })
 
-  it('只缺立绘差分能力的运行时按旧语法解析', () => {
+  it('只缺立绘差分能力的运行时不认识该命令，但仍保留 return', () => {
     const raw = 'changeFigureDiff:smile.png -left -id=hero;'
+    // 4.6.3 / 4.6.4 引擎：该命令必须按旧语法（旁白）解析
+    const withoutChangeFigureDiff = { changeFigureDiff: false, sceneSemantics: true }
 
-    // 4.6.3 引擎有场景语义但没有立绘差分，该命令必须按旧语法（旁白）解析
-    expect(parseSentence(raw, { changeFigureDiff: false, sceneSemantics: true })).toMatchObject({
+    expect(parseSentence(raw, withoutChangeFigureDiff)).toMatchObject({
       command: commandType.say,
       commandRaw: 'changeFigureDiff',
     })
-    // 能力是 4.6.5 起的整体开关：sceneSemantics 未开启时不会单独启用新命令
-    expect(parseSentence(raw, { changeFigureDiff: true, sceneSemantics: false })).toMatchObject({
-      command: commandType.say,
+    // 同一次能力选择里 return 仍是命令，不能因为缺立绘差分而一起丢掉
+    expect(parseSentence('return;', withoutChangeFigureDiff)).toMatchObject({
+      command: commandType.return,
     })
-    expect(parseSentence(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject({
-      command: commandType.changeFigureDiff,
-    })
+    expect(serializeSentence(parseSentence(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)!)).toBe(raw)
   })
 })

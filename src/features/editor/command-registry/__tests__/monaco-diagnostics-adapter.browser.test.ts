@@ -15,10 +15,15 @@ vi.mock('~/plugins/i18n', () => ({
 }))
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
-import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
+import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
+import { resolveWebgalScriptLanguageId } from '~/features/editor/text-editor/text-editor-language'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 
 const OWNER = 'webgal-editor-diagnostics'
+/** 能力全关时的语言档位：return 与立绘差分都按旁白着色 */
+const LEGACY_LANGUAGE_ID = resolveWebgalScriptLanguageId(
+  resolveWebgalScriptConfigKey(LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+)
 const models: monaco.editor.ITextModel[] = []
 let modelId = 0
 
@@ -39,7 +44,7 @@ function readMarkers(model: monaco.editor.ITextModel): monaco.editor.IMarker[] {
 describe('updateEditorDiagnostics', () => {
   beforeAll(() => {
     monaco.languages.register({ id: 'webgalscript' })
-    monaco.languages.register({ id: LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID })
+    monaco.languages.register({ id: LEGACY_LANGUAGE_ID })
   })
 
   beforeEach(() => {
@@ -381,7 +386,7 @@ describe('updateEditorDiagnostics', () => {
       hasAssetKey: vi.fn(() => true),
     })
 
-    const model = createModel('setVar: result=1 -local;', LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+    const model = createModel('setVar: result=1 -local;', LEGACY_LANGUAGE_ID)
     updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({

@@ -22,6 +22,11 @@ const CAPABILITY_MINIMUM_VERSIONS: Record<EngineRuntimeCapability, string> = {
   transformFrom: '4.6.5',
 }
 
+/** 某项能力的最低引擎版本；受能力门控的语法按它推导档位，不要另抄一份 */
+export function capabilityMinimumVersion(capability: EngineRuntimeCapability): string {
+  return CAPABILITY_MINIMUM_VERSIONS[capability]
+}
+
 export const LEGACY_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
   changeFigureDiff: false,
   figurePositions: false,
