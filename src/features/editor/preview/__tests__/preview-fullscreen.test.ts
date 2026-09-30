@@ -17,15 +17,22 @@ interface FakeWindow {
   appWindow: PreviewFullscreenWindow
   calls: string[]
   failOn: (call?: string) => void
+  /** 挂起 isMaximized 的应答，之后用 releaseMaximized / rejectMaximized 放行 */
+  holdMaximized: () => void
+  rejectMaximized: () => void
+  /** 放行一个挂起的应答；index 用来乱序放行，验证过期结果被丢弃 */
+  releaseMaximized: (value: boolean, index?: number) => void
   resize: () => void
   setMaximized: (value: boolean) => void
 }
 
-/** 假窗口：记录调用顺序，可注入最大化形态与失败点。 */
+/** 假窗口：记录调用顺序，可注入最大化形态、挂起形态查询与失败点。 */
 function createFakeWindow(): FakeWindow {
   const calls: string[] = []
   let failing: string | undefined
   let maximized = false
+  let holding = false
+  const held: { reject: (error: unknown) => void, resolve: (value: boolean) => void }[] = []
   let resizeHandler: (() => void) | undefined
   const record = (call: string) => {
     calls.push(call)
@@ -39,12 +46,26 @@ function createFakeWindow(): FakeWindow {
     failOn: (call) => {
       failing = call
     },
+    holdMaximized: () => {
+      holding = true
+    },
+    rejectMaximized: () => {
+      held.splice(0, 1)[0]?.reject(new Error('失败: isMaximized'))
+    },
+    releaseMaximized: (value, index = 0) => {
+      held.splice(index, 1)[0]?.resolve(value)
+    },
     resize: () => resizeHandler?.(),
     setMaximized: (value) => {
       maximized = value
     },
     appWindow: {
-      isMaximized: () => Promise.resolve(maximized),
+      isMaximized: () =>
+        holding
+          ? new Promise<boolean>((resolve, reject) => {
+              held.push({ reject, resolve })
+            })
+          : Promise.resolve(maximized),
       maximize: () => {
         record('maximize')
         return Promise.resolve()
@@ -247,6 +268,86 @@ describe('createPreviewFullscreenDriver', () => {
     await flushQueue()
 
     expect(calls).toContain('maximize')
+  })
+
+  it('初始形态查询未落定时的全屏事件等查询结果再处理', async () => {
+    const { calls, appWindow, holdMaximized, releaseMaximized } = createFakeWindow()
+    holdMaximized()
+    const driver = createPreviewFullscreenDriver(appWindow)
+
+    driver.notify(true)
+    await flushQueue()
+    // 形态还没问出来，不能先按「非最大化」把窗口设成全屏
+    expect(calls).toEqual([])
+
+    releaseMaximized(true)
+    await flushQueue()
+
+    expect(calls).toEqual(['setFullscreen(false)', 'unmaximize', 'setFullscreen(true)'])
+  })
+
+  it('形态查询失败时挂起的事件按非最大化处理', async () => {
+    const { appWindow, calls, holdMaximized, rejectMaximized, setMaximized } = createFakeWindow()
+    setMaximized(true)
+    holdMaximized()
+    const driver = createPreviewFullscreenDriver(appWindow)
+
+    driver.notify(true)
+    await flushQueue()
+    rejectMaximized()
+    await flushQueue()
+
+    expect(calls).toEqual(['setFullscreen(true)'])
+  })
+
+  it('查询在途时只保留最新的全屏事件', async () => {
+    const { appWindow, calls, holdMaximized, releaseMaximized } = createFakeWindow()
+    holdMaximized()
+    const driver = createPreviewFullscreenDriver(appWindow)
+
+    driver.notify(true)
+    driver.notify(false)
+    releaseMaximized(true)
+    await flushQueue()
+
+    // 最后一个事件才是当前状态：进来又立刻退出，本来就没有窗口动作
+    expect(calls).toEqual([])
+  })
+
+  it('乱序落定的过期形态查询不覆盖最新结果', async () => {
+    const { appWindow, calls, holdMaximized, releaseMaximized, resize, setMaximized } = createFakeWindow()
+    setMaximized(true)
+    holdMaximized()
+    const driver = createPreviewFullscreenDriver(appWindow)
+    releaseMaximized(true)
+    await flushQueue()
+
+    // 两次 resize 各起一次查询，最新一次说「不是最大化」
+    resize()
+    resize()
+    releaseMaximized(false, 1)
+    await flushQueue()
+    // 最老的一次查询此刻才落定，说「是最大化」，但它已经过期
+    releaseMaximized(true)
+    await flushQueue()
+
+    driver.notify(true)
+    await flushQueue()
+
+    expect(calls).toEqual(['setFullscreen(true)'])
+  })
+
+  it('初始查询未落定就卸载时，挂起的事件不再动窗口', async () => {
+    const { appWindow, calls, holdMaximized, releaseMaximized } = createFakeWindow()
+    holdMaximized()
+    const driver = createPreviewFullscreenDriver(appWindow)
+
+    driver.notify(true)
+    await driver.dispose()
+    releaseMaximized(true)
+    await flushQueue()
+
+    expect(calls).toEqual([])
   })
 
   it('动作失败时保留还原所有权，卸载时兜底', async () => {

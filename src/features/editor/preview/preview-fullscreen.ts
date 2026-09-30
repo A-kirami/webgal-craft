@@ -108,6 +108,9 @@ export async function applyPreviewFullscreenAction(
  *
  * 窗口动作串行执行：快速进出全屏或面板卸载都不会让两次动作交错，失败时保留「窗口形态由预览改过」
  * 的所有权，交给 dispose 兜底。
+ *
+ * isMaximized 要跨 IPC，初始形态还没落定时进来的一次全屏事件会等到查询落定再折算，避免拿默认的
+ * 「非最大化」进全屏而漏掉补正。
  */
 export function createPreviewFullscreenDriver(
   appWindow: PreviewFullscreenWindow,
@@ -119,6 +122,30 @@ export function createPreviewFullscreenDriver(
   let queue = Promise.resolve()
   let unlistenResize: (() => void) | undefined
   let disposed = false
+  /** 形态查询的序号：只有最后一次查询的结果算数 */
+  let maximizedQueryId = 0
+  /** 还有一次 isMaximized 没落定，windowWasMaximized 暂时不可信 */
+  let maximizedQueryPending = false
+  /** 查询在途时收到的最新全屏事件，等查询落定后再按解析出来的形态折算 */
+  let deferredFullscreen: boolean | undefined
+
+  function handleFullscreenChange(fullscreenActive: boolean): void {
+    const next = previewFullscreenTransition(status, { fullscreenActive, windowWasMaximized })
+    status = { mirrored: next.mirrored, corrected: next.corrected }
+    if (next.action.kind !== 'none') {
+      run(next.action)
+    }
+  }
+
+  function flushDeferredFullscreen(): void {
+    const fullscreenActive = deferredFullscreen
+    deferredFullscreen = undefined
+    if (fullscreenActive === undefined || disposed) {
+      return
+    }
+
+    handleFullscreenChange(fullscreenActive)
+  }
 
   // 全屏那一次 resize 正是要修的形态变化，只在非全屏时记录
   function syncWindowWasMaximized(): void {
@@ -126,12 +153,25 @@ export function createPreviewFullscreenDriver(
       return
     }
 
+    const id = ++maximizedQueryId
+    maximizedQueryPending = true
     void appWindow.isMaximized()
       .then((maximized) => {
+        // 过期查询不覆盖形态；已经镜像到全屏时也不再改，那正是进入全屏前的记录
+        if (id !== maximizedQueryId || status.mirrored) {
+          return
+        }
         windowWasMaximized = maximized
       })
       .catch(() => {
         // 问不到就按非最大化处理
+      })
+      .finally(() => {
+        if (id !== maximizedQueryId) {
+          return
+        }
+        maximizedQueryPending = false
+        flushDeferredFullscreen()
       })
   }
 
@@ -170,11 +210,14 @@ export function createPreviewFullscreenDriver(
         return
       }
 
-      const next = previewFullscreenTransition(status, { fullscreenActive, windowWasMaximized })
-      status = { mirrored: next.mirrored, corrected: next.corrected }
-      if (next.action.kind !== 'none') {
-        run(next.action)
+      // 形态还没问出来就按「非最大化」折算会漏掉最大化补正（进入全屏后底部留黑边）：
+      // 先只记住最新事件，等查询落定再算
+      if (maximizedQueryPending) {
+        deferredFullscreen = fullscreenActive
+        return
       }
+
+      handleFullscreenChange(fullscreenActive)
     },
     async dispose() {
       disposed = true
