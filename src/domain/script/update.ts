@@ -2,7 +2,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { cloneArgs } from '~/domain/script/codec'
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent } from '~/domain/script/content'
-import { CommandParamDescriptor, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/domain/script/params'
+import { CommandParamDescriptor, getRegistryDependentKeys, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/domain/script/params'
 import { updateSayFigureTargetId } from '~/domain/script/say-figure'
 import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
 
@@ -274,6 +274,12 @@ function updateFromFieldTable(
             }
           }
           upsertArgValue(nextArgs, paramDef.key, true, knownKeys)
+        } else {
+          // 分组开关关闭后依赖它的参数不再可见。引擎只按图片参数是否存在决定口型 / 眨眼启停，
+          // 残留参数会让已经关闭的开关继续生效，因此在这里一并清除。
+          for (const dependentKey of getRegistryDependentKeys(node.type, paramDef.key)) {
+            removeArgByKey(nextArgs, dependentKey)
+          }
         }
         return { ...node, args: nextArgs }
       }

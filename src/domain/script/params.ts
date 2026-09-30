@@ -3,7 +3,7 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 import { readSayFigureTargetId } from '~/domain/script/say-figure'
 import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, GenericCommandNode, isGenericNode } from '~/domain/script/types'
 import { getCommandConfig } from '~/features/editor/command-registry/index'
-import { isFlagChoiceField, readAllArgFields, UNSPECIFIED } from '~/features/editor/command-registry/schema'
+import { isFlagChoiceField, readAllArgFields, readArgFieldStorageKey, UNSPECIFIED } from '~/features/editor/command-registry/schema'
 
 export interface CommandParamDescriptor {
   key: string
@@ -41,22 +41,41 @@ function fieldTypeToKind(type: string): FieldKind {
   }
 }
 
-/** 注册表缓存：commandType → { argKey → ResolvedFieldMeta } */
-const registryMetaCache = new Map<commandType, Map<string, ResolvedFieldMeta>>()
+interface RegistryIndex {
+  /** argKey → 字段存储元信息 */
+  meta: Map<string, ResolvedFieldMeta>
+  /** 分组开关 key → 声明 visibleWhen.value === true 的参数 storage key */
+  dependents: Map<string, string[]>
+}
 
-function getRegistryMeta(type: commandType): Map<string, ResolvedFieldMeta> {
-  let cached = registryMetaCache.get(type)
+/** 注册表索引缓存：commandType → 由注册表字段派生的存储元信息 */
+const registryIndexCache = new Map<commandType, RegistryIndex>()
+
+function getRegistryIndex(type: commandType): RegistryIndex {
+  let cached = registryIndexCache.get(type)
   if (cached) {
     return cached
   }
 
-  cached = new Map<string, ResolvedFieldMeta>()
-  const entry = getCommandConfig(type)
-  // 存储元信息与展示能力无关：hiddenWhenCapability 隐藏的字段仍是已知参数，
-  // 否则隐藏会改变参数顺序与未知参数判定
-  const argFields = readAllArgFields(entry)
+  const meta = new Map<string, ResolvedFieldMeta>()
+  const dependents = new Map<string, string[]>()
 
-  for (const af of argFields) {
+  for (const af of readAllArgFields(getCommandConfig(type))) {
+    const { visibleWhen } = af.field
+    // visibleWhen.value === true 的字段是该分组开关的成员：开关关闭后它不再可见，
+    // 但引擎只按参数是否存在启停，残留参数会继续生效，这里记录成员关系供 update.ts 清除
+    if (visibleWhen?.value === true) {
+      const storageKey = readArgFieldStorageKey(af)
+      const group = dependents.get(visibleWhen.key)
+      if (!group) {
+        dependents.set(visibleWhen.key, [storageKey])
+      } else if (!group.includes(storageKey)) {
+        group.push(storageKey)
+      }
+    }
+
+    // 存储元信息与展示能力无关：hiddenWhenCapability 隐藏的字段仍是已知参数，
+    // 否则隐藏会改变参数顺序与未知参数判定
     if (af.jsonMeta) {
       // json-object 子字段不注册到 meta：
       // 原始 arg（如 blink）通过 findExtraArgValue 读取，
@@ -64,11 +83,12 @@ function getRegistryMeta(type: commandType): Map<string, ResolvedFieldMeta> {
     } else if (af.field.type === 'choice' && isFlagChoiceField(af.field)) {
       // flag choice 字段由特殊路径处理，不注册到 meta
     } else {
-      cached.set(af.field.key, { kind: fieldTypeToKind(af.field.type) })
+      meta.set(af.field.key, { kind: fieldTypeToKind(af.field.type) })
     }
   }
 
-  registryMetaCache.set(type, cached)
+  cached = { meta, dependents }
+  registryIndexCache.set(type, cached)
   return cached
 }
 
@@ -77,12 +97,21 @@ export function resolveRegistryFieldMeta(
   type: commandType,
   key: string,
 ): { kind: FieldKind, field?: string } | undefined {
-  return getRegistryMeta(type).get(key)
+  return getRegistryIndex(type).meta.get(key)
+}
+
+/**
+ * 供 update.ts 使用：获取注册表中 visibleWhen 要求 key 为 true 的参数 storage key。
+ * 关闭分组开关时必须一并清除这些参数，否则语句里会残留口型 / 眨眼图，
+ * 引擎按「图片参数非空」启停，界面显示已关闭却仍在演出。
+ */
+export function getRegistryDependentKeys(type: commandType, key: string): readonly string[] {
+  return getRegistryIndex(type).dependents.get(key) ?? []
 }
 
 /** 供 update.ts 使用：获取注册表中某命令的所有已知 arg key */
 export function getRegistryKnownKeys(type: commandType): Set<string> {
-  const meta = getRegistryMeta(type)
+  const meta = getRegistryIndex(type).meta
   const keys = new Set(meta.keys())
   // changeFigure 的位置是 flag-choice 的选项值而非独立参数 key，
   // 不在注册表 meta 中，但在 args 数组中以 { key: 'left', value: true } 形式存在，
@@ -145,7 +174,7 @@ function readFromFieldTable(
     }
   }
 
-  const meta = getRegistryMeta(node.type).get(key)
+  const meta = getRegistryIndex(node.type).meta.get(key)
   if (!meta) {
     return NOT_HANDLED
   }

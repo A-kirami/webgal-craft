@@ -107,6 +107,56 @@ describe('命令节点参数更新器', () => {
     ])
   })
 
+  it('关闭 changeFigure 的 animationFlag 会清除五个口型眨眼图参数', () => {
+    const sentence = mustParse('changeFigure: figure.png -id=fig-main -animationFlag -mouthOpen=open.png -mouthHalfOpen=half.png -mouthClose=close.png -eyesOpen=eyes_open.png -eyesClose=eyes_close.png -x=1;')
+    const node = parseCommandNode(sentence)
+    const updated = updateCommandNodeParam(node, makeParamDef('animationFlag', 'switch'), false)
+
+    expect(updated).toBeDefined()
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'id', value: 'fig-main' },
+      { key: 'x', value: 1 },
+    ])
+    expect(serializeSentence(serializeCommandNode(updated!)))
+      .toBe('changeFigure:figure.png -id=fig-main -x=1;')
+  })
+
+  it('关闭 animationFlag 后再编辑其他参数不会重新引入口型眨眼图', () => {
+    const node = parseCommandNode(mustParse('changeFigure: figure.png -animationFlag -mouthOpen=open.png;'))
+    const closed = updateCommandNodeParam(node, makeParamDef('animationFlag', 'switch'), false)
+    const updated = updateCommandNodeParam(closed!, makeParamDef('id', 'text'), 'hero')
+
+    expect(serializeCommandNode(updated!).args).toEqual([{ key: 'id', value: 'hero' }])
+  })
+
+  it('关闭 animationFlag 不影响未知参数与其他标准参数', () => {
+    const node = parseCommandNode(mustParse('changeFigure: figure.png -left -animationFlag -mouthOpen=open.png -custom=keep -next -x=1;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('animationFlag', 'switch'), false)
+
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'left', value: true },
+      { key: 'custom', value: 'keep' },
+      { key: 'next', value: true },
+      { key: 'x', value: 1 },
+    ])
+  })
+
+  it('开启 animationFlag 只为已填写的图片参数写入', () => {
+    const node = parseCommandNode(mustParse('changeFigure: figure.png -id=fig-main;'))
+    const enabled = updateCommandNodeParam(node, makeParamDef('animationFlag', 'switch'), true)
+    expect(serializeCommandNode(enabled!).args).toEqual([
+      { key: 'id', value: 'fig-main' },
+      { key: 'animationFlag', value: true },
+    ])
+
+    const updated = updateCommandNodeParam(enabled!, makeParamDef('mouthOpen', 'text'), 'open.png')
+    expect(serializeCommandNode(updated!).args).toEqual([
+      { key: 'id', value: 'fig-main' },
+      { key: 'animationFlag', value: true },
+      { key: 'mouthOpen', value: 'open.png' },
+    ])
+  })
+
   it('可更新 setTempAnimation target 并保留额外参数', () => {
     const sentence = mustParse('setTempAnimation: bounce -target=fig-left -x=1;')
     const node = parseCommandNode(sentence)
