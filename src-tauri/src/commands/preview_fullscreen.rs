@@ -135,7 +135,9 @@ impl PreviewFullscreenState {
             return SettleAction::Idle;
         };
 
-        if current == target {
+        // 只比 fullscreen：兜底只在「退出后要保持全屏」时布防（见 finish），而全屏时 maximized 只是
+        // tao 的残留标志（tao#1087），比它会把「已经收敛」误判成没收敛，白白消耗掉这次兜底
+        if current.fullscreen == target.fullscreen {
             SettleAction::Settled
         } else {
             SettleAction::Reapply(target)
@@ -441,6 +443,22 @@ mod tests {
         state.set_applying(false);
 
         assert_eq!(state.settle(FULLSCREEN), SettleAction::Settled);
+    }
+
+    #[test]
+    fn session_ignores_the_stale_maximized_flag_while_fullscreen() {
+        let mut state = PreviewFullscreenState::new(true);
+        state.begin(FULLSCREEN);
+        state.finish();
+
+        // Windows 全屏期间 MAXIMIZED 可能仍是残留的 true（tao#1087）：不该因此再补一次、白白消耗这次兜底
+        assert_eq!(
+            state.settle(WindowShape {
+                fullscreen: true,
+                maximized: true,
+            }),
+            SettleAction::Settled
+        );
     }
 
     #[test]
