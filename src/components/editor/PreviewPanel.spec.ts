@@ -21,6 +21,8 @@ const {
   getGameConfigMock,
   modalOpenMock,
   openUrlMock,
+  previewFullscreenEnterMock,
+  previewFullscreenExitMock,
   dismissFastPreviewTimeoutMock,
   resetEmbeddedPreviewStateMock,
   setEmbeddedPreviewLaunchIdMock,
@@ -35,14 +37,15 @@ const {
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   appWindowMock: {
+    isFullscreen: vi.fn(async () => false),
     isMaximized: vi.fn(async () => false),
-    maximize: vi.fn(async () => undefined),
-    setFullscreen: vi.fn(async () => undefined),
-    unmaximize: vi.fn(async () => undefined),
+    onResized: vi.fn(async () => () => undefined),
   },
   getGameConfigMock: vi.fn(),
   modalOpenMock: vi.fn(),
   openUrlMock: vi.fn(),
+  previewFullscreenEnterMock: vi.fn(async () => undefined),
+  previewFullscreenExitMock: vi.fn(async () => ({ fullscreen: false, maximized: false })),
   dismissFastPreviewTimeoutMock: vi.fn(),
   resetEmbeddedPreviewStateMock: vi.fn(),
   setEmbeddedPreviewLaunchIdMock: vi.fn(),
@@ -59,6 +62,13 @@ const {
 
 vi.mock('@tauri-apps/api/webviewWindow', () => ({
   getCurrentWebviewWindow: () => appWindowMock,
+}))
+
+vi.mock('~/commands/preview-fullscreen', () => ({
+  previewFullscreenCmds: {
+    enter: previewFullscreenEnterMock,
+    exit: previewFullscreenExitMock,
+  },
 }))
 
 vi.mock('@tauri-apps/plugin-opener', () => ({
@@ -1016,7 +1026,7 @@ describe('PreviewPanel', () => {
     expect(canvas?.style.transform).toBe('')
     expect(outputSurface?.style.filter).toBe('')
     await vi.waitFor(() => {
-      expect(appWindowMock.setFullscreen).toHaveBeenCalledWith(true)
+      expect(previewFullscreenEnterMock).toHaveBeenCalledWith({ fullscreen: false, maximized: false })
     })
 
     // 全屏元素换成别的节点：元素全屏结束时 document.fullscreenElement 不再指向预览 iframe
@@ -1026,7 +1036,7 @@ describe('PreviewPanel', () => {
     expect(canvas?.style.transform).toBe(canvasTransform)
     expect(outputSurface?.style.filter).toBe('brightness(0.65)')
     await vi.waitFor(() => {
-      expect(appWindowMock.setFullscreen).toHaveBeenCalledWith(false)
+      expect(previewFullscreenExitMock).toHaveBeenCalledOnce()
     })
   })
 

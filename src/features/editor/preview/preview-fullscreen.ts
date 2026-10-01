@@ -1,116 +1,146 @@
-// 预览全屏的窗口侧处理：把 iframe 的元素全屏折算成窗口全屏，并串行执行窗口动作。
+// 预览全屏的编辑器侧：把 iframe 的元素全屏折算成窗口会话，并维护「进入前的窗口形态」。
 //
-// iframe 与编辑器跨源，引擎在 iframe 里拿不到窗口权限，元素全屏只铺满 webview，窗口全屏得由编辑器
-// 这一侧自己叫。
+// 窗口形态的决策在 Rust 侧（src-tauri/src/commands/preview_fullscreen.rs）：Windows 上 tauri-runtime-wry
+// 会把元素全屏镜像成窗口全屏，元素全屏结束时还会自己退出窗口全屏，只有窗口的拥有者能把形态收干净。
+// 这里只做两件事：
 //
-// Windows 上从最大化窗口进无边框全屏时，tao 不会清掉最大化状态，客户端区停在任务栏之上，底部会留下
-// 一条未绘制的黑边（tao#1087）。补正只能让窗口在进入全屏那一刻不是最大化：先退窗口全屏，再离开最大化，
-// 最后重新进全屏；退出时把最大化还原。
-//
-// 需要 core:window:allow-set-fullscreen / allow-maximize / allow-unmaximize（capabilities/desktop.json）。
+// - 采样进入元素全屏前的窗口形态，进入时交给 Rust；
+// - 元素全屏期间不采样：镜像造成的窗口全屏不能当成窗口本来的形态。
+
+import type { PreviewWindowShape } from '~/commands/preview-fullscreen'
 
 /** 窗口接口：Tauri 的 WebviewWindow 结构上满足它，单独写出来是为了注入假窗口断言调用顺序。 */
 export interface PreviewFullscreenWindowLike {
+  isFullscreen(): Promise<boolean>
   isMaximized(): Promise<boolean>
-  maximize(): Promise<void>
-  setFullscreen(value: boolean): Promise<void>
-  unmaximize(): Promise<void>
+  onResized(handler: () => void): Promise<() => void>
+}
+
+/** 窗口侧会话：Rust 命令封装结构上就满足它。 */
+export interface PreviewFullscreenSession {
+  enter(resting: PreviewWindowShape): Promise<void>
+  /** 退出会话，返回还原后的窗口形态 */
+  exit(): Promise<PreviewWindowShape>
 }
 
 export interface PreviewFullscreenDriver {
-  /** 每次 fullscreenchange 调用一次 */
+  /** 元素全屏状态变化时调用一次 */
   notify(fullscreenActive: boolean): void
-  /** 面板卸载时调用：把预览带来的窗口形态收干净 */
+  /** 面板卸载时调用：结束进行中的会话、停止采样 */
   dispose(): Promise<void>
 }
 
 export function createPreviewFullscreenDriver(
   appWindow: PreviewFullscreenWindowLike,
+  session: PreviewFullscreenSession,
   onError?: (error: unknown) => void,
 ): PreviewFullscreenDriver {
-  /** 最新事件要求的窗口形态；同一形态下的重复事件靠它去重 */
-  let desiredFullscreen = false
-  /** 窗口全屏已经确认收敛到的形态：窗口动作成功才推进，失败时留在原处，交给后续事件或 dispose 重试 */
-  let appliedFullscreen = false
-  /** 补正时取消过最大化，还欠一次还原 */
-  let owesMaximizeRestore = false
+  /** 进入元素全屏前的窗口形态；还没采到样时为 undefined */
+  let restingShape: PreviewWindowShape | undefined
+  /** 元素全屏进行中 */
+  let elementFullscreenActive = false
   let disposed = false
-  /** 窗口动作串行执行：快速进出全屏或卸载都不会让两次动作交错 */
+  let unlistenResize: (() => void) | undefined
+  /** 采样序号：只有最后一次采样算数 */
+  let sampleRevision = 0
+  /** 最近一次采样的落定，进入全屏时要等它 */
+  let pendingSample: Promise<void> = Promise.resolve()
+  /** 会话命令串行执行：快速进出全屏或卸载都不会让两次会话交错 */
   let queue = Promise.resolve()
 
-  function scheduleSync(): void {
-    queue = queue.then(syncWindow).catch((error: unknown) => {
+  function run(step: () => Promise<void>): void {
+    queue = queue.then(step).catch((error: unknown) => {
       onError?.(error)
     })
   }
 
-  /**
-   * 把窗口收敛到当前要求的形态。动作执行时才读 desiredFullscreen，队列里排着的动作不会用过期的决策；
-   * 卸载后不再动窗口，交给 dispose 收尾。
-   */
-  async function syncWindow(): Promise<void> {
-    if (disposed || desiredFullscreen === appliedFullscreen) {
-      return
-    }
+  async function readWindowShape(): Promise<PreviewWindowShape> {
+    const [fullscreen, maximized] = await Promise.all([
+      appWindow.isFullscreen(),
+      appWindow.isMaximized(),
+    ])
 
-    if (desiredFullscreen) {
-      await enterWindowFullscreen()
-      appliedFullscreen = true
-      return
-    }
-
-    await appWindow.setFullscreen(false)
-    appliedFullscreen = false
-    if (owesMaximizeRestore) {
-      await appWindow.maximize()
-      owesMaximizeRestore = false
-    }
+    return { fullscreen, maximized }
   }
 
-  async function enterWindowFullscreen(): Promise<void> {
-    // 形态必须在动窗口之前问：这时窗口还没被这次全屏碰过，答案就是进全屏前的样子
-    const wasMaximized = await appWindow.isMaximized().catch((error: unknown) => {
-      onError?.(error)
-      return false
-    })
-
-    if (!wasMaximized) {
-      await appWindow.setFullscreen(true)
+  /** 采样进入前的形态；采样期间进了元素全屏或面板已卸载就丢弃结果 */
+  function sampleRestingShape(): void {
+    if (disposed || elementFullscreenActive) {
       return
     }
 
-    owesMaximizeRestore = true
-    await appWindow.setFullscreen(false)
-    await appWindow.unmaximize()
-    await appWindow.setFullscreen(true)
+    const revision = ++sampleRevision
+    pendingSample = readWindowShape()
+      .then((shape) => {
+        if (revision !== sampleRevision || elementFullscreenActive || disposed) {
+          return
+        }
+
+        restingShape = shape
+      })
+      .catch((error: unknown) => {
+        onError?.(error)
+      })
   }
 
-  return {
-    notify(fullscreenActive) {
-      if (disposed || fullscreenActive === desiredFullscreen) {
+  async function enterSession(): Promise<void> {
+    // 采样值可能还在路上：那次查询发生在进入全屏之前，等它比现采更接近真实形态
+    await pendingSample
+    // 没有可信样本（采样失败）时按「不是全屏」处理：镜像可能已经把窗口改成全屏，
+    // 那种全屏不是窗口本来的形态；最大化标志镜像不会动，可以现读
+    const resting = restingShape ?? {
+      fullscreen: false,
+      maximized: await appWindow.isMaximized(),
+    }
+
+    if (disposed || !elementFullscreenActive) {
+      return
+    }
+
+    await session.enter(resting)
+  }
+
+  async function exitSession(): Promise<void> {
+    // 退出后窗口就是还原到的形态，直接作为下次进入前的形态，免得重新采样时被镜像带偏
+    restingShape = await session.exit()
+  }
+
+  void sampleRestingShape()
+  void appWindow.onResized(() => {
+    void sampleRestingShape()
+  })
+    .then((unlisten) => {
+      if (disposed) {
+        unlisten()
         return
       }
 
-      desiredFullscreen = fullscreenActive
-      scheduleSync()
+      unlistenResize = unlisten
+    })
+    .catch((error: unknown) => {
+      onError?.(error)
+    })
+
+  return {
+    notify(fullscreenActive) {
+      if (disposed || fullscreenActive === elementFullscreenActive) {
+        return
+      }
+
+      elementFullscreenActive = fullscreenActive
+      run(fullscreenActive ? enterSession : exitSession)
     },
 
     async dispose() {
       disposed = true
+      unlistenResize?.()
+
+      if (elementFullscreenActive) {
+        elementFullscreenActive = false
+        run(exitSession)
+      }
+
       await queue
-
-      if (!appliedFullscreen && !owesMaximizeRestore) {
-        return
-      }
-
-      try {
-        await appWindow.setFullscreen(false)
-        if (owesMaximizeRestore) {
-          await appWindow.maximize()
-        }
-      } catch (error) {
-        onError?.(error)
-      }
     },
   }
 }

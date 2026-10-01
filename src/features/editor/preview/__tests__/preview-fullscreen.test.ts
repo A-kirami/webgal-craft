@@ -2,75 +2,126 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { createPreviewFullscreenDriver } from '../preview-fullscreen'
 
-import type { PreviewFullscreenWindowLike } from '../preview-fullscreen'
+import type { PreviewFullscreenSession, PreviewFullscreenWindowLike } from '../preview-fullscreen'
+import type { PreviewWindowShape } from '~/commands/preview-fullscreen'
+
+const NORMAL: PreviewWindowShape = { fullscreen: false, maximized: false }
+const MAXIMIZED: PreviewWindowShape = { fullscreen: false, maximized: true }
+const FULLSCREEN: PreviewWindowShape = { fullscreen: true, maximized: false }
+
+/** 形态的可读名，用于断言会话收到的形态 */
+function shapeName(shape: PreviewWindowShape): string {
+  if (shape.fullscreen) {
+    return 'fullscreen'
+  }
+
+  return shape.maximized ? 'maximized' : 'normal'
+}
 
 interface FakeWindow {
   appWindow: PreviewFullscreenWindowLike
-  calls: string[]
-  failOn: (call?: string) => void
-  /** 挂起 isMaximized 的应答，之后用 releaseMaximized / rejectMaximized 放行 */
-  holdMaximized: () => void
-  releaseMaximized: (value: boolean) => void
-  rejectMaximized: () => void
-  setMaximized: (value: boolean) => void
+  /** 形态查询次数：用来断言元素全屏期间不再采样 */
+  readCount: () => number
+  /** 模拟窗口形态变化引发的 resize 事件 */
+  resize: () => void
+  setShape: (shape: PreviewWindowShape) => void
+  /** 挂起形态查询，之后用 releaseShapeReads 放行 */
+  holdShapeReads: () => void
+  releaseShapeReads: () => void
 }
 
-/** 假窗口：记录调用顺序，可注入最大化形态、挂起的形态查询与失败点。 */
-function createFakeWindow(): FakeWindow {
-  const calls: string[] = []
-  let failing: string | undefined
-  let maximized = false
+function createFakeWindow(initialShape: PreviewWindowShape = NORMAL): FakeWindow {
+  let shape = initialShape
+  let resizeHandler: (() => void) | undefined
   let holding = false
-  let fulfill: ((value: boolean) => void) | undefined
-  let fail: ((error: unknown) => void) | undefined
-  const record = (call: string) => {
-    calls.push(call)
-    if (failing === call) {
-      throw new Error(`失败: ${call}`)
-    }
+  let reads = 0
+  const heldResolvers: (() => void)[] = []
+  const read = (value: boolean): Promise<boolean> => {
+    reads++
+
+    return holding
+      ? new Promise<boolean>((resolve) => {
+          heldResolvers.push(() => resolve(value))
+        })
+      : Promise.resolve(value)
   }
 
   return {
-    calls,
-    failOn: (call) => {
-      failing = call
+    appWindow: {
+      isFullscreen: () => read(shape.fullscreen),
+      isMaximized: () => read(shape.maximized),
+      onResized: (handler) => {
+        resizeHandler = handler
+
+        return Promise.resolve(() => {
+          resizeHandler = undefined
+        })
+      },
     },
-    holdMaximized: () => {
+    readCount: () => reads,
+    resize: () => resizeHandler?.(),
+    setShape: (nextShape) => {
+      shape = nextShape
+    },
+    holdShapeReads: () => {
       holding = true
     },
-    releaseMaximized: (value) => {
-      fulfill?.(value)
-    },
-    rejectMaximized: () => {
-      fail?.(new Error('失败: isMaximized'))
-    },
-    setMaximized: (value) => {
-      maximized = value
-    },
-    appWindow: {
-      isMaximized: () => holding
-        ? new Promise<boolean>((resolve, reject) => {
-            fulfill = resolve
-            fail = reject
-          })
-        : Promise.resolve(maximized),
-      maximize: () => {
-        record('maximize')
-        return Promise.resolve()
-      },
-      setFullscreen: (value) => {
-        record(`setFullscreen(${value})`)
-        return Promise.resolve()
-      },
-      unmaximize: () => {
-        record('unmaximize')
-        return Promise.resolve()
-      },
+    releaseShapeReads: () => {
+      holding = false
+      for (const resolve of heldResolvers.splice(0)) {
+        resolve()
+      }
     },
   }
 }
 
-/** 让队列里的窗口动作跑完。 */
+interface FakeSession {
+  calls: string[]
+  exitShape: PreviewWindowShape
+  session: PreviewFullscreenSession
+  /** 挂起 enter，之后用 releaseEnter 放行 */
+  holdEnter: () => void
+  releaseEnter: () => void
+}
+
+function createFakeSession(exitShape: PreviewWindowShape = NORMAL): FakeSession {
+  const calls: string[] = []
+  let holding = false
+  const heldResolvers: (() => void)[] = []
+  const fake: FakeSession = {
+    calls,
+    exitShape,
+    holdEnter: () => {
+      holding = true
+    },
+    releaseEnter: () => {
+      holding = false
+      for (const resolve of heldResolvers.splice(0)) {
+        resolve()
+      }
+    },
+    session: {
+      enter: async (resting) => {
+        calls.push(`enter(${shapeName(resting)})`)
+
+        if (holding) {
+          await new Promise<void>((resolve) => {
+            heldResolvers.push(resolve)
+          })
+        }
+      },
+      exit: async () => {
+        calls.push('exit')
+
+        return fake.exitShape
+      },
+    },
+  }
+
+  return fake
+}
+
+/** 让队列里的会话命令跑完。 */
 function flushQueue(): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, 0)
@@ -78,199 +129,182 @@ function flushQueue(): Promise<void> {
 }
 
 describe('createPreviewFullscreenDriver', () => {
-  it('普通窗口进入全屏只设窗口全屏，退出只取消窗口全屏', async () => {
-    const { appWindow, calls } = createFakeWindow()
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('进入元素全屏时把进入前的窗口形态交给会话', async () => {
+    const { appWindow } = createFakeWindow(MAXIMIZED)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
 
     driver.notify(true)
     await flushQueue()
-    driver.notify(false)
-    await flushQueue()
 
-    expect(calls).toEqual(['setFullscreen(true)', 'setFullscreen(false)'])
+    expect(calls).toEqual(['enter(maximized)'])
   })
 
-  it('最大化窗口进入全屏时补正三步，退出时还原最大化', async () => {
-    const { appWindow, calls, setMaximized } = createFakeWindow()
-    setMaximized(true)
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('退出元素全屏时结束会话，并把还原后的形态当成下次进入前的形态', async () => {
+    const { appWindow } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession(FULLSCREEN)
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
 
     driver.notify(true)
     await flushQueue()
     driver.notify(false)
     await flushQueue()
+    driver.notify(true)
+    await flushQueue()
 
-    expect(calls).toEqual([
-      'setFullscreen(false)',
-      'unmaximize',
-      'setFullscreen(true)',
-      'setFullscreen(false)',
-      'maximize',
-    ])
+    expect(calls).toEqual(['enter(normal)', 'exit', 'enter(fullscreen)'])
   })
 
-  it('重复的同形态事件不重复执行动作', async () => {
-    const { appWindow, calls } = createFakeWindow()
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('元素全屏期间不再采样，镜像造成的窗口全屏不会被当成窗口本来的形态', async () => {
+    const { appWindow, readCount, resize, setShape } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
+    const readsBeforeFullscreen = readCount()
 
     driver.notify(true)
-    driver.notify(true)
     await flushQueue()
-    driver.notify(false)
+    setShape(FULLSCREEN)
+    resize()
+    await flushQueue()
+
+    expect(readCount()).toBe(readsBeforeFullscreen)
     driver.notify(false)
     await flushQueue()
 
-    expect(calls).toEqual(['setFullscreen(true)', 'setFullscreen(false)'])
+    expect(calls).toEqual(['enter(normal)', 'exit'])
   })
 
-  it('同一轮里进出全屏时窗口不动作', async () => {
-    const { appWindow, calls, setMaximized } = createFakeWindow()
-    setMaximized(true)
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('元素全屏之外的窗口变化会重新采样', async () => {
+    const { appWindow, resize, setShape } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
 
-    // 两次事件之间没让出微任务：排队的收敛执行时元素已退出全屏，窗口不必跟着动
+    setShape(MAXIMIZED)
+    resize()
+    await flushQueue()
     driver.notify(true)
+    await flushQueue()
+
+    expect(calls).toEqual(['enter(maximized)'])
+  })
+
+  it('重复的同形态事件只开一次会话', async () => {
+    const { appWindow } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
+
+    driver.notify(true)
+    driver.notify(true)
+    await flushQueue()
+    driver.notify(false)
     driver.notify(false)
     await flushQueue()
 
+    expect(calls).toEqual(['enter(normal)', 'exit'])
+  })
+
+  it('采样还没落定时进入全屏会等采样结果', async () => {
+    const { appWindow, holdShapeReads, releaseShapeReads } = createFakeWindow(MAXIMIZED)
+    holdShapeReads()
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+
+    driver.notify(true)
+    await flushQueue()
     expect(calls).toEqual([])
+
+    releaseShapeReads()
+    await flushQueue()
+
+    expect(calls).toEqual(['enter(maximized)'])
   })
 
-  it('队列里的动作按顺序执行，前一个没跑完不会开始下一个', async () => {
-    const { appWindow, calls, holdMaximized, releaseMaximized, setMaximized } = createFakeWindow()
-    setMaximized(true)
-    holdMaximized()
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('采样在途时退出全屏，排队的进入动作不再执行', async () => {
+    const { appWindow, holdShapeReads, releaseShapeReads } = createFakeWindow(MAXIMIZED)
+    holdShapeReads()
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
 
     driver.notify(true)
     await flushQueue()
     driver.notify(false)
-    releaseMaximized(true)
+    releaseShapeReads()
     await flushQueue()
 
-    expect(calls).toEqual([
-      'setFullscreen(false)',
-      'unmaximize',
-      'setFullscreen(true)',
-      'setFullscreen(false)',
-      'maximize',
-    ])
+    expect(calls).toEqual(['exit'])
   })
 
-  it('进入全屏前先问窗口形态，没问出来之前不动窗口', async () => {
-    const { appWindow, calls, holdMaximized, releaseMaximized } = createFakeWindow()
-    holdMaximized()
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('会话串行执行，前一个没跑完不会开始下一个', async () => {
+    const { appWindow } = createFakeWindow(NORMAL)
+    const { calls, holdEnter, releaseEnter, session } = createFakeSession()
+    holdEnter()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
 
     driver.notify(true)
     await flushQueue()
-    expect(calls).toEqual([])
+    driver.notify(false)
+    await flushQueue()
+    expect(calls).toEqual(['enter(normal)'])
 
-    releaseMaximized(true)
+    releaseEnter()
     await flushQueue()
 
-    expect(calls).toEqual(['setFullscreen(false)', 'unmaximize', 'setFullscreen(true)'])
+    expect(calls).toEqual(['enter(normal)', 'exit'])
   })
 
-  it('形态查询失败时按非最大化进全屏并上报错误', async () => {
-    const { appWindow, calls, holdMaximized, rejectMaximized } = createFakeWindow()
-    holdMaximized()
+  it('会话失败时上报错误，后续事件继续处理', async () => {
+    const { appWindow } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    session.enter = async () => {
+      throw new Error('失败: enter')
+    }
     const onError = vi.fn()
-    const driver = createPreviewFullscreenDriver(appWindow, onError)
+    const driver = createPreviewFullscreenDriver(appWindow, session, onError)
+    await flushQueue()
 
     driver.notify(true)
     await flushQueue()
-    rejectMaximized()
-    await flushQueue()
-
-    expect(calls).toEqual(['setFullscreen(true)'])
-    expect(onError).toHaveBeenCalledOnce()
-  })
-
-  it('补正中途失败时保留还原最大化所有权，卸载时兜底', async () => {
-    const { appWindow, calls, failOn, setMaximized } = createFakeWindow()
-    setMaximized(true)
-    const onError = vi.fn()
-    const driver = createPreviewFullscreenDriver(appWindow, onError)
-
-    failOn('unmaximize')
-    driver.notify(true)
-    await flushQueue()
-    expect(calls).toEqual(['setFullscreen(false)', 'unmaximize'])
     expect(onError).toHaveBeenCalledOnce()
 
-    failOn(undefined)
-    await driver.dispose()
-
-    expect(calls).toEqual(['setFullscreen(false)', 'unmaximize', 'setFullscreen(false)', 'maximize'])
-  })
-
-  it('还原最大化失败时保留所有权，卸载时再试一次', async () => {
-    const { appWindow, calls, failOn, setMaximized } = createFakeWindow()
-    setMaximized(true)
-    const onError = vi.fn()
-    const driver = createPreviewFullscreenDriver(appWindow, onError)
-
-    driver.notify(true)
-    await flushQueue()
-    failOn('maximize')
     driver.notify(false)
     await flushQueue()
-    expect(onError).toHaveBeenCalledOnce()
 
-    failOn(undefined)
-    await driver.dispose()
-
-    expect(calls).toEqual([
-      'setFullscreen(false)',
-      'unmaximize',
-      'setFullscreen(true)',
-      'setFullscreen(false)',
-      'maximize',
-      'setFullscreen(false)',
-      'maximize',
-    ])
+    expect(calls).toEqual(['exit'])
   })
 
-  it('卸载时仍处于全屏则退出窗口全屏', async () => {
-    const { appWindow, calls } = createFakeWindow()
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('卸载时结束进行中的会话', async () => {
+    const { appWindow } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
 
     driver.notify(true)
     await flushQueue()
     await driver.dispose()
 
-    expect(calls).toEqual(['setFullscreen(true)', 'setFullscreen(false)'])
+    expect(calls).toEqual(['enter(normal)', 'exit'])
   })
 
-  it('没动过窗口时卸载不碰窗口', async () => {
-    const { appWindow, calls } = createFakeWindow()
-    const driver = createPreviewFullscreenDriver(appWindow)
+  it('卸载后不再响应事件，也不再采样', async () => {
+    const { appWindow, readCount, resize } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
 
-    driver.notify(false)
     await driver.dispose()
-
-    expect(calls).toEqual([])
-  })
-
-  it('卸载时还没轮到的进入动作不再执行', async () => {
-    const { appWindow, calls } = createFakeWindow()
-    const driver = createPreviewFullscreenDriver(appWindow)
+    const readsAfterDispose = readCount()
 
     driver.notify(true)
-    await driver.dispose()
-
-    expect(calls).toEqual([])
-  })
-
-  it('卸载后不再响应全屏事件', async () => {
-    const { appWindow, calls } = createFakeWindow()
-    const driver = createPreviewFullscreenDriver(appWindow)
-
-    await driver.dispose()
-    driver.notify(true)
+    resize()
     await flushQueue()
 
     expect(calls).toEqual([])
+    expect(readCount()).toBe(readsAfterDispose)
   })
 })

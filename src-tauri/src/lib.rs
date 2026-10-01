@@ -33,6 +33,21 @@ pub fn run() {
         app.manage(OverlayFactoryCache::default());
         app.manage(Mutex::new(ServerState::new()));
         app.manage(commands::archive_import::ArchiveImportState::default());
+        #[cfg(desktop)]
+        {
+            app.manage(std::sync::Mutex::new(
+                commands::preview_fullscreen::PreviewFullscreenState::default(),
+            ));
+
+            // 预览全屏的会话只在主窗口上：镜像退出全屏后需要按目标形态补回来
+            let preview_window = _window.clone();
+            _window.on_window_event(move |event| {
+                let state = preview_window.app_handle().state::<
+                    std::sync::Mutex<commands::preview_fullscreen::PreviewFullscreenState>,
+                >();
+                commands::preview_fullscreen::handle_window_event(&preview_window, event, &state);
+            });
+        }
 
         Ok(())
     });
@@ -149,6 +164,11 @@ pub fn run() {
             // window
             #[cfg(desktop)]
             commands::window::create_window,
+            // preview fullscreen
+            #[cfg(desktop)]
+            commands::preview_fullscreen::preview_fullscreen_enter,
+            #[cfg(desktop)]
+            commands::preview_fullscreen::preview_fullscreen_exit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,6 +3,7 @@ import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
+import { previewFullscreenCmds } from '~/commands/preview-fullscreen'
 import { usePreviewViewport } from '~/composables/usePreviewViewport'
 import {
   createPreviewBootstrapProvideMessage,
@@ -99,7 +100,7 @@ let isPreviewInteractionReleasePending = $ref(false)
 let previewInteractionReleaseFrameId: number | undefined
 // 预览里的游戏是否正处于全屏（引擎点“全屏”后 iframe 会成为全屏元素）
 let isPreviewFullscreen = $ref(false)
-// 窗口侧的全屏处理都在驱动器里（见 preview-fullscreen.ts）
+// 窗口形态的会话在 Rust 侧（见 ~/commands/preview-fullscreen），这里只把元素全屏状态折算成会话
 let previewFullscreenDriver: PreviewFullscreenDriver | undefined
 
 const previewViewport = usePreviewViewport({
@@ -616,9 +617,13 @@ useShortcutContext({
 
 onMounted(() => {
   void fitViewportToCurrentStage()
-  previewFullscreenDriver = createPreviewFullscreenDriver(getCurrentWebviewWindow(), (error: unknown) => {
-    logger.warn(`预览全屏的窗口处理失败: ${error}`)
-  })
+  previewFullscreenDriver = createPreviewFullscreenDriver(
+    getCurrentWebviewWindow(),
+    previewFullscreenCmds,
+    (error: unknown) => {
+      logger.warn(`预览全屏的窗口处理失败: ${error}`)
+    },
+  )
 })
 
 onBeforeUnmount(() => {
