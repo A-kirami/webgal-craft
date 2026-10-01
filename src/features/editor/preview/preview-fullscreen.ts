@@ -5,7 +5,8 @@
 // 这里只做两件事：
 //
 // - 采样进入元素全屏前的窗口形态，进入时交给 Rust；
-// - 元素全屏期间不采样：镜像造成的窗口全屏不能当成窗口本来的形态。
+// - 元素全屏期间不采样，resize 触发的采样也只更新最大化：Windows 上镜像造成的窗口全屏可能先于
+//   fullscreenchange 落定，那种全屏不是窗口本来的形态。
 
 import type { PreviewWindowShape } from '~/commands/preview-fullscreen'
 
@@ -63,7 +64,7 @@ export function createPreviewFullscreenDriver(
     return { fullscreen, maximized }
   }
 
-  /** 采样进入前的形态；采样期间进了元素全屏或面板已卸载就丢弃结果 */
+  /** 初始化时采样完整形态；采样期间进了元素全屏或面板已卸载就丢弃结果 */
   function sampleRestingShape(): void {
     if (disposed || elementFullscreenActive) {
       return
@@ -77,6 +78,29 @@ export function createPreviewFullscreenDriver(
         }
 
         restingShape = shape
+      })
+      .catch((error: unknown) => {
+        onError?.(error)
+      })
+  }
+
+  /**
+   * resize 触发的采样只更新最大化：窗口全屏可能是宿主镜像出来的（元素全屏开始时它会把窗口设成全屏，
+   * 可能先于 fullscreenchange 落定），只有初始化采样和会话退出时返回的形态才代表窗口本来的形态。
+   */
+  function sampleWindowMaximized(): void {
+    if (disposed || elementFullscreenActive || !restingShape) {
+      return
+    }
+
+    const revision = ++sampleRevision
+    pendingSample = appWindow.isMaximized()
+      .then((maximized) => {
+        if (revision !== sampleRevision || elementFullscreenActive || disposed || !restingShape) {
+          return
+        }
+
+        restingShape = { ...restingShape, maximized }
       })
       .catch((error: unknown) => {
         onError?.(error)
@@ -107,7 +131,7 @@ export function createPreviewFullscreenDriver(
 
   void sampleRestingShape()
   void appWindow.onResized(() => {
-    void sampleRestingShape()
+    sampleWindowMaximized()
   })
     .then((unlisten) => {
       if (disposed) {

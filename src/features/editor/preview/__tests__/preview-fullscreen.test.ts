@@ -177,6 +177,26 @@ describe('createPreviewFullscreenDriver', () => {
     expect(calls).toEqual(['enter(normal)', 'exit'])
   })
 
+  it('resize 采样先于进入事件落定时，镜像造成的窗口全屏不会被保留', async () => {
+    const { appWindow, resize, setShape } = createFakeWindow(NORMAL)
+    const { calls, session } = createFakeSession()
+    const driver = createPreviewFullscreenDriver(appWindow, session)
+    await flushQueue()
+
+    // 元素全屏开始时宿主会把窗口设成全屏并触发 resize，采样可能先于 fullscreenchange 落定
+    setShape(FULLSCREEN)
+    resize()
+    await flushQueue()
+
+    driver.notify(true)
+    await flushQueue()
+    driver.notify(false)
+    await flushQueue()
+
+    // 窗口本来不是全屏：退出时按非全屏还原，镜像造成的全屏不算窗口本来的形态
+    expect(calls).toEqual(['enter(normal)', 'exit'])
+  })
+
   it('元素全屏之外的窗口变化会重新采样', async () => {
     const { appWindow, resize, setShape } = createFakeWindow(NORMAL)
     const { calls, session } = createFakeSession()
