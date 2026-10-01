@@ -193,6 +193,123 @@ describe('diagnoseScene', () => {
     ])).toEqual([])
   })
 
+  it('旧引擎诊断语句里已有的立绘差分', () => {
+    // 旧运行时下该命令由解析器退化成 say 简写，诊断必须仍能认出来
+    const sentences = [
+      parseSentence('changeFigureDiff:smile.png -left -id=hero;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+      parseSentence('changeFigure:hero.png -left;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+      parseSentence('say:hello;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+    ]
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([{
+      code: 'unsupported-change-figure-diff',
+      field: { kind: 'content' },
+      severity: 'warning',
+      source: 'engine',
+      statementIndex: 0,
+      value: 'smile.png',
+    }])
+
+    expect(diagnoseScene(sentences, {
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([])
+  })
+
+  it('立绘差分的模型内容在任意引擎上都提示引擎会跳过本句', () => {
+    const sentences = [
+      parseSentence('changeFigureDiff:live2d/hero.json -id=hero;'),
+      parseSentence('changeFigureDiff:spine/hero.skel -left;'),
+      parseSentence('changeFigureDiff:smile.png -left;'),
+    ]
+
+    const expected = [
+      {
+        code: 'skipped-figure-diff-model',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 0,
+        value: 'live2d/hero.json',
+      },
+      {
+        code: 'skipped-figure-diff-model',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'spine/hero.skel',
+      },
+    ]
+
+    expect(diagnoseScene(sentences, {
+      engineCapabilities: { live2d: true, spine: true },
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual(expected)
+
+    // 引擎支持与否不影响「会跳过」的结论，只多出「命令本身太新」的诊断
+    expect(diagnoseScene(sentences, {
+      engineCapabilities: { live2d: false, spine: false },
+      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    })).toEqual([
+      {
+        code: 'skipped-figure-diff-model',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 0,
+        value: 'live2d/hero.json',
+      },
+      {
+        code: 'unsupported-change-figure-diff',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 0,
+        value: 'live2d/hero.json',
+      },
+      {
+        code: 'skipped-figure-diff-model',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'spine/hero.skel',
+      },
+      {
+        code: 'unsupported-change-figure-diff',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 1,
+        value: 'spine/hero.skel',
+      },
+      {
+        code: 'unsupported-change-figure-diff',
+        field: { kind: 'content' },
+        severity: 'warning',
+        source: 'engine',
+        statementIndex: 2,
+        value: 'smile.png',
+      },
+    ])
+  })
+
+  it('没有能力上下文时仍诊断立绘差分的模型内容', () => {
+    // 这条诊断的判据是命令本身，不依赖引擎能力，因此不应被能力上下文守卫挡掉
+    expect(diagnoseScene([
+      parseSentence('changeFigureDiff:live2d/hero.json -id=hero;'),
+    ])).toEqual([{
+      code: 'skipped-figure-diff-model',
+      field: { kind: 'content' },
+      severity: 'warning',
+      source: 'engine',
+      statementIndex: 0,
+      value: 'live2d/hero.json',
+    }])
+  })
+
   it('为旧引擎的 say Opus 语音引用生成警告', () => {
     const sentences = [
       parseSentence('say:hello -voice.opus;'),

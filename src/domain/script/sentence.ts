@@ -31,7 +31,23 @@ export interface StatementSourceRange {
   startLine: number
 }
 
-export type StatementSyntaxCapabilities = Pick<EngineRuntimeCapabilities, 'multilineStatements' | 'sceneSemantics'>
+/**
+ * 影响 webgal-parser 解析结果的能力唯一来源。
+ *
+ * 命令表由 sceneSemantics（含 return）与 changeFigureDiff 决定，分句由 multilineStatements 决定；
+ * 只有这三个会改变同一份文本解析出的语句。StatementSyntaxCapabilities、整篇解析缓存键与
+ * 文本编辑器的补全缓存键都从这份列表派生，避免新增能力时漏掉某一处而静默复用错误的解析结果。
+ */
+export const PARSE_AFFECTING_CAPABILITIES = [
+  'changeFigureDiff',
+  'multilineStatements',
+  'sceneSemantics',
+] as const satisfies readonly (keyof EngineRuntimeCapabilities)[]
+
+export type StatementSyntaxCapabilities = Pick<
+  EngineRuntimeCapabilities,
+  (typeof PARSE_AFFECTING_CAPABILITIES)[number]
+>
 
 let nextId = 0
 
@@ -65,9 +81,11 @@ const sourceRangesCache: StatementSourceRangesCacheEntry[] = []
 /** 上限 2 覆盖「当前文本 + 上一份（如语句组弹窗草稿）」，再多会长期占用整篇解析结果的内存 */
 const SOURCE_RANGES_CACHE_LIMIT = 2
 
-/** 缓存键只需包含影响切分的两个能力开关 */
-function createSyntaxCapabilitiesKey(capabilities?: StatementSyntaxCapabilities): string {
-  return `${capabilities?.multilineStatements ?? 'default'}|${capabilities?.sceneSemantics ?? 'default'}`
+/** 解析缓存键：只覆盖 PARSE_AFFECTING_CAPABILITIES，能力不同的文本不能命中同一条缓存 */
+export function createParseCapabilitiesKey(capabilities?: StatementSyntaxCapabilities): string {
+  return PARSE_AFFECTING_CAPABILITIES
+    .map(capability => capabilities?.[capability] ?? 'default')
+    .join('|')
 }
 
 function parseStatementSourceRanges(
@@ -123,7 +141,7 @@ export function buildStatementSourceRanges(
   capabilities?: StatementSyntaxCapabilities,
 ): StatementSourceRange[] {
   const normalizedText = text.includes('\r') ? text.replaceAll('\r\n', '\n') : text
-  const capabilitiesKey = createSyntaxCapabilitiesKey(capabilities)
+  const capabilitiesKey = createParseCapabilitiesKey(capabilities)
 
   for (const entry of sourceRangesCache) {
     if (entry.text === normalizedText && entry.capabilitiesKey === capabilitiesKey) {

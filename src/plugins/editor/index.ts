@@ -2,13 +2,13 @@ import * as monaco from 'monaco-editor'
 import { SCRIPT_CONFIG } from 'webgal-parser/src/config/scriptConfig'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_WEBGAL_SCRIPT_CONFIG, parseSceneOrEmpty } from '~/domain/script/parser'
-import { buildStatementSourceRanges } from '~/domain/script/sentence'
+import { parseSceneOrEmpty, WEBGAL_SCRIPT_LANGUAGES } from '~/domain/script/parser'
+import { buildStatementSourceRanges, createParseCapabilitiesKey } from '~/domain/script/sentence'
 import { getCommandConfig } from '~/features/editor/command-registry'
 import { editorDynamicOptionSources } from '~/features/editor/command-registry/dynamic-options'
 import { readContentField } from '~/features/editor/command-registry/schema'
 import { buildSceneAutocompleteOptionsFromText } from '~/features/editor/statement-editor/scene-autocomplete'
-import { WEBGAL_SCRIPT_LANGUAGE_IDS } from '~/features/editor/text-editor/text-editor-language'
+import { resolveWebgalScriptLanguageId, WEBGAL_SCRIPT_LANGUAGE_IDS } from '~/features/editor/text-editor/text-editor-language'
 import { resolveWebgalArgumentCompletionTarget } from '~/features/editor/text-editor/webgal-completion-context'
 import { i18n } from '~/plugins/i18n'
 import { useResourceIndex } from '~/services/resource-index/service'
@@ -22,6 +22,7 @@ import darkTheme from './themes/webgal-dark.json'
 import lightTheme from './themes/webgal-light.json'
 
 import type { IScene } from 'webgal-parser/src/interface/sceneInterface'
+import type { WebgalScriptConfig } from '~/domain/script/parser'
 import type { StatementSourceRange, StatementSyntaxCapabilities } from '~/domain/script/sentence'
 import type { DynamicOptionsContext, EditorDynamicOptionsKey } from '~/features/editor/command-registry/schema'
 
@@ -33,8 +34,8 @@ const TEMP_SCENE_URL = 'tempUrl'
 const CONTINUATION_MARKER_PATTERN = /^\s+([-|])/
 
 interface CompletionSourceRangesCacheEntry {
-  multilineStatements: boolean | undefined
-  sceneSemantics: boolean | undefined
+  /** 由 createParseCapabilitiesKey 生成，与整篇解析缓存用同一份能力列表 */
+  capabilitiesKey: string
   ranges: StatementSourceRange[]
   version: number
 }
@@ -185,9 +186,7 @@ const argumentKeyRule: ([RegExp, string, string] | [RegExp, string])[] = [
   ...buildEolRule(/ -/, 'split.common.webgal', '@argumentKey'),
 ]
 
-// Monaco 在旧运行时将 return 视为普通旁白内容。
-const commandStringList = SCRIPT_CONFIG.map(item => item.scriptString)
-const legacyCommandStringList = LEGACY_WEBGAL_SCRIPT_CONFIG.map(item => item.scriptString)
+// Monaco 在缺少命令的档位上把该命令视为普通旁白内容。
 
 // 部分命令内容的特殊高亮规则
 const commandNextRuleMap = new Map<commandType, string>([
@@ -201,7 +200,7 @@ const commandNextRuleMap = new Map<commandType, string>([
 ])
 
 // 形如 commandType: 或 commandType; 的命令匹配规则
-function buildCommandRuleList(scriptConfig: typeof SCRIPT_CONFIG): [RegExp | string, string, string][] {
+function buildCommandRuleList(scriptConfig: WebgalScriptConfig): [RegExp | string, string, string][] {
   return scriptConfig.map((config) => {
     const pattern = new RegExp(`^${config.scriptString}(?=:|;)`)
     // 寻找特定命令的内容高亮规则, 否则回退到默认规则
@@ -209,9 +208,6 @@ function buildCommandRuleList(scriptConfig: typeof SCRIPT_CONFIG): [RegExp | str
     return [pattern, 'command.common.webgal', nextRule]
   })
 }
-
-const commandRuleList = buildCommandRuleList(SCRIPT_CONFIG)
-const legacyCommandRuleList = buildCommandRuleList(LEGACY_WEBGAL_SCRIPT_CONFIG)
 
 // 构建匹配完 commandType 后的规则
 function buildAfterCommandRule(nextState: string) {
@@ -243,9 +239,9 @@ function buildWebgalRootRules(
 // #endregion
 
 const webgalMonarchTokensProvider = {
-  commands: commandStringList,
+  commands: SCRIPT_CONFIG.map(item => item.scriptString),
   tokenizer: {
-    root: buildWebgalRootRules(commandRuleList),
+    root: buildWebgalRootRules(buildCommandRuleList(SCRIPT_CONFIG)),
     comment: [
       [/.*$/, 'line.comment.webgal', '@root'],
     ],
@@ -458,23 +454,17 @@ const webgalMonarchTokensProvider = {
   },
 } satisfies monaco.languages.IMonarchLanguage
 
-const legacyWebgalMonarchTokensProvider = {
-  ...webgalMonarchTokensProvider,
-  commands: legacyCommandStringList,
-  tokenizer: {
-    ...webgalMonarchTokensProvider.tokenizer,
-    root: buildWebgalRootRules(legacyCommandRuleList),
-  },
-} satisfies monaco.languages.IMonarchLanguage
-
-monaco.languages.setMonarchTokensProvider(
-  WEBGAL_SCRIPT_LANGUAGE_IDS[0],
-  webgalMonarchTokensProvider,
-)
-monaco.languages.setMonarchTokensProvider(
-  WEBGAL_SCRIPT_LANGUAGE_IDS[1],
-  legacyWebgalMonarchTokensProvider,
-)
+// 每个命令表档位注册一套高亮规则：缺少的命令按普通旁白内容着色。
+for (const { id, config } of WEBGAL_SCRIPT_LANGUAGES) {
+  monaco.languages.setMonarchTokensProvider(resolveWebgalScriptLanguageId(id), {
+    ...webgalMonarchTokensProvider,
+    commands: config.map(item => item.scriptString),
+    tokenizer: {
+      ...webgalMonarchTokensProvider.tokenizer,
+      root: buildWebgalRootRules(buildCommandRuleList(config)),
+    },
+  } satisfies monaco.languages.IMonarchLanguage)
+}
 
 // #endregion
 
@@ -718,21 +708,15 @@ function getCompletionStatementSourceRanges(
   capabilities: StatementSyntaxCapabilities | undefined,
 ): StatementSourceRange[] {
   const version = model.getVersionId()
-  const multilineStatements = capabilities?.multilineStatements
-  const sceneSemantics = capabilities?.sceneSemantics
+  const capabilitiesKey = createParseCapabilitiesKey(capabilities)
   const cached = completionSourceRangesCache.get(model)
-  if (
-    cached?.version === version
-    && cached.multilineStatements === multilineStatements
-    && cached.sceneSemantics === sceneSemantics
-  ) {
+  if (cached?.version === version && cached.capabilitiesKey === capabilitiesKey) {
     return cached.ranges
   }
 
   const ranges = buildStatementSourceRanges(model.getValue(), capabilities)
   completionSourceRangesCache.set(model, {
-    multilineStatements,
-    sceneSemantics,
+    capabilitiesKey,
     ranges,
     version,
   })

@@ -17,6 +17,7 @@ describe('Engine runtime capabilities', () => {
 
   it('从引擎版本派生编辑器运行时能力', () => {
     expect(resolveEngineRuntimeCapabilities('4.6.2')).toEqual({
+      changeFigureDiff: false,
       figurePositions: false,
       multilineStatements: false,
       opusVocalShorthand: false,
@@ -24,6 +25,7 @@ describe('Engine runtime capabilities', () => {
       transformFrom: false,
     })
     expect(resolveEngineRuntimeCapabilities('4.6.3')).toEqual({
+      changeFigureDiff: false,
       figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
@@ -31,6 +33,7 @@ describe('Engine runtime capabilities', () => {
       transformFrom: false,
     })
     expect(resolveEngineRuntimeCapabilities('4.6.5')).toEqual({
+      changeFigureDiff: true,
       figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
@@ -38,6 +41,7 @@ describe('Engine runtime capabilities', () => {
       transformFrom: true,
     })
     expect(resolveEngineRuntimeCapabilities('4.10.0')).toEqual({
+      changeFigureDiff: true,
       figurePositions: true,
       multilineStatements: true,
       opusVocalShorthand: true,
@@ -60,9 +64,13 @@ describe('Engine runtime capabilities', () => {
     expect(supportsEngineRuntimeCapability('4.6.5-beta.1', 'transformFrom')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.4', 'transformFrom')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.5', 'transformFrom')).toBe(true)
+    expect(supportsEngineRuntimeCapability('4.6.4', 'changeFigureDiff')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.5-beta.1', 'changeFigureDiff')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.5', 'changeFigureDiff')).toBe(true)
     expect(supportsEngineRuntimeCapability(undefined, 'multilineStatements')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'opusVocalShorthand')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'sceneSemantics')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'transformFrom')).toBe(false)
+    expect(supportsEngineRuntimeCapability(undefined, 'changeFigureDiff')).toBe(false)
   })
 })

@@ -18,7 +18,8 @@ vi.mock(import('~/stores/workspace'), () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
+import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
+import { resolveWebgalScriptLanguageId } from '~/features/editor/text-editor/text-editor-language'
 import { getArgKeyCompletions } from '~/plugins/editor/completion/webgal-argument-keys'
 import { getCommandCompletions } from '~/plugins/editor/completion/webgal-commands'
 import {
@@ -185,6 +186,7 @@ describe('getArgKeyCompletions', () => {
 
   it('旧引擎不提供扩展立绘位置参数', () => {
     const completions = getArgKeyCompletions(range, commandType.say, true, {
+      changeFigureDiff: false,
       figurePositions: false,
       multilineStatements: false,
       opusVocalShorthand: false,
@@ -255,12 +257,31 @@ describe('WebGAL Monaco 补全', () => {
 })
 
 describe('WebGAL Monaco 语法高亮', () => {
-  it('旧运行时将 return 按旁白内容着色，而不是命令', () => {
-    const [tokens] = monaco.editor.tokenize('return;', LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+  const languageIdFor = (capabilities: { changeFigureDiff: boolean, sceneSemantics: boolean }) =>
+    resolveWebgalScriptLanguageId(resolveWebgalScriptConfigKey(capabilities))
+
+  it('能力全关时将 return 按旁白内容着色，而不是命令', () => {
+    const [tokens] = monaco.editor.tokenize('return;', languageIdFor({ changeFigureDiff: false, sceneSemantics: false }))
 
     expect(tokens?.[0]).toMatchObject({
       offset: 0,
       type: expect.stringContaining('content.say.webgal'),
+    })
+  })
+
+  it('只缺立绘差分的运行时保留 return 的命令着色，只把该命令降为旁白', () => {
+    const languageId = languageIdFor({ changeFigureDiff: false, sceneSemantics: true })
+
+    const [returnTokens] = monaco.editor.tokenize('return;', languageId)
+    expect(returnTokens?.[0]).toMatchObject({
+      offset: 0,
+      type: expect.stringContaining('command.common.webgal'),
+    })
+
+    const [diffTokens] = monaco.editor.tokenize('changeFigureDiff:stand.webp;', languageId)
+    expect(diffTokens?.[0]).toMatchObject({
+      offset: 0,
+      type: expect.stringContaining('character.say.webgal'),
     })
   })
 })

@@ -172,7 +172,7 @@ describe('sceneTextPanel', () => {
     const snapshot = resolveSceneTextPanelSnapshotFromContent(
       1,
       'return;',
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      { changeFigureDiff: false, multilineStatements: false, sceneSemantics: false },
     )
 
     expect(snapshot.entry?.parsed).toMatchObject({

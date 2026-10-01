@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { parseSentence } from '~/domain/script/parser'
+import { serializeSentence } from '~/domain/script/serialize'
 
-import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig, getCommandId } from '../index'
-import { readArgFields, readContentField, readEditorFields, resolveI18n } from '../schema'
+import { IMAGE_EXTENSIONS } from '../common-params'
+import { categoryTheme, commandEntries, commandPanelCategories, getCommandConfig, getCommandId, getFactoryDefaultCommandText } from '../index'
+import { isRuntimeCapabilitySupported, readArgFields, readContentField, readEditorFields, resolveI18n } from '../schema'
 
 describe('命令注册表完整性', () => {
   it('所有命令注册项都有唯一稳定标识', () => {
@@ -175,6 +178,77 @@ describe('命令注册表完整性', () => {
       type: 'choice',
       variant: { panel: 'figure-position' },
     })
+  })
+
+  it('changeFigureDiff 复用图片立绘的位置与口型眨眼图字段', () => {
+    const changeFigureFields = readEditorFields(getCommandConfig(commandType.changeFigure))
+    const diffFields = readEditorFields(getCommandConfig(commandType.changeFigureDiff))
+
+    // 先钉住字段集合本身：只比较两边相等的话，两边同步丢失同一个字段仍然是绿的
+    const sharedKeys = ['position', 'animationFlag', 'mouthOpen', 'mouthHalfOpen', 'mouthClose', 'eyesOpen', 'eyesClose']
+    expect(diffFields.map(field => field.key).filter(key => sharedKeys.includes(key))).toEqual(sharedKeys)
+
+    expect(diffFields.find(field => field.key === 'position')?.field).toMatchObject({
+      type: 'choice',
+      mode: 'flag',
+      variant: { panel: 'figure-position' },
+    })
+
+    // 位置与口型眨眼图两处逐字段同形，避免长期漂移
+    for (const key of sharedKeys) {
+      expect(diffFields.find(field => field.key === key)?.field)
+        .toEqual(changeFigureFields.find(field => field.key === key)?.field)
+    }
+  })
+
+  it('changeFigureDiff 对模型内容隐藏口型眨眼图字段', () => {
+    const diffFields = readEditorFields(getCommandConfig(commandType.changeFigureDiff))
+    const mouthOpen = diffFields.find(field => field.key === 'mouthOpen')?.field
+
+    expect(diffFields.find(field => field.key === 'animationFlag')?.field.visibleWhenContent?.('live2d/hero.json')).toBe(false)
+    expect(diffFields.find(field => field.key === 'animationFlag')?.field.visibleWhenContent?.('smile.png')).toBe(true)
+    expect(mouthOpen?.visibleWhenContent?.('spine/hero.skel')).toBe(false)
+  })
+
+  it('changeFigureDiff 按 4.6.5 能力门控且不提供效果编辑器', () => {
+    const entry = commandEntries.find(item => item.type === commandType.changeFigureDiff)
+    expect(entry).toBeDefined()
+    expect(entry?.requiredCapability).toBe('changeFigureDiff')
+    expect(entry?.hasEffectEditor).toBeUndefined()
+
+    expect(isRuntimeCapabilitySupported(entry!, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(true)
+    expect(isRuntimeCapabilitySupported(entry!, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toBe(false)
+
+    // 引擎忽略变换与入退场参数，面板不能提供写入入口
+    const keys = readArgFields(getCommandConfig(commandType.changeFigureDiff))
+      .map(item => item.field.key)
+    expect(keys).not.toContain('transform')
+    expect(keys).not.toContain('duration')
+    expect(keys).not.toContain('enter')
+    expect(keys).not.toContain('exit')
+    expect(keys).not.toContain('motion')
+    expect(keys).not.toContain('expression')
+    expect(keys).not.toContain('blendMode')
+  })
+
+  it('changeFigureDiff 的内容只接受图片扩展名', () => {
+    const content = readContentField(getCommandConfig(commandType.changeFigureDiff))
+
+    expect(content).toMatchObject({
+      type: 'file',
+      fileConfig: { assetType: 'figure', extensions: IMAGE_EXTENSIONS },
+    })
+  })
+
+  it('changeFigureDiff 的工厂默认语句可稳定往返', () => {
+    const text = getFactoryDefaultCommandText(commandType.changeFigureDiff)
+
+    expect(text).toBe('changeFigureDiff:;')
+    expect(parseSentence(text)).toMatchObject({
+      command: commandType.changeFigureDiff,
+      args: [],
+    })
+    expect(serializeSentence(parseSentence(text)!)).toBe(text)
   })
 
   it('立绘引用和标签名称字段声明对应 autocomplete 来源', () => {

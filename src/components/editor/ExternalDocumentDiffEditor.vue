@@ -15,7 +15,7 @@ interface Props {
   kind: DocumentKind
   localContent: string
   path: string
-  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'sceneSemantics'>
+  runtimeCapabilities?: Pick<EngineRuntimeCapabilities, 'changeFigureDiff' | 'sceneSemantics'>
 }
 
 const props = defineProps<Props>()

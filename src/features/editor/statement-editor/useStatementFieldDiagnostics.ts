@@ -1,6 +1,7 @@
 import { findUnsupportedFigurePositionReferences } from '~/domain/script/figure-position-diagnostics'
 import {
   findMissingSentenceResourceReferences,
+  findSkippedFigureDiffModelReferences,
   findUnsupportedEngineModelReferences,
 } from '~/features/editor/command-registry/diagnostics'
 import { getDiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
@@ -11,7 +12,7 @@ import { useResourceStore } from '~/stores/resource'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
-import type { UnsupportedEngineModelReference } from '~/features/editor/command-registry/diagnostics'
+import type { SkippedFigureDiffModelReference, UnsupportedEngineModelReference } from '~/features/editor/command-registry/diagnostics'
 import type { DiagnosticFieldStatus } from '~/features/editor/diagnostics/presentation'
 import type { EditorFieldDiagnostic, SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { ResourceReferenceQuery, ResourceReferenceSource } from '~/services/resource-index/reference-query'
@@ -39,6 +40,18 @@ function toLocalUnsupportedEngineModelDiagnostic(
 ): EditorFieldDiagnostic {
   return {
     code: reference.modelType === 'live2d' ? 'unsupported-live2d' : 'unsupported-spine',
+    field: reference.source,
+    severity: 'warning',
+    source: 'engine',
+    value: reference.value,
+  }
+}
+
+function toLocalSkippedFigureDiffModelDiagnostic(
+  reference: SkippedFigureDiffModelReference,
+): EditorFieldDiagnostic {
+  return {
+    code: reference.code,
     field: reference.source,
     severity: 'warning',
     source: 'engine',
@@ -79,6 +92,10 @@ export function useStatementFieldDiagnostics(options: UseStatementFieldDiagnosti
         resourceStore.currentEngineCapabilities,
       ).map(reference => toLocalUnsupportedEngineModelDiagnostic(reference)))
     }
+
+    // 模型跳过的判据是命令本身，与引擎的模型能力无关
+    diagnostics.push(...findSkippedFigureDiffModelReferences(parsed)
+      .map(reference => toLocalSkippedFigureDiffModelDiagnostic(reference)))
 
     if (toValue(options.runtimeCapabilities)?.figurePositions === false) {
       diagnostics.push(...findUnsupportedFigurePositionReferences(parsed).map(reference =>

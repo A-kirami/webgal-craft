@@ -15,10 +15,15 @@ vi.mock('~/plugins/i18n', () => ({
 }))
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
-import { LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID } from '~/features/editor/text-editor/text-editor-language'
+import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
+import { resolveWebgalScriptLanguageId } from '~/features/editor/text-editor/text-editor-language'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 
 const OWNER = 'webgal-editor-diagnostics'
+/** 能力全关时的语言档位：return 与立绘差分都按旁白着色 */
+const LEGACY_LANGUAGE_ID = resolveWebgalScriptLanguageId(
+  resolveWebgalScriptConfigKey(LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+)
 const models: monaco.editor.ITextModel[] = []
 let modelId = 0
 
@@ -39,7 +44,7 @@ function readMarkers(model: monaco.editor.ITextModel): monaco.editor.IMarker[] {
 describe('updateEditorDiagnostics', () => {
   beforeAll(() => {
     monaco.languages.register({ id: 'webgalscript' })
-    monaco.languages.register({ id: LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID })
+    monaco.languages.register({ id: LEGACY_LANGUAGE_ID })
   })
 
   beforeEach(() => {
@@ -175,6 +180,84 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
+  it('旧运行时会标记立绘差分，范围覆盖整条语句', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const statement = 'changeFigureDiff:smile.png -left -id=hero;'
+    const model = createModel([
+      'changeFigure: hero.png -left;',
+      statement,
+    ].join('\n'))
+    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 2,
+      startColumn: 1,
+      endLineNumber: 2,
+      // 命令名与全部参数都在范围内，不能只划图片路径
+      endColumn: statement.length + 1,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.unsupportedChangeFigureDiff:',
+    })])
+  })
+
+  it('多行立绘差分的范围覆盖它的全部物理行', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const model = createModel([
+      'changeFigureDiff:stand.webp',
+      '  -id=hero -left;',
+      'say:next;',
+    ].join('\n'))
+    // 只有 4.6.5 起才有该命令，但多行语句是 4.6.3 的能力：需要这个组合才能出现多行差分语句
+    updateEditorDiagnostics(model, {
+      changeFigureDiff: false,
+      figurePositions: true,
+      multilineStatements: true,
+      opusVocalShorthand: true,
+      sceneSemantics: true,
+      transformFrom: false,
+    })
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 2,
+      endColumn: '  -id=hero -left;'.length + 1,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.unsupportedChangeFigureDiff:',
+    })])
+  })
+
+  it('新运行时不标记立绘差分，但会标记被引擎跳过的模型内容', () => {
+    useResourceIndex.mockReturnValue({
+      status: { value: 'ready' },
+      hasAssetKey: vi.fn(() => true),
+    })
+
+    const statement = 'changeFigureDiff:live2d/hero.json -id=hero;'
+    const model = createModel([
+      'changeFigureDiff:smile.png -left;',
+      statement,
+    ].join('\n'))
+    updateEditorDiagnostics(model, LATEST_ENGINE_RUNTIME_CAPABILITIES)
+
+    expect(readMarkers(model)).toEqual([expect.objectContaining({
+      startLineNumber: 2,
+      startColumn: 1,
+      endLineNumber: 2,
+      endColumn: statement.length + 1,
+      severity: monaco.MarkerSeverity.Warning,
+      message: 'edit.diagnostics.skippedFigureDiffModel:',
+    })])
+  })
+
   it('旧运行时会标记扩展立绘位置', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
@@ -303,7 +386,7 @@ describe('updateEditorDiagnostics', () => {
       hasAssetKey: vi.fn(() => true),
     })
 
-    const model = createModel('setVar: result=1 -local;', LEGACY_WEBGAL_SCRIPT_LANGUAGE_ID)
+    const model = createModel('setVar: result=1 -local;', LEGACY_LANGUAGE_ID)
     updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({

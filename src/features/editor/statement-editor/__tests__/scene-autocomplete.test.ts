@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildStatements } from '~/domain/script/sentence'
 
 import { buildSceneAutocompleteOptionsFromStatements, buildSceneAutocompleteOptionsFromText } from '../scene-autocomplete'
@@ -61,6 +60,19 @@ describe('buildSceneAutocompleteOptionsFromStatements', () => {
     expect(options.soundEffectIds).toEqual([{ label: 'fx-main', value: 'fx-main' }])
     expect(options.sceneLabels).toEqual([{ label: 'start', value: 'start' }])
   })
+
+  it('把立绘差分的 id 一并收进 figureIds', () => {
+    const statements = buildStatements([
+      'changeFigure: hero.png -id=hero;',
+      'changeFigureDiff: smile.png -id=hero -left;',
+      'changeFigureDiff: angry.png -id=hero-angry;',
+    ].join('\n'))
+
+    expect(buildSceneAutocompleteOptionsFromStatements(statements).figureIds).toEqual([
+      { label: 'hero', value: 'hero' },
+      { label: 'hero-angry', value: 'hero-angry' },
+    ])
+  })
 })
 
 describe('buildSceneAutocompleteOptionsFromText', () => {
@@ -73,9 +85,12 @@ describe('buildSceneAutocompleteOptionsFromText', () => {
     })
   })
 
-  it('按运行时能力解析文本，旧运行时将 return 保持为对白', () => {
+  it('按运行时能力解析文本，缺少场景语义的运行时将 return 保持为对白', () => {
     expect(buildSceneAutocompleteOptionsFromText('return:success;').speakers).toEqual([])
-    expect(buildSceneAutocompleteOptionsFromText('return:success;', LEGACY_ENGINE_RUNTIME_CAPABILITIES).speakers).toEqual([
+    expect(buildSceneAutocompleteOptionsFromText(
+      'return:success;',
+      { changeFigureDiff: false, multilineStatements: false, sceneSemantics: false },
+    ).speakers).toEqual([
       { label: 'return', value: 'return' },
     ])
   })

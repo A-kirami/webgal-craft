@@ -145,4 +145,23 @@ describe('useStatementFieldDiagnostics', () => {
     }])
     expect(result.getFieldStatus({ kind: 'argument', key: 'target' })).toBe('warning')
   })
+
+  it('草稿里的立绘差分模型内容会即时标记内容字段', () => {
+    resourceIndexStatus.value = 'idle'
+    useResourceStoreMock.mockReturnValue({
+      currentEngineCapabilities: { live2d: true, spine: true },
+    })
+    const parsed = computed(() => parseSentence('changeFigureDiff:live2d/hero.json -id=hero;'))
+
+    const result = useStatementFieldDiagnostics({ parsed })
+
+    expect(result.getFieldDiagnostics({ kind: 'content' })).toEqual([{
+      code: 'skipped-figure-diff-model',
+      field: { kind: 'content' },
+      severity: 'warning',
+      source: 'engine',
+      value: 'live2d/hero.json',
+    }])
+    expect(result.getFieldStatus({ kind: 'content' })).toBe('warning')
+  })
 })
