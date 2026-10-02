@@ -7,6 +7,8 @@ pub mod export;
 pub mod external_import;
 pub mod fs;
 pub mod game;
+#[cfg(desktop)]
+pub mod preview_fullscreen;
 pub mod project_config;
 pub mod resource_import;
 pub mod server;

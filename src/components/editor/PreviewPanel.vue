@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow'
 import { openUrl } from '@tauri-apps/plugin-opener'
 
 import { findGameConfigEntryValue, gameCmds } from '~/commands/game'
+import { previewFullscreenCmds } from '~/commands/preview-fullscreen'
 import { usePreviewViewport } from '~/composables/usePreviewViewport'
 import {
   createPreviewBootstrapProvideMessage,
@@ -12,6 +14,7 @@ import {
   isPreviewViewportSpaceKeyMessage,
   isPreviewViewportWheelMessage,
 } from '~/features/editor/preview/embedded-preview-messages'
+import { createPreviewFullscreenDriver } from '~/features/editor/preview/preview-fullscreen'
 import {
   DEFAULT_PREVIEW_PANEL_ASPECT_RATIO,
   DEFAULT_PREVIEW_PANEL_STAGE_HEIGHT,
@@ -36,6 +39,7 @@ import PreviewToolbar from './PreviewToolbar.vue'
 import TransformOverlay from './TransformOverlay.vue'
 import ViewportControls from './ViewportControls.vue'
 
+import type { PreviewFullscreenDriver } from '~/features/editor/preview/preview-fullscreen'
 import type { PreviewPanelStageSize } from '~/features/editor/preview/preview-panel'
 import type { DisplayTransform } from '~/features/editor/transform-overlay/model'
 import type { PreviewConnectionStatus } from '~/stores/preview-sync'
@@ -94,6 +98,10 @@ let embeddedPreviewSlotRevision = 0
 let embeddedPreviewSlotUpdateQueue = Promise.resolve()
 let isPreviewInteractionReleasePending = $ref(false)
 let previewInteractionReleaseFrameId: number | undefined
+// 预览里的游戏是否正处于全屏（引擎点“全屏”后 iframe 会成为全屏元素）
+let isPreviewFullscreen = $ref(false)
+// 窗口形态的会话在 Rust 侧（见 ~/commands/preview-fullscreen），这里只把元素全屏状态折算成会话
+let previewFullscreenDriver: PreviewFullscreenDriver | undefined
 
 const previewViewport = usePreviewViewport({
   getCanvasSize: () => ({
@@ -105,13 +113,16 @@ const previewViewport = usePreviewViewport({
 const previewCanvasStyle = $computed(() => ({
   aspectRatio,
   height: `${stageHeight}px`,
-  transform: previewViewport.viewportTransform.value,
+  // 全屏时把画布的缩放让开：祖先的 transform 会成为全屏 iframe 的包含块，不让开的话元素全屏
+  // 只会撑满画布那一小块，而不是整个窗口
+  transform: isPreviewFullscreen ? undefined : previewViewport.viewportTransform.value,
   width: `${stageWidth}px`,
 }))
 const previewOutputSurfaceStyle = $computed(() => ({
   // 裁剪经过 transform 放大的 iframe，避免其命中区域越出预览边界响应编辑器事件
   overflow: 'hidden' as const,
-  filter: preferenceStore.previewBrightnessEnabled
+  // 同上，filter 也会成为全屏 iframe 的包含块
+  filter: !isPreviewFullscreen && preferenceStore.previewBrightnessEnabled
     ? `brightness(${percentageToRatio(preferenceStore.previewBrightness[0])})`
     : undefined,
 }))
@@ -481,10 +492,22 @@ async function initializeEmbeddedPreview(currentEmbeddedLaunchId: string): Promi
   }
 }
 
+/**
+ * 预览全屏状态变化：全屏期间让开画布的 transform / filter，并让驱动器接管窗口。
+ *
+ * 只认「预览 iframe 自己」成为全屏元素 —— 跨源 frame 只能把自身变成全屏元素，游戏没法让编辑器里
+ * 别的元素全屏；窗口动作也只跑在编辑器这一侧，iframe 拿不到任何窗口权限。
+ */
+function handlePreviewFullscreenChange(): void {
+  isPreviewFullscreen = document.fullscreenElement === iframeRef.value
+  previewFullscreenDriver?.notify(isPreviewFullscreen)
+}
+
 useEventListener(globalThis, 'message', handleEmbeddedPreviewBootstrap)
 useEventListener(globalThis, 'message', handleEmbeddedPreviewPointer)
 useEventListener(globalThis, 'message', handleEmbeddedPreviewSpaceKey)
 useEventListener(globalThis, 'message', handleEmbeddedPreviewWheel)
+useEventListener(document, 'fullscreenchange', handlePreviewFullscreenChange)
 useResizeObserver(viewportRef, () => {
   previewViewport.syncFitToViewport()
 })
@@ -594,11 +617,20 @@ useShortcutContext({
 
 onMounted(() => {
   void fitViewportToCurrentStage()
+  previewFullscreenDriver = createPreviewFullscreenDriver(
+    getCurrentWebviewWindow(),
+    previewFullscreenCmds,
+    (error: unknown) => {
+      logger.warn(`预览全屏的窗口处理失败: ${error}`)
+    },
+  )
 })
 
 onBeforeUnmount(() => {
   cancelPreviewInteractionRelease()
   updateEmbeddedPreviewSlot(undefined)
+  // 面板卸载会把 iframe 一起摘掉，元素全屏随之结束，那次 fullscreenchange 我们未必还能听到
+  void previewFullscreenDriver?.dispose()
 })
 </script>
 
@@ -636,6 +668,7 @@ onBeforeUnmount(() => {
             class="bg-background shadow-sm origin-top-left left-0 top-0 absolute"
             :style="previewCanvasStyle"
           >
+            <!-- 跨源 iframe 默认拿不到 fullscreen 能力，引擎据此判断环境支不支持，缺了就不显示全屏按钮 -->
             <iframe
               ref="iframeRef"
               :key="refreshKey"
@@ -643,6 +676,7 @@ onBeforeUnmount(() => {
               :title="previewTitle"
               class="border-0 size-full"
               :style="previewIframeStyle"
+              allowfullscreen
               @load="postPreviewOutputSettings"
             />
           </div>
