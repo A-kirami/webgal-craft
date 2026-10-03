@@ -255,11 +255,14 @@ function serializeSayNode(node: SayCommandNode): ISentence {
     .flag('concat', node.concat)
     .flag('notend', node.notend)
     .build(node.extraArgs)
-  const shouldFallbackToExplicitSay = isContinuation && node.text === '' && args.length === 0
+  // 续写形式没有命令头，内容就是命令头；文本为空时整句只剩参数段或裸 ';'，
+  // 两种写法都不再是独立语句：' -fontSize=small' 以空格 + '-' 开头，会被支持多行语句的引擎
+  // 当成上一条语句的续行吞掉；裸 ';' 会被 webgal-parser 识别成 comment。
+  // 因此文本为空时回退到显式 say 头，参数段随命令头一起保留下来。
+  const shouldFallbackToExplicitSay = isContinuation && node.text === ''
 
   return {
     ...toSentenceBase(node),
-    // 空续写文本若写成裸 ';'，webgal-parser 会把它识别成 comment。
     commandRaw: isStandardForm || shouldFallbackToExplicitSay
       ? 'say'
       : (isContinuation ? SAY_CONTINUATION_RAW : node.speaker),

@@ -79,5 +79,12 @@ describe('serializeSentence', () => {
       commandRaw: SAY_CONTINUATION_RAW,
       content: '',
     }))).toBe('say:;')
+
+    // 只有参数段（" -fontSize=small"）会被引擎当成上一条语句的续行，必须带上命令头
+    expect(serializeSentence(createSentence({
+      commandRaw: SAY_CONTINUATION_RAW,
+      content: '',
+      args: [{ key: 'fontSize', value: 'small' }],
+    }))).toBe('say: -fontSize=small;')
   })
 })

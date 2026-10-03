@@ -474,6 +474,18 @@ describe('命令节点参数更新器', () => {
     ])
   })
 
+  it('空内容的 say 更新参数后回退到显式 say 头', () => {
+    const node = parseCommandNode(mustParse('say:;'))
+    const updated = updateCommandNodeParam(node, makeParamDef('fontSize', 'select'), 'small')
+    expect(updated).toBeDefined()
+
+    const serialized = serializeCommandNode(updated!)
+    expect(serialized.commandRaw).toBe('say')
+    expect(serialized.args).toEqual([{ key: 'fontSize', value: 'small' }])
+    // 无命令头的 ' -fontSize=small;' 会被多行语句引擎当成上一条语句的续行
+    expect(serializeSentence(serialized)).toBe('say: -fontSize=small;')
+  })
+
   it('类型化命令的不支持参数返回 undefined', () => {
     const sentence = mustParse('setVar: score=10;')
     const node = parseCommandNode(sentence)
