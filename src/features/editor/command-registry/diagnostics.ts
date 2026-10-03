@@ -4,6 +4,7 @@ import { classifyEngineModelReference } from '~/domain/engine/model-capabilities
 import { readTransformFromMode } from '~/domain/engine/transform-args'
 import { classifyColorText } from '~/domain/script/color'
 import { parseChooseContent } from '~/domain/script/content'
+import { hasVariableInterpolation } from '~/domain/script/variable-interpolation'
 import { createReferencedAssetKey } from '~/services/resource-index/values'
 
 import { getCommandConfig, getCommandScriptString } from './index'
@@ -165,7 +166,9 @@ export function findSkippedFigureDiffModelReferences(
   }
 
   const value = sentence.content.trim()
-  const modelType = classifyEngineModelReference(value)
+  const modelType = hasVariableInterpolation(value)
+    ? undefined
+    : classifyEngineModelReference(value)
   if (!modelType) {
     return []
   }
@@ -219,7 +222,11 @@ export function findUnsupportedEngineOpusVocalReferences(
 
   // 解析器会把显式 vocal 参数和文件简写归一化为同一字段；Craft 保存时统一输出简写。
   const vocal = sentence.args.find(arg => arg.key === 'vocal')
-  if (typeof vocal?.value !== 'string' || !vocal.value.toLowerCase().endsWith('.opus')) {
+  if (
+    typeof vocal?.value !== 'string'
+    || hasVariableInterpolation(vocal.value)
+    || !vocal.value.toLowerCase().endsWith('.opus')
+  ) {
     return []
   }
 
@@ -315,6 +322,7 @@ export function findUnsupportedSceneSemanticReferences(
 /**
  * 找出 color 参数里编辑器无法编辑（unsupported）或根本不是色值（invalid）的值。
  * 越界但语法合法的值（如 `rgb(300, 0, 0)`）按 CSS 语义裁剪，与引擎渲染结果一致，不算异常。
+ * 含变量插值的取值在运行时才成形，静态分类必然误报，直接跳过。
  */
 export function findColorFormatReferences(sentence: ISentence): ColorFormatReference[] {
   const references: ColorFormatReference[] = []
@@ -326,7 +334,7 @@ export function findColorFormatReferences(sentence: ISentence): ColorFormatRefer
 
     const item = sentence.args.find(candidate => candidate.key === argField.storageKey)
     const value = typeof item?.value === 'string' ? item.value.trim() : ''
-    if (!value) {
+    if (!value || hasVariableInterpolation(value)) {
       continue
     }
 
@@ -345,10 +353,20 @@ export function findColorFormatReferences(sentence: ISentence): ColorFormatRefer
   return references
 }
 
+/**
+ * 按内容判定立绘 / 背景语句的模型类型。
+ *
+ * 含变量插值的取值在运行时才决定是不是模型，分类结论只是猜测，因此返回 undefined，
+ * 让「引擎不支持该模型」与「立绘差分会被整句跳过」两条诊断都不误报。
+ */
 function classifySentenceEngineModelReference(
   command: commandType,
   value: string,
 ): EngineModelType | undefined {
+  if (hasVariableInterpolation(value)) {
+    return undefined
+  }
+
   if (command === commandType.changeFigure) {
     return classifyEngineModelReference(value)
   }

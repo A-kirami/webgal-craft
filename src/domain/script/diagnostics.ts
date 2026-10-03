@@ -1,6 +1,17 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { hasVariableInterpolation } from './variable-interpolation'
+
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
+
+/**
+ * 读取标签名。空标签与含变量插值的标签都返回 undefined：
+ * 后者在运行时才成形，既不能算作静态定义，也不能参与静态匹配。
+ */
+function readStaticLabel(sentence: ISentence): string | undefined {
+  const label = sentence.content.trim()
+  return label && !hasVariableInterpolation(label) ? label : undefined
+}
 
 export interface DuplicateSceneLabelDiagnostic {
   count: number
@@ -18,7 +29,7 @@ export function diagnoseDuplicateSceneLabels(
       continue
     }
 
-    const label = sentence.content.trim()
+    const label = readStaticLabel(sentence)
     if (!label) {
       continue
     }
@@ -60,7 +71,7 @@ export function diagnoseMissingSceneLabels(
       continue
     }
 
-    const label = sentence.content.trim()
+    const label = readStaticLabel(sentence)
     if (label) {
       definedLabels.add(label)
     }
@@ -72,7 +83,7 @@ export function diagnoseMissingSceneLabels(
       continue
     }
 
-    const label = sentence.content.trim()
+    const label = readStaticLabel(sentence)
     if (label && !definedLabels.has(label)) {
       diagnostics.push({ label, statementIndex })
     }
