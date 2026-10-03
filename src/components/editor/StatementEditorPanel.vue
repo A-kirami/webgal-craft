@@ -223,8 +223,9 @@ useShortcutContext({
       <span class="text-sm text-muted-foreground ml-auto tabular-nums">#{{ index != null ? index + 1 : entry.id }}</span>
     </div>
 
-    <!-- 可滚动参数区域 -->
-    <ScrollArea v-if="!config.locked" class="flex-1" @dblclick="handleBlankDblClick">
+    <!-- 可滚动参数区域。[contain:inline-size]：参数区宽度只由面板决定，不参与内容的固有宽度计算；
+         否则内容定宽控件（如文件选择器触发器）会撑开 ScrollArea 的 display: table 包裹层，把默认命令弹窗顶宽 -->
+    <ScrollArea v-if="!config.locked" class="flex-1 [contain:inline-size]" @dblclick="handleBlankDblClick">
       <div class="flex flex-col gap-3" :class="inline ? 'px-1 py-0' : 'p-4'">
         <!-- 资源媒体预览 -->
         <StatementAssetPreview
