@@ -19,6 +19,19 @@ describe('diagnoseMissingSceneLabels', () => {
     ])
   })
 
+  it('跳过含变量插值的跳转目标', () => {
+    const sentences = [
+      parseSentence('label:start;'),
+      parseSentence('jumpLabel:{target};'),
+      parseSentence('jumpLabel:next-{target};'),
+      parseSentence('jumpLabel:end;'),
+    ]
+
+    expect(diagnoseMissingSceneLabels(sentences)).toEqual([
+      { label: 'end', statementIndex: 3 },
+    ])
+  })
+
   it('按大小写精确匹配标签名', () => {
     const sentences = [
       parseSentence('label:start;'),

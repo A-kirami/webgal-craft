@@ -6,8 +6,10 @@ import { parseSentence } from '~/domain/script/parser'
 
 import {
   findChangeFigureDiffCompatReferences,
+  findColorFormatReferences,
   findSkippedFigureDiffModelReferences,
   findTransformWriteModeCompatReferences,
+  findUnsupportedEngineModelReferences,
   findUnsupportedEngineOpusVocalReferences,
   querySentenceResourceReferences,
 } from '../diagnostics'
@@ -42,6 +44,11 @@ describe('querySentenceResourceReferences', () => {
 
     const variableSentence = parseSentence('say:hello -vocal={voice};')
     expect(querySentenceResourceReferences(variableSentence!)).toEqual([])
+  })
+
+  it('忽略与字面文本混写的变量取值', () => {
+    const sentence = parseSentence('changeBg:chapter{n}/bg.png;')
+    expect(querySentenceResourceReferences(sentence!)).toEqual([])
   })
 
   it('拆分 choose 内容中的每个场景文件', () => {
@@ -85,6 +92,18 @@ describe('findUnsupportedEngineOpusVocalReferences', () => {
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('say:hello -voice.opus;')!,
       LATEST_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+  })
+
+  it('跳过含变量插值的语音引用', () => {
+    expect(findUnsupportedEngineOpusVocalReferences(
+      parseSentence('say:hello -vocal=voices/{index}.opus;')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    )).toEqual([])
+
+    expect(findUnsupportedEngineOpusVocalReferences(
+      parseSentence('say:hello -vocal={voice};')!,
+      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
   })
 })
@@ -247,5 +266,42 @@ describe('findSkippedFigureDiffModelReferences', () => {
   it('只看命令本身，与其他命令的模型内容无关', () => {
     expect(findSkippedFigureDiffModelReferences(parseSentence('changeFigure:hero.png -left;')!)).toEqual([])
     expect(findSkippedFigureDiffModelReferences(parseSentence('changeFigureDiff:smile.png -left;')!)).toEqual([])
+  })
+
+  it('跳过含变量插值的立绘差分内容', () => {
+    expect(findSkippedFigureDiffModelReferences(
+      parseSentence('changeFigureDiff:{model}.json -left;')!,
+    )).toEqual([])
+  })
+})
+
+describe('findUnsupportedEngineModelReferences', () => {
+  it('跳过含变量插值的模型内容', () => {
+    const capabilities = { live2d: false, spine: false }
+
+    expect(findUnsupportedEngineModelReferences(
+      parseSentence('changeFigure:live2d/{model}.json;')!,
+      capabilities,
+    )).toEqual([])
+
+    expect(findUnsupportedEngineModelReferences(
+      parseSentence('changeBg:spine/{model}.skel;')!,
+      capabilities,
+    )).toEqual([])
+  })
+})
+
+describe('findColorFormatReferences', () => {
+  it('跳过含变量插值的色值', () => {
+    expect(findColorFormatReferences(parseSentence('intro: 你好 -fontColor={color};')!)).toEqual([])
+    expect(findColorFormatReferences(parseSentence('intro: 你好 -fontColor=rgb({r}, 0, 0);')!)).toEqual([])
+  })
+
+  it('不含变量插值时照常分类', () => {
+    expect(findColorFormatReferences(parseSentence('intro: 你好 -fontColor=#zzz;')!)).toEqual([{
+      code: 'invalid-color-format',
+      source: { kind: 'argument', key: 'fontColor' },
+      value: '#zzz',
+    }])
   })
 })

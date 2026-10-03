@@ -1,12 +1,16 @@
 import { RelPath } from '~/domain/path'
+import { hasVariableInterpolation } from '~/domain/script/variable-interpolation'
 
 import { createAssetKeyForType } from './keys'
 
 import type { AssetKey } from './keys'
 
-function isVariableResourceReference(value: string): boolean {
-  const trimmed = value.trim()
-  return /^\{[^{}]+\}$/.test(trimmed)
+/**
+ * 含变量插值的取值在运行时才成形，索引不到具体资源；
+ * 未闭合的花括号是字面文本，仍按普通路径处理。
+ */
+function isVariableResourceReference(trimmedValue: string): boolean {
+  return hasVariableInterpolation(trimmedValue)
 }
 
 function normalizeResourceReferencePath(assetType: string, value: string): string {

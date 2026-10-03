@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
-import { buildStatements } from '~/domain/script/sentence'
+import { buildStatements, ensureParsed } from '~/domain/script/sentence'
 
 import { diagnoseEditorDocument } from '../document-diagnostics'
 import { diagnoseScene } from '../scene-diagnostics'
@@ -54,6 +54,38 @@ describe('diagnoseScene', () => {
         code: 'missing-label',
         field: { kind: 'content' },
         label: 'missing',
+        severity: 'error',
+        source: 'scene',
+        statementIndex: 3,
+      },
+    ])
+  })
+
+  it.each(['duplicate-label', 'missing-label'])('变量插值标签不生成 %s 诊断', (code) => {
+    const statements = buildStatements([
+      'label: {branch};',
+      'label: {branch};',
+      'jumpLabel:{target};',
+      'label:start;',
+    ].join('\n'))
+
+    expect(diagnoseScene(statements.map(statement => ensureParsed(statement)))
+      .filter(diagnostic => diagnostic.code === code)).toEqual([])
+  })
+
+  it('无变量插值的标签仍按字面诊断', () => {
+    const statements = buildStatements([
+      'label:{branch};',
+      'label:start;',
+      'jumpLabel:{branch};',
+      'jumpLabel:Start;',
+    ].join('\n'))
+
+    expect(diagnoseScene(statements.map(statement => ensureParsed(statement)))).toEqual([
+      {
+        code: 'missing-label',
+        field: { kind: 'content' },
+        label: 'Start',
         severity: 'error',
         source: 'scene',
         statementIndex: 3,

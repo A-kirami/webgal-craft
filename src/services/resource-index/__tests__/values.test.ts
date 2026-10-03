@@ -29,6 +29,17 @@ describe('resource-index values', () => {
     expect(createReferencedAssetKey('figure', '../hero.png')).toBeUndefined()
   })
 
+  it('含变量插值的取值不索引，未闭合花括号按字面路径处理', () => {
+    expect(shouldIndexAssetReferenceValue('background', 'bg_{chapter}.png')).toBe(false)
+    expect(createReferencedAssetKey('background', 'chapter{n}/bg.png')).toBeUndefined()
+    expect(createReferencedAssetKey('background', 'bg_{}.png')).toEqual(
+      createAssetKeyForType('background', RelPath.from('bg_{}.png')),
+    )
+    expect(createReferencedAssetKey('background', 'bg_{chapter.png')).toEqual(
+      createAssetKeyForType('background', RelPath.from('bg_{chapter.png')),
+    )
+  })
+
   it('动画脚本引用映射到带 json 后缀的资源文件', () => {
     expect(createReferencedAssetKey('animation', ' effects/fade ')).toEqual(
       createAssetKeyForType('animation', RelPath.from('effects/fade.json')),
