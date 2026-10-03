@@ -36,11 +36,10 @@ export function serializeSentence(sentence: ISentence): string {
   const escapedContent = sentence.content.replaceAll(';', String.raw`\;`)
 
   // say 续写形式：commandRaw 为哨兵值时省略冒号前缀，直接输出内容文本。
+  // 文本为空时没有可充当命令头的内容，仅剩的参数段会被引擎当成上一条语句的续行，回退到显式 say 头。
   if (sentence.commandRaw === SAY_CONTINUATION_RAW) {
-    if (escapedContent === '' && argsText === '') {
-      return `say:${commentText}${statementSuffix}`
-    }
-    return `${escapedContent}${argsText}${commentText}${statementSuffix}`
+    const commandHead = escapedContent === '' ? 'say:' : ''
+    return `${commandHead}${escapedContent}${argsText}${commentText}${statementSuffix}`
   }
 
   return `${sentence.commandRaw}:${escapedContent}${argsText}${commentText}${statementSuffix}`

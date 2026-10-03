@@ -419,6 +419,18 @@ describe('useStatementEditor', () => {
       expect(editor.say.effectiveSpeaker.value).toBe('')
     })
 
+    it('空内容的 say 编辑参数后保持独立语句', () => {
+      const { editor, updates } = createHarness('say:;')
+      const fontSizeField = requireArgField(editor, 'fontSize')
+
+      editor.params.handleArgFieldChange(fontSizeField, 'small')
+
+      const latest = updates.at(-1)!
+      expect(latest.parsed.command).toBe(commandType.say)
+      expect(latest.parsed.args).toEqual([{ key: 'fontSize', value: 'small' }])
+      expect(latest.rawText).toBe('say: -fontSize=small;')
+    })
+
     it('接续对话（无 speaker）：编辑内容后转为续写简写', () => {
       const { editor, updates } = createHarness('say:世界，你好！;')
 
@@ -526,7 +538,7 @@ describe('useStatementEditor', () => {
       expect(latest.rawText).toBe('xxxxxxxxx -notend;')
     })
 
-    it('接续对话（无冒号，内容为空）：编辑参数不应丢失 args 前的空格', () => {
+    it('接续对话（无冒号，内容为空）：编辑参数后回退到显式 say 头', () => {
       const { editor, updates } = createHarness(' -concat -notend;')
       const concatField = requireArgField(editor, 'concat')
 
@@ -534,8 +546,8 @@ describe('useStatementEditor', () => {
 
       const latest = updates.at(-1)!
       expect(latest.parsed.command).toBe(commandType.say)
-      expect(latest.rawText).toBe(' -notend;')
-      expect(latest.rawText.startsWith(' -')).toBe(true)
+      // 内容为空时没有命令头，' -notend;' 只剩参数段，会被多行语句引擎当成上一条语句的续行
+      expect(latest.rawText).toBe('say: -notend;')
     })
 
     it('旁白（冒号前缀）：编辑内容后保留旁白形式', () => {
