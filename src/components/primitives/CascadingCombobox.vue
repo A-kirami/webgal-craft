@@ -152,17 +152,6 @@ function clearSearchHover() {
   hoveredSearchIndex = -1
 }
 
-function handleRootInteractOutside(event: Event) {
-  const target = event.target
-  if (!(target instanceof HTMLElement)) {
-    return
-  }
-
-  if (target.closest('[data-cascading-subpanel]')) {
-    event.preventDefault()
-  }
-}
-
 function selectOption(value: string) {
   emit('update:modelValue', value)
   closeWithTriggerFocus()
@@ -364,7 +353,6 @@ watch(() => searchQuery, (nextQuery, previousQuery) => {
       class="p-0 min-w-[var(--reka-popover-trigger-width)] w-auto"
       @open-auto-focus.prevent
       @close-auto-focus.prevent
-      @interact-outside="handleRootInteractOutside"
     >
       <div
         ref="panelRef"

@@ -38,24 +38,26 @@ const wrapperStyle = floating.wrapperStyle
     <div
       v-if="openState"
       ref="floatingRef"
-      class="z-[60]"
+      class="pointer-events-auto z-50"
       data-cascading-subpanel=""
+      data-dismissable-layer=""
       data-reka-popper-content-wrapper=""
       :style="wrapperStyle"
     >
+      <!-- 子菜单 teleport 到 body，脱离父浮层的 DOM：
+           pointer-events-auto 让模态框锁住 body 指针时浮层仍可交互；
+           data-dismissable-layer 声明它属于当前浮层栈（reka 依该标记与 DOM 顺序判定「层内」），
+           否则父级弹窗与 Popover 会把子菜单内的指针/焦点事件当作外部交互而关闭。 -->
       <div
         v-bind="$attrs"
         data-state="open"
         :data-side="placedSide"
         :data-align="placedAlign"
         :class="cn(
-          'overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+          'overflow-hidden min-w-32 rounded-md border bg-popover text-popover-foreground shadow-lg outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
           props.class,
         )"
-        :style="{
-          animation: !isPositioned ? 'none' : undefined,
-          minWidth: 'max(8rem, var(--reka-popper-anchor-width))',
-        }"
+        :style="{ animation: !isPositioned ? 'none' : undefined }"
       >
         <ScrollAreaRoot
           data-cascading-subpanel-scroll-area=""
