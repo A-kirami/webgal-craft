@@ -30,6 +30,16 @@ const groupedData = buildCascadingComboboxData([
   resolvedDelimiter: '/',
 })
 
+// 子菜单按自身内容定宽后，只有内容足够宽的子菜单才会顶到视口右边界并触发翻转
+const nearEdgeGroupedData = buildCascadingComboboxData([
+  { label: 'chara/variant01', value: 'chara/variant01' },
+  { label: 'charc/default-expression-with-a-very-long-name', value: 'charc/default-expression-with-a-very-long-name' },
+  { label: 'charc/group01/item01', value: 'charc/group01/item01' },
+], {
+  grouping: { mode: 'path' },
+  resolvedDelimiter: '/',
+})
+
 const flatData = buildCascadingComboboxData([
   { label: 'Idle', value: 'idle' },
   { label: 'Joy', value: 'joy' },
@@ -111,8 +121,8 @@ const NearEdgeHarness = defineComponent({
     const modelValue = ref('charc/group01/item01')
 
     return {
-      groupedData,
       modelValue,
+      nearEdgeGroupedData,
     }
   },
   template: `
@@ -120,8 +130,8 @@ const NearEdgeHarness = defineComponent({
       <CascadingCombobox
         v-model="modelValue"
         data-testid="edge-trigger"
-        :browse-nodes="groupedData.browseNodes"
-        :search-documents="groupedData.searchDocuments"
+        :browse-nodes="nearEdgeGroupedData.browseNodes"
+        :search-documents="nearEdgeGroupedData.searchDocuments"
         placeholder="Select motion"
         search-placeholder="Search motion"
       />

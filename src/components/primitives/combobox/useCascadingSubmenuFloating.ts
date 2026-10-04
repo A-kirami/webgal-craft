@@ -102,14 +102,10 @@ export function useCascadingSubmenuFloating(
         limiter: limitShift(),
       }),
       size({
-        apply: ({ elements, rects, availableWidth, availableHeight }) => {
-          const { width: anchorWidth, height: anchorHeight } = rects.reference
-          const contentStyle = elements.floating.style
-
-          contentStyle.setProperty('--reka-popper-available-width', `${availableWidth}px`)
-          contentStyle.setProperty('--reka-popper-available-height', `${availableHeight}px`)
-          contentStyle.setProperty('--reka-popper-anchor-width', `${anchorWidth}px`)
-          contentStyle.setProperty('--reka-popper-anchor-height', `${anchorHeight}px`)
+        // 子菜单只按自身内容定宽（min-w-32 兜底），不继承父级菜单/触发器宽度，
+        // 因此这里只暴露滚动区域需要的可用高度。
+        apply: ({ elements, availableHeight }) => {
+          elements.floating.style.setProperty('--reka-popper-available-height', `${availableHeight}px`)
         },
       }),
     ]
