@@ -151,7 +151,7 @@ function loadMore(): void {
 
 function entryButtonClass(entry: BackupEntry): string {
   if (selectedBackupPath === entry.backupPath) {
-    return 'bg-accent text-accent-foreground'
+    return 'bg-primary/10 text-primary'
   }
   if (entry.sourceKind === 'auto-save') {
     return 'text-muted-foreground hover:bg-muted'

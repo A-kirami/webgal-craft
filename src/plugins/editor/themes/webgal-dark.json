@@ -28,8 +28,11 @@
     { "token": "split.applyStyle.webgal", "foreground": "896cdf" }
   ],
   "colors": {
+    "editor.background": "#16171c",
     "editor.lineHighlightBorder": "#00000000",
-    "editor.lineHighlightBackground": "#212831"
+    "editor.lineHighlightBackground": "#1f2029",
+    "editorWidget.background": "#28282e",
+    "editorWidget.border": "#2d2d32"
   }
 }
 

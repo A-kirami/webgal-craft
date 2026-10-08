@@ -10,7 +10,7 @@ const isHomePage = $computed(() => route.path === '/')
 <template>
   <header
     data-tauri-drag-region
-    class="text-gray-500 bg-background flex h-7 w-full relative"
+    class="text-foreground bg-card flex h-7 w-full relative"
   >
     <div v-show="!isHomePage" class="flex gap-1.5 pointer-events-none items-center left-1/2 top-1/2 absolute -translate-x-1/2 -translate-y-1/2">
       <img src="/webgal-craft-logo.svg" class="size-5" alt="WebGAL Craft logo">

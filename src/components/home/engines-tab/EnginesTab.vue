@@ -102,10 +102,10 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
       class="py-12 border rounded-lg border-dashed flex flex-col transition-colors items-center justify-center"
       :class="{
         'border-primary/50 bg-primary/5': isOverDropZoneEmpty,
-        'border-gray-300 dark:border-gray-700': !isOverDropZoneEmpty,
+        'border-border': !isOverDropZoneEmpty,
       }"
     >
-      <div class="mb-4 p-4 rounded-full bg-gray-100 dark:bg-gray-800">
+      <div class="mb-4 p-4 rounded-full bg-muted">
         <Box class="text-muted-foreground h-10 w-10" />
       </div>
       <h3 class="text-lg font-medium mb-1">
@@ -119,7 +119,7 @@ const { isOverDropZone: isOverDropZoneEmpty } = useTauriDropZone(dropZoneEmptyRe
           class="mb-3 px-6 py-4 border-2 rounded-md border-dashed flex transition-colors items-center justify-center"
           :class="{
             'border-primary/35 bg-primary/5': isOverDropZoneEmpty,
-            'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50': !isOverDropZoneEmpty,
+            'border-border bg-muted/50': !isOverDropZoneEmpty,
           }"
         >
           <Download class="text-muted-foreground mr-2 h-6 w-6" />

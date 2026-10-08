@@ -41,7 +41,7 @@ function emitSelect(value: unknown) {
           <ToggleGroupItem
             :value="option.value"
             :aria-label="option.label"
-            :class="cn('border-0 rounded-sm h-6 min-w-0 flex-1 p-0 text-muted-foreground/40 hover:bg-muted/60 hover:text-muted-foreground', option.value === props.selectValue && 'bg-accent text-foreground')"
+            :class="cn('border-0 rounded-sm h-6 min-w-0 flex-1 p-0 text-muted-foreground/40 hover:bg-muted/60 hover:text-muted-foreground', option.value === props.selectValue && 'bg-primary/10 text-primary')"
           >
             <svg
               aria-hidden="true"

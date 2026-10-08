@@ -105,8 +105,9 @@ const cardAttrs = $computed(() => ({
           </div>
         </div>
 
+        <!-- hover 底色必须是不透明的预合成色：bg-accent/30 是半透明的，嵌套在卡片上会二次叠加导致色差 -->
         <div
-          class="pl-3 pr-1.5 flex gap-0.5 transition-opacity items-center right-0 top-1/2 absolute from-card from-65% bg-gradient-to-l -translate-y-1/2"
+          class="pl-3 pr-1.5 bg-card flex gap-0.5 transition-[opacity,background-color] [-webkit-mask-image:linear-gradient(to_left,black_65%,transparent)] [mask-image:linear-gradient(to_left,black_65%,transparent)] items-center right-0 top-1/2 absolute group-hover:bg-[color-mix(in_srgb,oklch(var(--accent))_30%,oklch(var(--background)))] -translate-y-1/2"
           :class="actionsAlwaysVisible ? 'opacity-100' : 'opacity-0 group-focus-visible:opacity-100 group-has-[:focus-visible]:opacity-100 group-hover:opacity-100'"
           @click.stop
           @keydown.stop

@@ -67,7 +67,7 @@ function updateSize(key: SizeKey, value: unknown): void {
       <label
         v-for="option in platformOptions"
         :key="option.value"
-        class="text-sm px-2 py-3 border rounded-md gap-2 grid grid-rows-[2rem_1.5rem] cursor-pointer transition-colors items-center justify-items-center relative has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent/50 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+        class="text-sm px-2 py-3 border rounded-md gap-2 grid grid-rows-[2rem_1.5rem] cursor-pointer transition-colors items-center justify-items-center relative has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
       >
         <Checkbox
           class="sr-only"

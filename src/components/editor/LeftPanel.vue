@@ -78,13 +78,13 @@ function handlePreviewExpand() {
         <TabsList class="p-0 border-b border-border rounded-none bg-transparent shrink-0 w-full">
           <TabsTrigger
             value="scene"
-            class="rounded-none h-full hover:text-foreground after:rounded-full data-[state=active]:bg-transparent after:h-0.5 after:content-empty after:transition-colors after:inset-x-3 after:bottom-0 after:absolute data-[state=active]:after:bg-foreground"
+            class="rounded-none h-full hover:text-foreground after:rounded-full data-[state=active]:bg-transparent after:h-0.5 after:content-empty after:transition-colors after:inset-x-3 after:bottom-0 after:absolute data-[state=active]:after:bg-primary"
           >
             {{ $t('edit.scenePanel.scene') }}
           </TabsTrigger>
           <TabsTrigger
             value="resource"
-            class="rounded-none h-full hover:text-foreground after:rounded-full data-[state=active]:bg-transparent after:h-0.5 after:content-empty after:transition-colors after:inset-x-3 after:bottom-0 after:absolute data-[state=active]:after:bg-foreground"
+            class="rounded-none h-full hover:text-foreground after:rounded-full data-[state=active]:bg-transparent after:h-0.5 after:content-empty after:transition-colors after:inset-x-3 after:bottom-0 after:absolute data-[state=active]:after:bg-primary"
           >
             {{ $t('edit.scenePanel.resource') }}
           </TabsTrigger>

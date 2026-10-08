@@ -252,7 +252,7 @@ function resolveResourceServeUrl(resource: DiscoveredResource): string | undefin
                 v-for="resource in resources"
                 :key="resource.path"
                 class="p-3 flex cursor-pointer transition-colors items-center justify-between hover:bg-accent/50"
-                :class="{ 'bg-accent': selectedPaths.has(resource.path) }"
+                :class="{ 'bg-primary/10': selectedPaths.has(resource.path) }"
                 @click="toggleSelection(resource.path)"
               >
                 <div class="flex flex-1 gap-3 min-w-0 items-center">

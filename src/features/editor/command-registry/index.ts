@@ -20,12 +20,12 @@ export const categoryTheme: Record<CommandCategory, {
   hoverBg: string
   hoverText: string
 }> = {
-  perform: { gradient: 'from-blue-500 to-blue-300', bg: 'bg-blue-50 dark:bg-blue-950', text: 'text-blue-500', hoverBg: 'hover:bg-blue-100 dark:hover:bg-blue-900', hoverText: 'hover:text-blue-600 dark:hover:text-blue-400' },
-  effect: { gradient: 'from-pink-500 to-pink-300', bg: 'bg-pink-50 dark:bg-pink-950', text: 'text-pink-500', hoverBg: 'hover:bg-pink-100 dark:hover:bg-pink-900', hoverText: 'hover:text-pink-600 dark:hover:text-pink-400' },
-  display: { gradient: 'from-teal-500 to-teal-300', bg: 'bg-teal-50 dark:bg-teal-950', text: 'text-teal-500', hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-900', hoverText: 'hover:text-teal-600 dark:hover:text-teal-400' },
-  scene: { gradient: 'from-amber-500 to-amber-300', bg: 'bg-amber-50 dark:bg-amber-950', text: 'text-amber-500', hoverBg: 'hover:bg-amber-100 dark:hover:bg-amber-900', hoverText: 'hover:text-amber-600 dark:hover:text-amber-400' },
-  system: { gradient: 'from-purple-500 to-purple-300', bg: 'bg-purple-50 dark:bg-purple-950', text: 'text-purple-500', hoverBg: 'hover:bg-purple-100 dark:hover:bg-purple-900', hoverText: 'hover:text-purple-600 dark:hover:text-purple-400' },
-  comment: { gradient: 'from-gray-500 to-gray-300', bg: 'bg-gray-50 dark:bg-gray-950', text: 'text-gray-500', hoverBg: 'hover:bg-gray-100 dark:hover:bg-gray-900', hoverText: 'hover:text-gray-600 dark:hover:text-gray-400' },
+  perform: { gradient: 'from-blue-500 to-blue-300 dark:to-blue-700', bg: 'bg-blue-50 dark:bg-blue-950', text: 'text-blue-500', hoverBg: 'hover:bg-blue-100 dark:hover:bg-blue-900', hoverText: 'hover:text-blue-600 dark:hover:text-blue-400' },
+  effect: { gradient: 'from-pink-500 to-pink-300 dark:to-pink-700', bg: 'bg-pink-50 dark:bg-pink-950', text: 'text-pink-500', hoverBg: 'hover:bg-pink-100 dark:hover:bg-pink-900', hoverText: 'hover:text-pink-600 dark:hover:text-pink-400' },
+  display: { gradient: 'from-teal-500 to-teal-300 dark:to-teal-700', bg: 'bg-teal-50 dark:bg-teal-950', text: 'text-teal-500', hoverBg: 'hover:bg-teal-100 dark:hover:bg-teal-900', hoverText: 'hover:text-teal-600 dark:hover:text-teal-400' },
+  scene: { gradient: 'from-amber-500 to-amber-300 dark:to-amber-700', bg: 'bg-amber-50 dark:bg-amber-950', text: 'text-amber-500', hoverBg: 'hover:bg-amber-100 dark:hover:bg-amber-900', hoverText: 'hover:text-amber-600 dark:hover:text-amber-400' },
+  system: { gradient: 'from-purple-500 to-purple-300 dark:to-purple-700', bg: 'bg-purple-50 dark:bg-purple-950', text: 'text-purple-500', hoverBg: 'hover:bg-purple-100 dark:hover:bg-purple-900', hoverText: 'hover:text-purple-600 dark:hover:text-purple-400' },
+  comment: { gradient: 'from-gray-500 to-gray-300 dark:to-gray-700', bg: 'bg-gray-50 dark:bg-gray-950', text: 'text-gray-500', hoverBg: 'hover:bg-gray-100 dark:hover:bg-gray-900', hoverText: 'hover:text-gray-600 dark:hover:text-gray-400' },
 }
 
 export const commandPanelCategories = [

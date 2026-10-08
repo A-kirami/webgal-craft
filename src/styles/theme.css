@@ -1,0 +1,79 @@
+/*
+ * 主题色板。presetShadcn 只负责把 `bg-primary` 这类工具映射到 `oklch(var(--primary))`，
+ * 变量本身由本文件声明（unocss.config.ts 中 color: false），因此可在运行时覆盖。
+ */
+:root {
+  color-scheme: light;
+
+  --background: 0.994 0.002 285;
+  --foreground: 0.21 0.012 282;
+  --card: 1 0 0;
+  --card-foreground: 0.21 0.012 282;
+  --popover: 1 0 0;
+  --popover-foreground: 0.21 0.012 282;
+  --primary: 0.55 0.21 275;
+  --primary-foreground: 0.985 0.005 285;
+  --secondary: 0.955 0.004 285;
+  --secondary-foreground: 0.3 0.015 283;
+  --muted: 0.96 0.003 285;
+  --muted-foreground: 0.5 0.012 283;
+  --accent: 0.97 0.014 275;
+  --accent-foreground: 0.3 0.02 283;
+  --destructive: 0.577 0.245 27.325;
+  --destructive-foreground: 0.985 0 0;
+  --border: 0.905 0.005 285;
+  --input: 0.905 0.005 285;
+  --ring: 0.55 0.21 275;
+  --chart1: 0.646 0.222 41.116;
+  --chart2: 0.6 0.118 184.704;
+  --chart3: 0.398 0.07 227.392;
+  --chart4: 0.828 0.189 84.429;
+  --chart5: 0.769 0.188 70.08;
+
+  /* 工具类读取的是 --sidebar-background（不是 --sidebar），与 presetShadcn 的 theme.colors 对齐 */
+  --sidebar-background: 0.985 0.002 285;
+  --sidebar-foreground: 0.3 0.012 283;
+  --sidebar-primary: 0.55 0.21 275;
+  --sidebar-primary-foreground: 0.985 0.005 285;
+  --sidebar-accent: 0.95 0.006 285;
+  --sidebar-accent-foreground: 0.3 0.015 283;
+  --sidebar-border: 0.905 0.005 285;
+  --sidebar-ring: 0.55 0.21 275;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: 0.235 0.01 283;
+  --foreground: 0.9 0.005 285;
+  --card: 0.27 0.01 283;
+  --card-foreground: 0.9 0.005 285;
+  --popover: 0.28 0.01 283;
+  --popover-foreground: 0.9 0.005 285;
+  --primary: 0.71 0.15 278;
+  --primary-foreground: 0.22 0.03 283;
+  --secondary: 0.29 0.012 283;
+  --secondary-foreground: 0.9 0.005 285;
+  --muted: 0.26 0.01 283;
+  --muted-foreground: 0.68 0.015 283;
+  --accent: 0.355 0.022 278;
+  --accent-foreground: 0.92 0.005 285;
+  --destructive: 0.704 0.191 22.216;
+  --destructive-foreground: 0.985 0 0;
+  --border: 0.3 0.008 283;
+  --input: 0.32 0.01 283;
+  --ring: 0.71 0.15 278;
+  --chart1: 0.488 0.243 264.376;
+  --chart2: 0.696 0.17 162.48;
+  --chart3: 0.769 0.188 70.08;
+  --chart4: 0.627 0.265 303.9;
+  --chart5: 0.645 0.246 16.439;
+  --sidebar-background: 0.26 0.01 283;
+  --sidebar-foreground: 0.9 0.005 285;
+  --sidebar-primary: 0.71 0.15 278;
+  --sidebar-primary-foreground: 0.22 0.03 283;
+  --sidebar-accent: 0.29 0.012 283;
+  --sidebar-accent-foreground: 0.9 0.005 285;
+  --sidebar-border: 0.3 0.008 283;
+  --sidebar-ring: 0.71 0.15 278;
+}

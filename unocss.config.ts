@@ -25,7 +25,8 @@ export default defineConfig({
     presetAnimations(),
     presetShadcn(
       {
-        color: 'zinc',
+        // 主题变量由 src/styles/theme.css 声明，preset 只保留颜色工具映射
+        color: false,
       },
       {
         componentLibrary: 'reka',

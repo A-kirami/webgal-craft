@@ -10,7 +10,7 @@ const modalStore = useModalStore()
 </script>
 
 <template>
-  <header class="border-b bg-white dark:bg-gray-950">
+  <header class="border-b bg-card">
     <div class="mx-auto px-4 container flex h-16 items-center lg:px-8 sm:px-6">
       <div
         class="mr-4 flex gap-2 cursor-pointer items-center"
@@ -18,7 +18,7 @@ const modalStore = useModalStore()
       >
         <img src="/webgal-craft-logo.svg" class="size-10" alt="WebGAL Craft logo">
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <span class="text-gray-700 h-5 w-auto inline-block dark:text-gray-100" aria-hidden="true" v-html="webgalCraftTextSvg" />
+        <span class="text-foreground h-5 w-auto inline-block" aria-hidden="true" v-html="webgalCraftTextSvg" />
       </div>
       <nav class="ml-auto flex gap-2 items-center">
         <Button variant="ghost" size="icon" @click="modalStore.open('AboutModal')">

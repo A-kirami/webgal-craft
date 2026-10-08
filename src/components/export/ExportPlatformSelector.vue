@@ -18,7 +18,7 @@ const emit = defineEmits<{
     <button
       type="button"
       class="p-3 text-left border rounded-md flex gap-3 transition-colors items-center relative disabled:opacity-60 disabled:cursor-not-allowed"
-      :class="selectedPlatform === 'web' ? 'border-primary bg-accent/50' : 'hover:bg-accent/40'"
+      :class="selectedPlatform === 'web' ? 'border-primary bg-primary/10' : 'hover:bg-accent/40'"
       :disabled="disabled"
       :aria-pressed="selectedPlatform === 'web'"
       @click="emit('select', 'web')"
@@ -44,7 +44,7 @@ const emit = defineEmits<{
       class="p-3 text-left border rounded-md flex gap-3 items-center relative disabled:opacity-50 disabled:cursor-not-allowed"
       :disabled="disabled || disabledDesktop"
       :aria-pressed="selectedPlatform === 'desktop'"
-      :class="selectedPlatform === 'desktop' ? 'border-primary bg-accent/50' : 'hover:bg-accent/40'"
+      :class="selectedPlatform === 'desktop' ? 'border-primary bg-primary/10' : 'hover:bg-accent/40'"
       @click="emit('select', 'desktop')"
     >
       <Monitor class="shrink-0 size-5" aria-hidden="true" />

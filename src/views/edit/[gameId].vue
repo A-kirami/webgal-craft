@@ -202,7 +202,7 @@ useShortcutContext({
 </script>
 
 <template>
-  <div class="flex flex-col overflow-hidden">
+  <div class="bg-background flex flex-col overflow-hidden">
     <EditHeader />
     <ResizablePanelGroup
       auto-save-id="editor-main"

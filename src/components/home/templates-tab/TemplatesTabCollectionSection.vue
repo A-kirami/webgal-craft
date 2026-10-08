@@ -99,7 +99,7 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
         class="p-3 border-1 rounded-lg border-dashed flex gap-4 cursor-pointer transition-colors items-center justify-center overflow-hidden hover:border-primary/40 dark:hover:border-primary/60"
         :class="{
           'border-primary/40 bg-primary/5': isOverDropZoneGrid,
-          'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900': !isOverDropZoneGrid,
+          'border-border bg-card': !isOverDropZoneGrid,
         }"
         @click="emit('importClick')"
       >
@@ -134,10 +134,10 @@ function getMenuItems(item: TemplateCollectionItem): MenuItem[] {
         type="button"
         :disabled="importBusy"
         :aria-label="$t('home.templates.importTemplate')"
-        class="p-3 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800/20"
+        class="p-3 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-accent"
         :class="{
           'bg-primary/5': isOverDropZoneList,
-          'bg-gray-50/50 dark:bg-gray-800/10': !isOverDropZoneList,
+          'bg-muted/50': !isOverDropZoneList,
         }"
         @click="emit('importClick')"
       >
