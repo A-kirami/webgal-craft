@@ -403,6 +403,8 @@ fn extract_archive(
         );
     }
 
+    // 最后一个条目复制完成后不再进入循环，收尾前再检查一次，避免取消后仍继续整理目录
+    official_engine_download_cancelled(cancellation)?;
     flatten_archive_root(&payload, destination)
 }
 
