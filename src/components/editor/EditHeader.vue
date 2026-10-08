@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <header class="px-4 border-b bg-white flex h-12 items-center justify-between dark:bg-gray-950">
+  <header class="px-4 border-b bg-card flex h-12 items-center justify-between">
     <div class="flex gap-2 items-center">
       <Button variant="ghost" size="icon" class="[&_svg]:size-5" @click="void handleBack()">
         <ArrowLeft />

@@ -110,7 +110,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
                 <span>
                   <TabsTrigger
                     :value="item.tab"
-                    class="p-1.75 data-[state=active]:bg-accent"
+                    class="p-1.75 data-[state=active]:text-primary data-[state=active]:bg-primary/10 hover:bg-muted"
                   >
                     <component :is="item.icon" class="size-4.5" />
                   </TabsTrigger>
@@ -184,7 +184,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             <ToggleGroupItem
               value="grid"
               size="sm"
-              class="p-0 rounded-sm size-6 min-w-auto data-[state=on]:bg-gray-200 dark:data-[state=on]:bg-gray-800"
+              class="p-0 rounded-sm size-6 min-w-auto"
               :title="$t('edit.assetPanel.actions.viewGrid')"
               :aria-label="$t('edit.assetPanel.actions.viewGrid')"
             >
@@ -193,7 +193,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             <ToggleGroupItem
               value="list"
               size="sm"
-              class="p-0 rounded-sm size-6 min-w-auto data-[state=on]:bg-gray-200 dark:data-[state=on]:bg-gray-800"
+              class="p-0 rounded-sm size-6 min-w-auto"
               :title="$t('edit.assetPanel.actions.viewList')"
               :aria-label="$t('edit.assetPanel.actions.viewList')"
             >

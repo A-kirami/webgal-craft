@@ -191,7 +191,7 @@ useShortcutContext({
           <Button
             variant="ghost"
             size="xs"
-            :class="activeCategory === 'all' && 'bg-accent text-accent-foreground'"
+            :class="activeCategory === 'all' && 'bg-primary/10 text-primary'"
             :aria-pressed="activeCategory === 'all'"
             @click="handleCategoryClick('all')"
           >
@@ -313,7 +313,7 @@ useShortcutContext({
               }"
               :drag-source="commandDragSource"
               icon="i-lucide-box"
-              gradient="from-violet-500 to-fuchsia-300"
+              gradient="from-violet-500 to-fuchsia-300 dark:to-fuchsia-700"
               icon-bg="bg-violet-50 dark:bg-violet-950"
               icon-text="text-violet-500"
               @click="emit('insertGroup', group)"

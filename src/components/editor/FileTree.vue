@@ -880,7 +880,7 @@ tryOnUnmounted(() => {
                 :data-file-tree-selected="isFileTreePathSelected(renderItem.fileItem.path) ? 'true' : undefined"
                 :class="[
                   'cursor-pointer touch-none',
-                  isFileTreePathSelected(renderItem.fileItem.path) ? 'bg-accent' : '',
+                  isFileTreePathSelected(renderItem.fileItem.path) ? 'bg-primary/10' : '',
                   getFileTreeDropTargetClass(renderItem),
                 ]"
                 @keydown.enter.prevent="handleEnterKey(renderItem.item)"
@@ -939,7 +939,7 @@ tryOnUnmounted(() => {
                           </div>
                           <span
                             v-if="resolveItemBadgeText(renderItem.item.value)"
-                            class="text-[10px] text-muted-foreground leading-none px-1.5 py-0.75 rounded bg-muted shrink-0"
+                            class="text-[10px] text-primary leading-none px-1.5 py-0.75 rounded bg-primary/10 shrink-0"
                           >
                             {{ resolveItemBadgeText(renderItem.item.value) }}
                           </span>

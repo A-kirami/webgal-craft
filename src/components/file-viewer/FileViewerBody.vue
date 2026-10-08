@@ -556,7 +556,7 @@ onUnmounted(() => {
             :class="[
               'p-1.5 rounded-md flex flex-col gap-1 pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring',
               enableDragTransfer ? 'touch-none' : '',
-              isItemHighlighted(displayItem.item.path) ? 'bg-accent ring-1 ring-ring/50' : '',
+              isItemHighlighted(displayItem.item.path) ? 'bg-primary/10 ring-1 ring-ring/50' : '',
               getFileViewerDropTargetClass(displayItem.item),
             ]"
             @click="handleItemClick(displayItem.item)"
@@ -649,7 +649,7 @@ onUnmounted(() => {
             :class="[
               'p-2 rounded-md flex gap-2 w-full pointer-events-auto items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring',
               enableDragTransfer ? 'touch-none' : '',
-              isItemHighlighted(displayItem.item.path) ? 'bg-accent ring-1 ring-ring/50' : '',
+              isItemHighlighted(displayItem.item.path) ? 'bg-primary/10 ring-1 ring-ring/50' : '',
               getFileViewerDropTargetClass(displayItem.item),
             ]"
             :style="{ height: `${listItemHeight}px` }"

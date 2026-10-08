@@ -1764,6 +1764,22 @@ describe('FileViewer', () => {
     expect(document.querySelector('[data-file-viewer-root-surface]')).toHaveClass('bg-accent/35')
   })
 
+  it('未配置投放目标时根区域不高亮', async () => {
+    await renderInBrowser(FileViewer, {
+      props: {
+        items: [createItem(1)],
+        viewMode: 'grid',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(document.querySelector('[data-file-viewer-root-surface]')).not.toHaveClass('bg-accent/35')
+    expect(document.querySelector('[class*="bg-accent/35"]')).toBeNull()
+  })
+
   it('投放判断拒绝时不会触发 fileTransferDrop', async () => {
     viewportWidthMock.value = 780
 

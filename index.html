@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/webgal-craft-logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- 防主题闪烁：在样式与 JS 加载前按持久化设置同步 .dark 并铺上底色 -->
+    <style>
+      html {
+        background: #fdfdfe;
+      }
+
+      html.dark {
+        background: #1d1e23;
+      }
+    </style>
+    <script>
+      try {
+        const settings = JSON.parse(localStorage.getItem('general-settings') ?? '{}')
+        if (settings.theme === 'dark' || (settings.theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+        }
+      } catch {}
+    </script>
     <!-- 预加载编辑器使用的字体 -->
     <link rel="preload" href="/font/FiraCode-VF.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
     <title>WebGAL Craft</title>

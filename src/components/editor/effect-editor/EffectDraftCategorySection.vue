@@ -252,7 +252,7 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                     variant="ghost"
                     :aria-label="controls.isLinkedSliderLocked(item.param) ? $t('modals.effectEditor.unlinkScale') : $t('modals.effectEditor.linkScale')"
                     :aria-pressed="controls.isLinkedSliderLocked(item.param)"
-                    :class="[controls.isLinkedSliderLocked(item.param) && 'bg-accent text-accent-foreground hover:bg-accent/80']"
+                    :class="[controls.isLinkedSliderLocked(item.param) && 'bg-primary/10 text-primary hover:bg-primary/15']"
                     @click="controls.toggleLinkedSliderLock(item.param)"
                   >
                     <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />

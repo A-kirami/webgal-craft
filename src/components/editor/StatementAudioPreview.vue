@@ -149,10 +149,10 @@ function createWaveSurferOptions(container: HTMLDivElement): WaveSurferOptions {
     hideScrollbar: true,
     interact: true,
     normalize: true,
-    progressColor: resolveThemeColor('--primary', 'hsl(221.2 83.2% 53.3%)'),
+    progressColor: resolveThemeColor('--primary', 'oklch(0.55 0.21 275)'),
     renderFunction: renderContinuousWaveform,
     // 不用 alpha，避免 progress 层沿用背景波形的透明度一起变淡。
-    waveColor: softenWaveColor(resolveThemeColor('--muted-foreground', 'oklch(0.48 0.02 264)')),
+    waveColor: softenWaveColor(resolveThemeColor('--muted-foreground', 'oklch(0.5 0.02 283)')),
   }
 }
 

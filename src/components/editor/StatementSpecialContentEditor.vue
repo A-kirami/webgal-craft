@@ -125,7 +125,7 @@ function choiceStatus(index: number) {
           : $t('edit.visualEditor.accessibility.setDefaultChoice', { index: index + 1 })"
         :aria-pressed="defaultChooseIndex === index"
         :data-state="defaultChooseIndex === index ? 'on' : 'off'"
-        class="text-muted-foreground font-normal rounded-md shrink-0 whitespace-nowrap data-[state=on]:(text-accent-foreground bg-accent)"
+        class="text-muted-foreground font-normal rounded-md shrink-0 whitespace-nowrap data-[state=on]:(text-primary bg-primary/10)"
         @click="emit('chooseDefault', index)"
       >
         {{ $t('edit.visualEditor.options.default') }}

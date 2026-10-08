@@ -240,8 +240,8 @@ describe('DiscoveredResourcesModal', () => {
     const betaRow = betaLabel.closest('[class*="cursor-pointer"]')
     const charlieRow = charlieLabel.closest('[class*="cursor-pointer"]')
 
-    expect(betaRow?.classList.contains('bg-accent')).toBe(false)
-    expect(charlieRow?.classList.contains('bg-accent')).toBe(true)
+    expect(betaRow?.classList.contains('bg-primary/10')).toBe(false)
+    expect(charlieRow?.classList.contains('bg-primary/10')).toBe(true)
   })
 
   it('模板资源不会请求预览运行时 serve url', async () => {

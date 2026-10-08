@@ -4,7 +4,7 @@ import { computed, defineComponent, h } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 // 浏览器测试环境 uno.css 按需生成，折叠预览的布局类不会被扫描到，断言几何前必须 safelist
-// @unocss-safelist flex inline-flex items-center gap-1 gap-2 text-xs text-nowrap font-medium rounded rounded-none shrink-0 w-5 overflow-hidden p-1 py-0.5 px-1 px-1.5 self-stretch ring-1 ring-inset ring-foreground/10 bg-muted bg-muted-foreground/10 text-muted-foreground
+// @unocss-safelist flex inline-flex items-center gap-1 gap-2 text-xs text-nowrap font-medium rounded rounded-none shrink-0 w-5 overflow-hidden p-1 py-0.5 px-1 px-1.5 self-stretch ring-1 ring-inset ring-foreground/10 bg-muted bg-secondary bg-muted-foreground/10 text-muted-foreground
 import 'virtual:uno.css'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'

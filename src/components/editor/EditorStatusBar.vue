@@ -212,7 +212,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 </script>
 
 <template>
-  <div class="text-xs px-3 border-t bg-gray-50 flex h-6 items-center dark:bg-gray-900">
+  <div class="text-xs px-3 border-t bg-card flex h-6 items-center">
     <div data-tour="resource-switch" class="flex gap-3 min-w-0 items-center">
       <TooltipProvider :delay-duration="0" :ignore-non-keyboard-focus="true">
         <Tooltip v-if="isEngineBound">

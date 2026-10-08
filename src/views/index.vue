@@ -40,7 +40,7 @@ useEnginesTour()
 </script>
 
 <template>
-  <div class="bg-gray-50 flex flex-col h-full min-h-0 overflow-hidden dark:bg-gray-900">
+  <div class="bg-background flex flex-col h-full min-h-0 overflow-hidden">
     <AppHeader />
     <main class="mx-auto px-4 py-8 container flex flex-1 flex-col min-h-0 overflow-hidden lg:px-8 sm:px-6">
       <WelcomeSection />

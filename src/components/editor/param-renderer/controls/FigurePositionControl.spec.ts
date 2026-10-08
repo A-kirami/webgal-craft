@@ -32,8 +32,8 @@ describe('FigurePositionControl', () => {
     expect(buttons).toHaveLength(positionOptions.length)
     expect(document.querySelectorAll('svg')).toHaveLength(positionOptions.length)
 
-    await expect.element(page.getByRole('button', { name: 'Left 13' })).toHaveClass('bg-accent', 'text-foreground')
-    await expect.element(page.getByRole('button', { name: 'Right 13' })).not.toHaveClass('bg-accent')
+    await expect.element(page.getByRole('button', { name: 'Left 13' })).toHaveClass('bg-primary/10', 'text-primary')
+    await expect.element(page.getByRole('button', { name: 'Right 13' })).not.toHaveClass('bg-primary/10')
   })
 
   it('选择位置时向上层提交对应值', async () => {

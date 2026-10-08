@@ -212,7 +212,7 @@ watch(() => searchQuery, async (nextQuery) => {
         aria-haspopup="listbox"
         :class="cn(
           'text-xs justify-between font-normal px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-ring',
-          !isTriggerHovered && 'hover:bg-background!',
+          !isTriggerHovered && 'hover:bg-transparent!',
           props.class,
         )"
         @pointercancel="handleTriggerPointerCancel"

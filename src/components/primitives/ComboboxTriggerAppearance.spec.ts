@@ -3,8 +3,9 @@ import { page } from 'vitest/browser'
 import { defineComponent } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
-// @unocss-safelist hover:bg-background! hover:bg-accent bg-background
+// @unocss-safelist hover:bg-transparent! hover:bg-accent bg-transparent
 import 'virtual:uno.css'
+import '~/styles/theme.css'
 
 import CascadingCombobox from './CascadingCombobox.vue'
 import { buildCascadingComboboxData } from './combobox/cascading-combobox-data'

@@ -72,7 +72,7 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
             }"
             @click="emit('gameClick', item.game)"
           >
-            <div class="bg-gray-100 w-full aspect-16/9 relative overflow-hidden">
+            <div class="bg-muted w-full aspect-16/9 relative overflow-hidden">
               <AssetImage
                 :path="item.game.previewAssets.cover.path"
                 :root-path="item.rootPath"
@@ -147,12 +147,12 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
         data-tour="import-game"
         :disabled="importBusy"
         :aria-label="$t('home.games.importGame')"
-        class="p-4 text-center border-1 border-gray-300 rounded-lg border-dashed bg-gray-50 flex flex-col gap-3 h-full w-full cursor-pointer transition-colors items-center justify-center overflow-hidden dark:border-gray-700 hover:border-purple-300 dark:bg-gray-900 dark:hover:border-purple-700"
-        :class="{ 'border-purple-300 bg-purple-50': isOverDropZoneGrid }"
+        class="p-4 text-center border-1 border-border rounded-lg border-dashed bg-card flex flex-col gap-3 h-full w-full cursor-pointer transition-colors items-center justify-center overflow-hidden hover:border-primary/50"
+        :class="{ 'border-primary/50 bg-primary/10': isOverDropZoneGrid }"
         @click="emit('importClick')"
       >
-        <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/20">
-          <Scroll class="text-purple-600 h-6 w-6 dark:text-purple-400" />
+        <div class="p-3 rounded-full bg-primary/10">
+          <Scroll class="text-primary h-6 w-6" />
         </div>
         <div class="px-4 min-w-0">
           <p class="text-sm font-medium">
@@ -256,13 +256,13 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
         data-tour="import-game"
         :disabled="importBusy"
         :aria-label="$t('home.games.importGame')"
-        class="p-3 bg-gray-50/50 flex w-full cursor-pointer transition-colors items-center justify-between dark:bg-gray-800/10 hover:bg-gray-100 dark:hover:bg-gray-800/20"
-        :class="{'bg-purple-50': isOverDropZoneList}"
+        class="p-3 bg-muted/50 flex w-full cursor-pointer transition-colors items-center justify-between hover:bg-accent"
+        :class="{'bg-primary/10': isOverDropZoneList}"
         @click="emit('importClick')"
       >
         <div class="flex gap-3 items-center">
-          <div class="rounded-md bg-purple-100 flex h-10 w-10 items-center justify-center dark:bg-purple-900/20">
-            <Scroll class="text-purple-600 h-5 w-5 dark:text-purple-400" />
+          <div class="rounded-md bg-primary/10 flex h-10 w-10 items-center justify-center">
+            <Scroll class="text-primary h-5 w-5" />
           </div>
           <div class="text-left">
             <h3 class="font-medium">

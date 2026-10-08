@@ -119,6 +119,12 @@ const dropRegistry = useDroppableRegistry()
 let rootDropTargetElement = $ref<HTMLElement>()
 let rootDropTargetPath = $ref<string>()
 let isRootDropTargetActive = $ref(false)
+// 外部拖拽高亮要求外部目标路径确实存在：FilePicker 等场景不传 dropTargetDirectory，
+// 裸比较 externalDropTargetPath === dropTargetDirectory?.path 会因 undefined === undefined 恒真而常驻高亮
+const isRootDropHighlightActive = $computed(() =>
+  isRootDropTargetActive
+  || (externalDropTargetPath !== undefined && externalDropTargetPath === dropTargetDirectory?.path),
+)
 let ownedFileViewerDragPayload = $ref<FileSystemDragPayload>()
 
 const DRAG_OVERLAY_OFFSET_X = 6
@@ -496,7 +502,7 @@ defineExpose(fileViewerExpose)
       data-file-viewer-root-surface="true"
       :class="[
         'flex-1 min-h-0',
-        isRootDropTargetActive || externalDropTargetPath === dropTargetDirectory?.path ? 'bg-accent/35' : '',
+        isRootDropHighlightActive ? 'bg-accent/35' : '',
       ]"
     >
       <ScrollArea ref="scrollAreaRef" class="flex-scroll-area h-full min-h-0">
@@ -528,7 +534,7 @@ defineExpose(fileViewerExpose)
 
         <FileViewerBody
           v-else
-          :active-root-drop-target="isRootDropTargetActive || externalDropTargetPath === dropTargetDirectory?.path"
+          :active-root-drop-target="isRootDropHighlightActive"
           :can-drop-file-transfer="canDropFileTransfer"
           :enable-drag-transfer="enableDragTransfer"
           :external-drop-target-path="externalDropTargetPath"

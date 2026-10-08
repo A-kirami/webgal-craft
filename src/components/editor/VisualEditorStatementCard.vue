@@ -117,7 +117,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
   if (param.isEffect) {
     return 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
   }
-  return 'bg-muted'
+  return 'bg-secondary'
 }
 </script>
 

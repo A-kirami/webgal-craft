@@ -12,7 +12,7 @@ const props = defineProps<
   <TreeItem
     :class="
       cn(
-        'z-10 ps-(--tree-padding) outline-hidden select-none focus:z-20 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full bg-background hover:bg-accent data-[selected]:bg-accent data-[drag-target=true]:bg-accent data-[search-match=true]:bg-blue-50!',
+        'z-10 ps-(--tree-padding) outline-hidden select-none focus:z-20 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full bg-background hover:bg-accent data-[selected]:bg-primary/10 data-[drag-target=true]:bg-accent data-[search-match=true]:bg-accent!',
         props.class,
       )
     "
