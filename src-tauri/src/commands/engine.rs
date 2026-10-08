@@ -3,10 +3,7 @@ use std::{
     fs::{self, File},
     io::{self, Read},
     path::{Path, PathBuf},
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+    sync::Mutex,
     time::Duration,
 };
 
@@ -14,7 +11,7 @@ use futures_util::StreamExt;
 use serde::{Deserialize, Deserializer, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::ipc::Channel;
-use tokio::{fs as tokio_fs, io::AsyncWriteExt};
+use tokio::{fs as tokio_fs, io::AsyncWriteExt, sync::watch};
 use zip::ZipArchive;
 
 use super::{AppError, AppResult};
@@ -35,18 +32,18 @@ const OFFICIAL_ENGINE_NETWORK_TIMEOUT: Duration = Duration::from_secs(30);
 const OFFICIAL_GITHUB_HOST: &str = "github.com";
 const OFFICIAL_GITHUB_PATH_PREFIX: &str = "/OpenWebGAL/WebGAL/releases/";
 
-/// 进行中的官方引擎下载取消标记，按版本号索引。
+/// 进行中的官方引擎下载取消信号，按版本号索引。
 /// 前端通过互斥保证同时只有一个下载，但按 key 存取可以避免跨任务串扰。
-static OFFICIAL_ENGINE_DOWNLOAD_CANCELLATIONS: Mutex<BTreeMap<String, Arc<AtomicBool>>> =
+static OFFICIAL_ENGINE_DOWNLOAD_CANCELLATIONS: Mutex<BTreeMap<String, watch::Sender<bool>>> =
     Mutex::new(BTreeMap::new());
 
-fn register_official_engine_download_cancellation(version: &str) -> Arc<AtomicBool> {
-    let flag = Arc::new(AtomicBool::new(false));
+fn register_official_engine_download_cancellation(version: &str) -> watch::Receiver<bool> {
+    let (sender, receiver) = watch::channel(false);
     OFFICIAL_ENGINE_DOWNLOAD_CANCELLATIONS
         .lock()
         .expect("官方引擎下载取消注册表锁已中毒")
-        .insert(version.to_owned(), Arc::clone(&flag));
-    flag
+        .insert(version.to_owned(), sender);
+    receiver
 }
 
 fn unregister_official_engine_download_cancellation(version: &str) {
@@ -57,20 +54,28 @@ fn unregister_official_engine_download_cancellation(version: &str) {
 }
 
 fn request_official_engine_download_cancellation(version: &str) {
-    if let Some(flag) = OFFICIAL_ENGINE_DOWNLOAD_CANCELLATIONS
+    if let Some(sender) = OFFICIAL_ENGINE_DOWNLOAD_CANCELLATIONS
         .lock()
         .expect("官方引擎下载取消注册表锁已中毒")
         .get(version)
     {
-        flag.store(true, Ordering::Relaxed);
+        sender.send_replace(true);
     }
 }
 
-fn official_engine_download_cancelled(cancellation: &AtomicBool) -> AppResult<()> {
-    if cancellation.load(Ordering::Relaxed) {
+fn official_engine_download_cancelled(cancellation: &watch::Receiver<bool>) -> AppResult<()> {
+    if *cancellation.borrow() {
         return Err(AppError::Cancelled);
     }
     Ok(())
+}
+
+/// 等待取消请求。进入前已取消则立即返回；发送端被移除时视为取消，避免永久挂起。
+async fn wait_for_official_engine_download_cancellation(cancellation: &mut watch::Receiver<bool>) {
+    if *cancellation.borrow() {
+        return;
+    }
+    let _ = cancellation.changed().await;
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -348,7 +353,7 @@ fn extract_archive(
     archive_path: &Path,
     destination: &Path,
     on_progress: &Channel<OfficialEngineDownloadProgress>,
-    cancellation: &AtomicBool,
+    cancellation: &watch::Receiver<bool>,
 ) -> AppResult<()> {
     let file = File::open(archive_path)?;
     let mut archive = ZipArchive::new(file)
@@ -444,7 +449,7 @@ async fn download_official_engine_inner(
     asset_url: &str,
     destination: &Path,
     on_progress: &Channel<OfficialEngineDownloadProgress>,
-    cancellation: &AtomicBool,
+    cancellation: &mut watch::Receiver<bool>,
 ) -> AppResult<()> {
     if destination.exists() {
         return Err(AppError::TargetConflict(destination.display().to_string()));
@@ -475,7 +480,7 @@ async fn download_official_engine_into(
     destination: &Path,
     archive_path: &Path,
     on_progress: &Channel<OfficialEngineDownloadProgress>,
-    cancellation: &AtomicBool,
+    cancellation: &mut watch::Receiver<bool>,
 ) -> AppResult<()> {
     let client = reqwest::Client::builder()
         .user_agent("WebGALCraft engine manager")
@@ -483,11 +488,14 @@ async fn download_official_engine_into(
         .read_timeout(OFFICIAL_ENGINE_NETWORK_TIMEOUT)
         .build()
         .map_err(|error| AppError::Server(format!("无法初始化官方引擎下载: {error}")))?;
-    let response = client
-        .get(asset_url)
-        .send()
-        .await
-        .map_err(|error| AppError::Server(format!("官方引擎下载失败: {error}")))?;
+    let response = tokio::select! {
+        result = client.get(asset_url).send() => {
+            result.map_err(|error| AppError::Server(format!("官方引擎下载失败: {error}")))?
+        }
+        () = wait_for_official_engine_download_cancellation(cancellation) => {
+            return Err(AppError::Cancelled);
+        }
+    };
     if !response.status().is_success() {
         return Err(AppError::Server(format!(
             "官方引擎下载返回 HTTP {}",
@@ -503,10 +511,24 @@ async fn download_official_engine_into(
     let mut stream = response.bytes_stream();
     let mut downloaded_bytes = 0u64;
     let mut hasher = Sha256::new();
-    while let Some(chunk) = stream.next().await {
-        official_engine_download_cancelled(cancellation)?;
-        let chunk =
-            chunk.map_err(|error| AppError::Server(format!("官方引擎下载中断: {error}")))?;
+    loop {
+        let chunk = tokio::select! {
+            chunk = stream.next() => chunk,
+            () = wait_for_official_engine_download_cancellation(cancellation) => {
+                return Err(AppError::Cancelled);
+            }
+        };
+        let Some(chunk) = chunk else {
+            break;
+        };
+        let chunk = match chunk {
+            Ok(chunk) => chunk,
+            Err(error) => {
+                // 取消后紧接的网络错误按取消处理，避免用户看到误导性的失败提示
+                official_engine_download_cancelled(cancellation)?;
+                return Err(AppError::Server(format!("官方引擎下载中断: {error}")));
+            }
+        };
         downloaded_bytes = downloaded_bytes.saturating_add(chunk.len() as u64);
         if downloaded_bytes > MAX_OFFICIAL_ENGINE_BYTES {
             return Err(AppError::Server("官方引擎压缩包超过允许大小".into()));
@@ -556,13 +578,13 @@ pub async fn download_official_engine(
     on_progress: Channel<OfficialEngineDownloadProgress>,
     proxy_prefix: Option<String>,
 ) -> AppResult<OfficialEngineRelease> {
-    let cancellation = register_official_engine_download_cancellation(&version);
+    let mut cancellation = register_official_engine_download_cancellation(&version);
     let result = download_official_engine_with_cancellation(
         &version,
         &destination,
         &on_progress,
         proxy_prefix.as_deref(),
-        &cancellation,
+        &mut cancellation,
     )
     .await;
     unregister_official_engine_download_cancellation(&version);
@@ -574,9 +596,14 @@ async fn download_official_engine_with_cancellation(
     destination: &str,
     on_progress: &Channel<OfficialEngineDownloadProgress>,
     proxy_prefix: Option<&str>,
-    cancellation: &AtomicBool,
+    cancellation: &mut watch::Receiver<bool>,
 ) -> AppResult<OfficialEngineRelease> {
-    let release = fetch_official_release(version).await?;
+    let release = tokio::select! {
+        result = fetch_official_release(version) => result?,
+        () = wait_for_official_engine_download_cancellation(cancellation) => {
+            return Err(AppError::Cancelled);
+        }
+    };
     official_engine_download_cancelled(cancellation)?;
 
     let destination_path = PathBuf::from(destination);
@@ -660,8 +687,6 @@ pub async fn read_engine_manifest(engine_path: String) -> AppResult<EngineManife
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::Ordering;
-
     use serde_json::json;
 
     use super::{
@@ -910,7 +935,11 @@ mod tests {
     fn register_official_engine_download_cancellation_replaces_stale_flag() {
         let version = "9.9.8-retry-test";
         let stale = register_official_engine_download_cancellation(version);
-        stale.store(true, Ordering::Relaxed);
+        request_official_engine_download_cancellation(version);
+        assert!(matches!(
+            official_engine_download_cancelled(&stale),
+            Err(AppError::Cancelled)
+        ));
 
         let fresh = register_official_engine_download_cancellation(version);
 
