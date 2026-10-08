@@ -41,7 +41,12 @@ function downloadOfficialEngine(
   })
 }
 
+function cancelOfficialEngineDownload(version: string): Promise<void> {
+  return safeInvoke('cancel_official_engine_download', { version })
+}
+
 export const engineCmds = {
+  cancelOfficialEngineDownload,
   downloadOfficialEngine,
   getLatestOfficialEngineRelease,
   getOfficialEngineReleases,

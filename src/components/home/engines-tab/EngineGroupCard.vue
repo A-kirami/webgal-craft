@@ -95,6 +95,13 @@ const versionSummary = $computed(() => {
   return summaries.join(' · ')
 })
 
+let versionPopoverOpen = $ref(false)
+
+function handleDownloadVersion(version: string): void {
+  versionPopoverOpen = false
+  emit('downloadVersion', version)
+}
+
 function handleRemoteAction(): void {
   if (remoteAction?.kind === 'retry') {
     emit('retryRemote')
@@ -190,7 +197,7 @@ const menuItems = $computed<MenuItem[]>(() => {
                   </Badge>
                 </div>
 
-                <Popover>
+                <Popover v-model:open="versionPopoverOpen">
                   <PopoverTrigger as-child>
                     <Button variant="ghost" class="text-[13px] text-muted-foreground font-normal px-1.5 py-0 text-left h-auto w-fit justify-start -ml-1.5">
                       <span>
@@ -203,7 +210,7 @@ const menuItems = $computed<MenuItem[]>(() => {
                       :group="group"
                       :can-delete="!isActiveImporting"
                       @delete-engine="engine => emit('deleteEngine', engine)"
-                      @download-version="version => emit('downloadVersion', version)"
+                      @download-version="handleDownloadVersion"
                       @open-version-release="releaseUrl => emit('openVersionRelease', releaseUrl)"
                     />
                   </PopoverContent>
@@ -310,7 +317,7 @@ const menuItems = $computed<MenuItem[]>(() => {
         </div>
 
         <div class="flex shrink-0 gap-3 items-center">
-          <Popover>
+          <Popover v-model:open="versionPopoverOpen">
             <PopoverTrigger as-child>
               <Button variant="ghost" class="text-[13px] text-muted-foreground font-normal p-0 h-auto">
                 {{ versionSummary }}
@@ -321,7 +328,7 @@ const menuItems = $computed<MenuItem[]>(() => {
                 :group="group"
                 :can-delete="!isActiveImporting"
                 @delete-engine="engine => emit('deleteEngine', engine)"
-                @download-version="version => emit('downloadVersion', version)"
+                @download-version="handleDownloadVersion"
                 @open-version-release="releaseUrl => emit('openVersionRelease', releaseUrl)"
               />
             </PopoverContent>

@@ -136,6 +136,7 @@ home:
     copied: "{files} ファイル · {bytes}"
     currentEntry: "{summary} · {entry}"
     officialEngine:
+      cancel: ダウンロードをキャンセル
       title: "{engineName} {engineVersion} をインストール中"
       downloaded: "{downloaded} をダウンロード済み"
       downloadedWithTotal: "{downloaded} / {total} をダウンロード済み"

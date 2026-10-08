@@ -756,6 +756,9 @@ export interface OfficialEngineInstallResult extends ImportEngineResult {
   release: OfficialEngineRelease
 }
 
+/** Rust 下载命令启动前收到的取消请求，按版本号记录 */
+const officialEngineInstallCancelRequests = new Set<string>()
+
 async function installOfficialEngine(version: string): Promise<OfficialEngineInstallResult> {
   const managedImportStore = useManagedImportStore()
   if (!managedImportStore.begin('engine', {
@@ -806,6 +809,9 @@ async function installOfficialEngine(version: string): Promise<OfficialEngineIns
       copiedBytes: 0,
       copiedFiles: 0,
     })
+    if (officialEngineInstallCancelRequests.has(release.version)) {
+      throw new AppError('CANCELLED', '操作已取消')
+    }
     const generalSettingsStore = useGeneralSettingsStore()
     await engineCmds.downloadOfficialEngine(release.version, stagingPath, (progress) => {
       managedImportStore.updateProgress({
@@ -823,6 +829,7 @@ async function installOfficialEngine(version: string): Promise<OfficialEngineIns
     const imported = await importEngine(stagingPath)
     return { ...imported, release }
   } finally {
+    officialEngineInstallCancelRequests.delete(version)
     if (stagingPath && await exists(stagingPath)) {
       await fsCmds.deleteFile(stagingPath, true).catch((error) => {
         logger.warn(`[官方引擎] 清理下载目录失败: ${stagingPath} - ${error}`)
@@ -830,6 +837,12 @@ async function installOfficialEngine(version: string): Promise<OfficialEngineIns
     }
     managedImportStore.finish()
   }
+}
+
+async function cancelOfficialEngineInstall(version: string): Promise<void> {
+  // 先记录请求：若下载命令尚未启动，由 installOfficialEngine 启动前检查兜底
+  officialEngineInstallCancelRequests.add(version)
+  await engineCmds.cancelOfficialEngineDownload(version)
 }
 
 function assertDeletable(deleteCheck: DeleteEngineCheckResult): void {
@@ -865,6 +878,7 @@ export const engineManager = {
   inspectEngine,
   getEnginePreviewAssets,
   findEngineByRef,
+  cancelOfficialEngineInstall,
   getLatestOfficialEngineRelease: engineCmds.getLatestOfficialEngineRelease,
   getOfficialEngineReleases: engineCmds.getOfficialEngineReleases,
   canDeleteEngine,

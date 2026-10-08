@@ -58,6 +58,9 @@ pub enum AppError {
     #[error("站点未注册")]
     SiteNotRegistered,
 
+    #[error("操作已取消")]
+    Cancelled,
+
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
 }
@@ -84,6 +87,7 @@ impl AppError {
             Self::InvalidProjectConfig { .. } => "INVALID_PROJECT_CONFIG",
             Self::BackupManifestCorrupted { .. } => "BACKUP_MANIFEST_CORRUPTED",
             Self::SiteNotRegistered => "SITE_NOT_REGISTERED",
+            Self::Cancelled => "CANCELLED",
             Self::Tauri(_) => "TAURI_ERROR",
         }
     }
@@ -173,6 +177,7 @@ mod tests {
             "SCHEMA_VERSION_TOO_NEW"
         );
         assert_eq!(AppError::SiteNotRegistered.code(), "SITE_NOT_REGISTERED");
+        assert_eq!(AppError::Cancelled.code(), "CANCELLED");
     }
 
     #[test]

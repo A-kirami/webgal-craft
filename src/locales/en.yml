@@ -136,6 +136,7 @@ home:
     copied: "{files} files · {bytes}"
     currentEntry: "{summary} · {entry}"
     officialEngine:
+      cancel: Cancel download
       title: Installing {engineName} {engineVersion}
       downloaded: Downloaded {downloaded}
       downloadedWithTotal: Downloaded {downloaded} / {total}

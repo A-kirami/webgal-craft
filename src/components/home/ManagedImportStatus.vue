@@ -42,6 +42,11 @@ const isOfficialEngineInstallation = computed(() => props.activity?.kind === 'of
 const phase = computed<ManagedImportProgress['phase']>(() =>
   props.progress?.phase ?? (isOfficialEngineInstallation.value ? 'downloading' : 'copying'),
 )
+const cancelLabel = computed(() =>
+  isOfficialEngineInstallation.value
+    ? t('home.managedImport.officialEngine.cancel')
+    : t('home.managedImport.cancel'),
+)
 
 const percentage = computed(() => {
   const total = props.progress?.totalBytes
@@ -123,11 +128,12 @@ const progressDetail = computed(() => {
       </p>
     </div>
     <Button
-      v-if="canCancel"
       type="button"
       size="icon"
       variant="ghost"
-      :aria-label="$t('home.managedImport.cancel')"
+      :disabled="!canCancel"
+      :class="{ 'invisible pointer-events-none': !canCancel }"
+      :aria-label="cancelLabel"
       @click="emit('cancel')"
     >
       <X />

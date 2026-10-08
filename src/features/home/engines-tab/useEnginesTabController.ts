@@ -11,6 +11,7 @@ import { createEngineImportWorkflow } from '~/features/resource-import/resource-
 import { engineManager } from '~/services/engine-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
 import { useOfficialEngineReleaseCacheStore } from '~/stores/official-engine-release-cache'
+import { AppError } from '~/types/errors'
 
 import type { Engine } from '~/database/model'
 import type { OfficialEngineRelease } from '~/domain/engine/official-release'
@@ -120,6 +121,10 @@ export function useEnginesTabController(options: UseEnginesTabControllerOptions)
         : options.t('home.engines.official.installSuccess', { version: result.release.version }))
     } catch (error) {
       officialStatus.value = officialReleases.value.length > 0 ? 'ready' : 'error'
+      if (error instanceof AppError && error.code === 'CANCELLED') {
+        logger.info(`[官方引擎] 安装已取消: ${version}`)
+        return
+      }
       logger.warn(`[官方引擎] 安装失败: ${error}`)
       toast.error(options.t('home.engines.official.installFailed'), {
         description: error instanceof Error ? error.message : String(error),

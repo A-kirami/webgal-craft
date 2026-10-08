@@ -136,6 +136,7 @@ home:
     copied: "{files} 个文件 · {bytes}"
     currentEntry: "{summary} · {entry}"
     officialEngine:
+      cancel: 取消下载
       title: 正在安装 {engineName} {engineVersion}
       downloaded: 已下载 {downloaded}
       downloadedWithTotal: 已下载 {downloaded} / {total}

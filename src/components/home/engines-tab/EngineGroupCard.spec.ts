@@ -452,4 +452,42 @@ describe('EngineGroupCard', () => {
     await expect.element(page.getByText('home.engines.importing')).toBeVisible()
     await expect.element(page.getByRole('progressbar')).not.toBeInTheDocument()
   })
+
+  it('在版本弹层中点击下载后会关闭弹层', async () => {
+    const onDownloadVersion = vi.fn()
+    const {
+      Popover: _popover,
+      PopoverContent: _popoverContent,
+      PopoverTrigger: _popoverTrigger,
+      ...stubsWithoutPopover
+    } = globalStubs
+    await renderInBrowser(EngineGroupCard, {
+      props: {
+        group: {
+          ...createGroup(),
+          remote: {
+            releases: [createOfficialRelease('4.6.4')],
+            status: 'ready',
+          },
+        },
+        viewMode: 'list',
+        onDownloadVersion,
+      },
+      browser: {
+        i18nMode: 'lite',
+      },
+      global: {
+        stubs: stubsWithoutPopover,
+      },
+    })
+
+    await page.getByRole('button', { name: /4\.6\.0/ }).click()
+    const downloadButton = page.getByRole('button', { name: 'home.engines.official.download' })
+    await expect.element(downloadButton).toBeVisible()
+
+    await downloadButton.click()
+
+    expect(onDownloadVersion).toHaveBeenCalledWith('4.6.4')
+    await expect.element(downloadButton).not.toBeInTheDocument()
+  })
 })
