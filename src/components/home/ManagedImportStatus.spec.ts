@@ -136,4 +136,53 @@ describe('ManagedImportStatus', () => {
     await expect.element(page.getByText('正在导入引擎')).toBeVisible()
     await expect.element(page.getByText('12 个文件 · 9.0 MiB')).toBeVisible()
   })
+
+  it('不可取消时取消按钮保留占位但不可见，避免布局抖动', async () => {
+    const { container } = await renderInBrowser(ManagedImportStatus, {
+      props: {
+        activity: {
+          kind: 'official-engine-install',
+          engineName: 'WebGAL',
+          engineVersion: '4.6.5',
+        },
+        canCancel: false,
+        resourceKind: 'engine',
+      },
+      browser: {
+        i18nMode: 'localized',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const button = container.querySelector<HTMLButtonElement>('button[aria-label="取消下载"]')
+    expect(button).toBeTruthy()
+    expect(button?.classList.contains('invisible')).toBe(true)
+    expect(button?.disabled).toBe(true)
+  })
+
+  it('可取消时取消按钮可见且可点击', async () => {
+    await renderInBrowser(ManagedImportStatus, {
+      props: {
+        activity: {
+          kind: 'official-engine-install',
+          engineName: 'WebGAL',
+          engineVersion: '4.6.5',
+        },
+        canCancel: true,
+        resourceKind: 'engine',
+      },
+      browser: {
+        i18nMode: 'localized',
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const button = page.getByRole('button', { name: '取消下载' })
+    await expect.element(button).toBeVisible()
+    await expect.element(button).not.toBeDisabled()
+  })
 })

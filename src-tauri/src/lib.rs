@@ -104,6 +104,7 @@ pub fn run() {
             commands::engine::get_latest_official_engine_release,
             commands::engine::get_official_engine_releases,
             commands::engine::download_official_engine,
+            commands::engine::cancel_official_engine_download,
             // export
             commands::export::export_web,
             commands::export::export_pc,
