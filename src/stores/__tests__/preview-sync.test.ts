@@ -568,7 +568,7 @@ describe('usePreviewSyncStore', () => {
     await expect(pending).rejects.toThrow('set effect failed')
   })
 
-  it('预览面板关闭时会丢弃请求，重新打开后恢复发送', async () => {
+  it('预览面板关闭时 Overlay 查询降级但命令照常发送，重新打开后查询恢复', async () => {
     const preferenceStore = usePreferenceStore()
     const store = usePreviewSyncStore()
     const pendingBeforeClose = store.queryReferenceBox('fig-center')
@@ -585,16 +585,27 @@ describe('usePreviewSyncStore', () => {
       status: 'unsupported',
       reason: 'preview state reset',
     })
-    await expect(store.sendPreviewCommand('preview.command.set-effect', {
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(1)
+
+    // 命令不再受面板开关门禁：照常发送并等待 ack
+    const pendingCommand = store.sendPreviewCommand('preview.command.set-effect', {
       target: 'fig-center',
       transform: { blur: 12 },
-    })).rejects.toThrow('preview state reset')
-    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(1)
+    })
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(2)
+    const commandRequest = JSON.parse(sendPreviewCommandMock.mock.calls[1][0])
+    store.consumeHostEvent(JSON.stringify({
+      kind: 'response',
+      type: 'preview.command.set-effect',
+      requestId: commandRequest.requestId,
+      payload: {},
+    }))
+    await expect(pendingCommand).resolves.toBeUndefined()
 
     preferenceStore.showPreviewPanel = true
     const pending = store.queryReferenceBox('fig-center')
-    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(2)
-    const request = JSON.parse(sendPreviewCommandMock.mock.calls[1][0])
+    expect(sendPreviewCommandMock).toHaveBeenCalledTimes(3)
+    const request = JSON.parse(sendPreviewCommandMock.mock.calls[2][0])
     store.consumeHostEvent(JSON.stringify({
       kind: 'response',
       type: 'preview.query.reference-box',

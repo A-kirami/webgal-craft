@@ -1454,9 +1454,8 @@ pub async fn send_preview_command(
     };
 
     if target_addrs.is_empty() {
-        log::warn!(
-            "send_preview_command: 未找到可用预览目标 scope={target_scope:?}; 预览命令未发送"
-        );
+        // 没有已注册的预览连接是常态（面板关闭、浏览器未打开），fan-out 天然 no-op
+        log::debug!("send_preview_command: 无已注册预览目标 scope={target_scope:?}，跳过投递");
         return Ok(());
     }
 

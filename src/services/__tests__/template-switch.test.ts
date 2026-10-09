@@ -190,15 +190,7 @@ describe('templateSwitch.resetTemplate', () => {
     expect(debugCommanderMock.refetchTemplates).not.toHaveBeenCalled()
   })
 
-  it('预览状态重置时不阻止模板重置', async () => {
-    debugCommanderMock.refetchTemplates.mockRejectedValueOnce(new Error('preview state reset'))
-
-    await expect(templateSwitch.resetTemplate(AbsPath.from('/games/demo'))).resolves.toBeUndefined()
-
-    expect(cleanTemplateUpperMock).toHaveBeenCalledWith('/games/demo')
-  })
-
-  it('其他预览刷新失败会向调用方传播', async () => {
+  it('预览刷新失败会向调用方传播', async () => {
     debugCommanderMock.refetchTemplates.mockRejectedValueOnce(new Error('preview failed'))
 
     await expect(templateSwitch.resetTemplate(AbsPath.from('/games/demo'))).rejects.toThrow('preview failed')

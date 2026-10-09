@@ -3,7 +3,6 @@ import { defineStore } from 'pinia'
 import {
   createPreviewRequestEnvelope,
   isPreviewPanelOpen,
-  isPreviewStateResetError,
   PREVIEW_STATE_RESET_REASON,
   sendPreviewRequestEnvelope,
 } from '~/services/preview-protocol-client'
@@ -318,11 +317,8 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
       }
 
       clearTimeout(pending.timeoutId)
-      const isReset = isPreviewStateResetError(error)
-      if (!isReset) {
-        logger.error(`发送 ${request.type} 查询失败: ${error}`)
-      }
-      pending.settleFailure(isReset ? PREVIEW_STATE_RESET_REASON : failureReason)
+      logger.error(`发送 ${request.type} 查询失败: ${error}`)
+      pending.settleFailure(failureReason)
     })
   }
 
@@ -331,10 +327,6 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     payload: RequestPayloadByType[TType],
     options: PreviewCommandOptions = {},
   ): Promise<void> {
-    if (!isPreviewPanelOpen()) {
-      return Promise.reject(new Error(PREVIEW_STATE_RESET_REASON))
-    }
-
     const request = createPreviewRequestEnvelope(type, payload)
     const { requestId } = request
 
@@ -363,10 +355,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
         }
 
         clearTimeout(timeoutId)
-        const isReset = isPreviewStateResetError(error)
-        if (!isReset) {
-          logger.error(`发送 ${request.type} command 失败: ${error}`)
-        }
+        logger.error(`发送 ${request.type} command 失败: ${error}`)
         reject(error instanceof Error ? error : new Error(String(error)))
       })
     })
@@ -377,6 +366,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     options: ReferenceBoxQueryOptions = {},
   ): Promise<ReferenceBoxQueryResultPayload> {
     const type = 'preview.query.reference-box'
+    // Overlay 查询定向 embedded-preview（协议能力边界），面板关闭即无投递目标，直接降级
     if (!isPreviewPanelOpen()) {
       resetEmbeddedPreviewState()
       return Promise.resolve({
@@ -426,6 +416,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
   }
 
   function queryBaseTransform(options: PreviewQueryOptions = {}): Promise<BaseTransformQueryResult> {
+    // Overlay 查询定向 embedded-preview（协议能力边界），面板关闭即无投递目标，直接降级
     if (!isPreviewPanelOpen()) {
       return Promise.resolve({
         status: 'unavailable',
@@ -482,6 +473,7 @@ export const usePreviewSyncStore = defineStore('previewSync', () => {
     options: PreviewQueryOptions = {},
   ): Promise<TransformBaselineQueryResult> {
     const type = 'preview.query.transform-baseline'
+    // Overlay 查询定向 embedded-preview（协议能力边界），面板关闭即无投递目标，直接降级
     if (!isPreviewPanelOpen()) {
       return Promise.resolve({
         status: 'unavailable',
