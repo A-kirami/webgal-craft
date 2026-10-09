@@ -104,23 +104,21 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
     <ScrollArea class="border-r">
       <Tabs ::="preferenceStore.assetTab" orientation="vertical" class="h-full">
         <TabsList class="p-0.5 rounded-none bg-transparent gap-0.5 h-full justify-start">
-          <TooltipProvider :delay-duration="0">
-            <Tooltip v-for="item in assetTabItems" :key="item.tab">
-              <TooltipTrigger as-child>
-                <span>
-                  <TabsTrigger
-                    :value="item.tab"
-                    class="p-1.75 data-[state=active]:text-primary data-[state=active]:bg-primary/10 hover:bg-muted"
-                  >
-                    <component :is="item.icon" class="size-4.5" />
-                  </TabsTrigger>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right" class="text-xs px-2 py-1">
-                {{ item.label }}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip v-for="item in assetTabItems" :key="item.tab" :delay-duration="0">
+            <TooltipTrigger as-child>
+              <span>
+                <TabsTrigger
+                  :value="item.tab"
+                  class="p-1.75 data-[state=active]:text-primary data-[state=active]:bg-primary/10 hover:bg-muted"
+                >
+                  <component :is="item.icon" class="size-4.5" />
+                </TabsTrigger>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="right" class="text-xs px-2 py-1">
+              {{ item.label }}
+            </TooltipContent>
+          </Tooltip>
         </TabsList>
       </Tabs>
     </ScrollArea>
@@ -139,7 +137,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
               <Button
                 variant="outline"
                 size="icon-sm"
-                :title="$t('common.create')"
                 :aria-label="$t('common.create')"
               >
                 <Plus />
@@ -185,7 +182,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
               value="grid"
               size="sm"
               class="p-0 rounded-sm size-6 min-w-auto"
-              :title="$t('edit.assetPanel.actions.viewGrid')"
               :aria-label="$t('edit.assetPanel.actions.viewGrid')"
             >
               <LayoutGrid class="size-3.5!" />
@@ -194,7 +190,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
               value="list"
               size="sm"
               class="p-0 rounded-sm size-6 min-w-auto"
-              :title="$t('edit.assetPanel.actions.viewList')"
               :aria-label="$t('edit.assetPanel.actions.viewList')"
             >
               <LayoutList class="size-3.5!" />
@@ -206,7 +201,7 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
                 <Button
                   variant="ghost"
                   size="xs"
-                  :title="$t('edit.assetPanel.actions.sortField')"
+                  :aria-label="$t('edit.assetPanel.actions.sortField')"
                 >
                   <ArrowUpDown />
                   <span class="hidden truncate @[500px]:inline">{{ currentSortLabel }}</span>
@@ -231,7 +226,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             <Button
               variant="ghost"
               size="icon-xs"
-              :title="$t('edit.assetPanel.actions.sortOrder')"
               :aria-label="$t('edit.assetPanel.actions.sortOrder')"
               @click="toggleSortOrder"
             >
@@ -248,7 +242,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             variant="ghost"
             size="icon-xs"
             :disabled="isMinZoom"
-            :title="$t('edit.assetPanel.actions.zoomOut')"
             :aria-label="$t('edit.assetPanel.actions.zoomOut')"
             @click="handleZoomChange(-5)"
           >
@@ -265,7 +258,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             variant="ghost"
             size="xs"
             class="px-0 min-w-10"
-            :title="$t('edit.assetPanel.actions.zoomReset')"
             :aria-label="$t('edit.assetPanel.actions.zoomReset')"
             @click="resetZoom"
           >
@@ -275,7 +267,6 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             variant="ghost"
             size="icon-xs"
             :disabled="isMaxZoom"
-            :title="$t('edit.assetPanel.actions.zoomIn')"
             :aria-label="$t('edit.assetPanel.actions.zoomIn')"
             @click="handleZoomChange(5)"
           >

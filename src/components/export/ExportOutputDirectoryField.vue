@@ -33,14 +33,19 @@ const emit = defineEmits<{
         {{ $t('export.browse') }}
       </Button>
     </div>
-    <p
-      v-if="outputPreview"
-      class="text-xs text-muted-foreground truncate"
-      :title="outputPreview"
-      aria-live="polite"
-    >
-      {{ $t('export.finalOutputPath') }}: {{ outputPreview }}
-    </p>
+    <Tooltip v-if="outputPreview">
+      <TooltipTrigger as-child>
+        <p
+          class="text-xs text-muted-foreground truncate"
+          aria-live="polite"
+        >
+          {{ $t('export.finalOutputPath') }}: {{ outputPreview }}
+        </p>
+      </TooltipTrigger>
+      <TooltipContent>
+        {{ outputPreview }}
+      </TooltipContent>
+    </Tooltip>
     <p
       v-else
       class="text-xs text-muted-foreground"

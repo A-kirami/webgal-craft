@@ -656,6 +656,7 @@ onBeforeUnmount(() => {
             :style="previewCanvasStyle"
           >
             <!-- 跨源 iframe 默认拿不到 fullscreen 能力，引擎据此判断环境支不支持，缺了就不显示全屏按钮 -->
+            <!-- title 是 iframe 的无障碍可访问名称（WCAG 要求），不是悬浮提示，不要换成 Tooltip -->
             <iframe
               ref="iframeRef"
               :key="refreshKey"

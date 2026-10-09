@@ -228,20 +228,27 @@ function resolveResourceServeUrl(resource: DiscoveredResource): string | undefin
               </div>
 
               <div class="px-3 py-2 pl-10 flex flex-wrap gap-1.5">
-                <button
+                <Tooltip
                   v-for="version in group.versions"
                   :key="version.path"
-                  type="button"
-                  :aria-pressed="selectedPaths.has(version.path)"
-                  class="text-xs font-mono px-2 py-1 border rounded-md transition-colors"
-                  :class="selectedPaths.has(version.path)
-                    ? 'bg-primary/10 border-primary/40 text-primary'
-                    : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'"
-                  :title="version.path"
-                  @click="toggleSelection(version.path)"
                 >
-                  {{ version.version ?? $t('common.unknown') }}
-                </button>
+                  <TooltipTrigger as-child>
+                    <button
+                      type="button"
+                      :aria-pressed="selectedPaths.has(version.path)"
+                      class="text-xs font-mono px-2 py-1 border rounded-md transition-colors"
+                      :class="selectedPaths.has(version.path)
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : 'border-border text-muted-foreground hover:border-primary/30 hover:text-foreground'"
+                      @click="toggleSelection(version.path)"
+                    >
+                      {{ version.version ?? $t('common.unknown') }}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ version.path }}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </template>

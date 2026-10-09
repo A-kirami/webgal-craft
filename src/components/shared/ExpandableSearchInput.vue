@@ -86,7 +86,6 @@ async function handleClearInput() {
       :disabled="disabled"
       :variant="isInputVisible ? 'default' : 'outline'"
       size="icon-sm"
-      :title="resolvedToggleLabel"
       :aria-label="resolvedToggleLabel"
       @click="handleToggle"
     >

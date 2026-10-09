@@ -291,31 +291,29 @@ function progressIndicatorClass(task: ExportTask): string {
                   <span v-if="elapsedLabel(task)" class="shrink-0 tabular-nums">{{ elapsedLabel(task) }}</span>
                 </p>
               </div>
-              <TooltipProvider :delay-duration="300">
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      :class="task.status === 'completed' ? '' : 'invisible pointer-events-none'"
-                      :aria-label="isAndroid ? $t('export.openFile') : $t('export.openDirectory')"
-                      @click="openExportDirectory(task)"
-                    >
-                      <ExternalLink v-if="isAndroid" aria-hidden="true" />
-                      <FolderOpen v-else aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{{ isAndroid ? $t('export.openFile') : $t('export.openDirectory') }}</TooltipContent>
-                </Tooltip>
-                <Tooltip v-if="isAndroid">
-                  <TooltipTrigger as-child>
-                    <Button variant="ghost" size="icon" :aria-label="$t('export.share')" @click="shareExport">
-                      <Share2 aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{{ $t('export.share') }}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Tooltip :delay-duration="300">
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :class="task.status === 'completed' ? '' : 'invisible pointer-events-none'"
+                    :aria-label="isAndroid ? $t('export.openFile') : $t('export.openDirectory')"
+                    @click="openExportDirectory(task)"
+                  >
+                    <ExternalLink v-if="isAndroid" aria-hidden="true" />
+                    <FolderOpen v-else aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{{ isAndroid ? $t('export.openFile') : $t('export.openDirectory') }}</TooltipContent>
+              </Tooltip>
+              <Tooltip v-if="isAndroid" :delay-duration="300">
+                <TooltipTrigger as-child>
+                  <Button variant="ghost" size="icon" :aria-label="$t('export.share')" @click="shareExport">
+                    <Share2 aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{{ $t('export.share') }}</TooltipContent>
+              </Tooltip>
             </div>
             <div class="flex gap-2 items-center">
               <Progress :model-value="task.progress" class="flex-1" :indicator-class="progressIndicatorClass(task)" />

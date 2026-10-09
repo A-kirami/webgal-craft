@@ -214,58 +214,56 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 <template>
   <div class="text-xs px-3 border-t bg-card flex h-6 items-center">
     <div data-tour="resource-switch" class="flex gap-3 min-w-0 items-center">
-      <TooltipProvider :delay-duration="0" :ignore-non-keyboard-focus="true">
-        <Tooltip v-if="isEngineBound">
-          <TooltipTrigger as-child>
-            <button
-              :aria-label="$t('edit.statusBar.selectEngine')"
-              :class="resolveStatusChipClass(isBoundEngineUnavailable)"
-              @click="openSwitchEngine"
-            >
-              <Layers class="h-3 w-3" :stroke-width="1.5" />
-              <span class="max-w-30 truncate">{{ engineLabel ?? $t('edit.statusBar.engineMissing') }}</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" class="px-2 py-1">
-            {{ $t('edit.statusBar.selectEngine') }}
-          </TooltipContent>
-        </Tooltip>
+      <Tooltip v-if="isEngineBound" :delay-duration="0" :ignore-non-keyboard-focus="true">
+        <TooltipTrigger as-child>
+          <button
+            :aria-label="$t('edit.statusBar.selectEngine')"
+            :class="resolveStatusChipClass(isBoundEngineUnavailable)"
+            @click="openSwitchEngine"
+          >
+            <Layers class="h-3 w-3" :stroke-width="1.5" />
+            <span class="max-w-30 truncate">{{ engineLabel ?? $t('edit.statusBar.engineMissing') }}</span>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" class="px-2 py-1">
+          {{ $t('edit.statusBar.selectEngine') }}
+        </TooltipContent>
+      </Tooltip>
 
-        <Tooltip v-if="isEngineBound">
-          <TooltipTrigger as-child>
-            <button
-              :aria-label="$t('edit.statusBar.selectTemplate')"
-              :class="resolveStatusChipClass(isTemplateEntryUnavailable)"
-              @click="openSwitchTemplate"
-            >
-              <Palette class="h-3 w-3" :stroke-width="1.5" />
-              <span class="max-w-30 truncate">{{ templateLabel ?? $t('edit.statusBar.templateMissing') }}</span>
-              <Link2 v-if="isFollowingEngine" class="h-3 w-3" :stroke-width="1.5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" class="px-2 py-1">
-            {{ $t('edit.statusBar.selectTemplate') }}
-          </TooltipContent>
-        </Tooltip>
+      <Tooltip v-if="isEngineBound" :delay-duration="0" :ignore-non-keyboard-focus="true">
+        <TooltipTrigger as-child>
+          <button
+            :aria-label="$t('edit.statusBar.selectTemplate')"
+            :class="resolveStatusChipClass(isTemplateEntryUnavailable)"
+            @click="openSwitchTemplate"
+          >
+            <Palette class="h-3 w-3" :stroke-width="1.5" />
+            <span class="max-w-30 truncate">{{ templateLabel ?? $t('edit.statusBar.templateMissing') }}</span>
+            <Link2 v-if="isFollowingEngine" class="h-3 w-3" :stroke-width="1.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" class="px-2 py-1">
+          {{ $t('edit.statusBar.selectTemplate') }}
+        </TooltipContent>
+      </Tooltip>
 
-        <div
-          v-if="showResourceIndexBuilding"
-          role="status"
-          class="text-muted-foreground flex shrink-0 gap-1 items-center"
-        >
-          <Loader2 class="size-3 animate-spin" aria-hidden="true" />
-          <span>{{ $t('edit.statusBar.resourceIndexBuilding') }}</span>
-        </div>
+      <div
+        v-if="showResourceIndexBuilding"
+        role="status"
+        class="text-muted-foreground flex shrink-0 gap-1 items-center"
+      >
+        <Loader2 class="size-3 animate-spin" aria-hidden="true" />
+        <span>{{ $t('edit.statusBar.resourceIndexBuilding') }}</span>
+      </div>
 
-        <div
-          v-else-if="isResourceIndexDegraded"
-          role="status"
-          class="text-yellow-600 flex shrink-0 gap-1 items-center dark:text-yellow-300"
-        >
-          <TriangleAlert class="size-3" aria-hidden="true" />
-          <span>{{ $t('edit.statusBar.resourceIndexUnavailable') }}</span>
-        </div>
-      </TooltipProvider>
+      <div
+        v-else-if="isResourceIndexDegraded"
+        role="status"
+        class="text-yellow-600 flex shrink-0 gap-1 items-center dark:text-yellow-300"
+      >
+        <TriangleAlert class="size-3" aria-hidden="true" />
+        <span>{{ $t('edit.statusBar.resourceIndexUnavailable') }}</span>
+      </div>
     </div>
 
     <!-- 右侧：文本/可视化编辑器信息 -->
@@ -277,7 +275,6 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
             'h-2 w-2 rounded-full',
             isSaved ? 'bg-green-500' : 'bg-amber-500',
           ]"
-          :title="isSaved ? $t('common.saved') : $t('common.unsaved')"
         />
         <span class="text-muted-foreground">
           {{ isSaved ? $t('common.saved') : $t('common.unsaved') }}

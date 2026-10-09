@@ -22,73 +22,71 @@ const buttonClass = 'size-6 text-muted-foreground hover:text-foreground [&_svg]:
 </script>
 
 <template>
-  <TooltipProvider>
-    <div
-      data-testid="viewport-controls"
-      class="flex gap-1 items-center"
+  <div
+    data-testid="viewport-controls"
+    class="flex gap-1 items-center"
+  >
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="buttonClass"
+          :disabled="props.disabled"
+          @click="emit('zoomOut')"
+        >
+          <Minus />
+          <span class="sr-only">{{ $t('edit.previewPanel.zoomOut') }}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{{ $t('edit.previewPanel.zoomOut') }}</p>
+      </TooltipContent>
+    </Tooltip>
+
+    <output
+      class="text-xs font-medium px-1.5 text-center flex h-6 min-w-12 pointer-events-none select-none items-center justify-center tabular-nums"
+      :aria-label="$t('edit.previewPanel.zoomLevel')"
     >
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <Button
-            variant="ghost"
-            size="icon"
-            :class="buttonClass"
-            :disabled="props.disabled"
-            @click="emit('zoomOut')"
-          >
-            <Minus />
-            <span class="sr-only">{{ $t('edit.previewPanel.zoomOut') }}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{{ $t('edit.previewPanel.zoomOut') }}</p>
-        </TooltipContent>
-      </Tooltip>
+      {{ zoomPercent }}
+    </output>
 
-      <output
-        class="text-xs font-medium px-1.5 text-center flex h-6 min-w-12 pointer-events-none select-none items-center justify-center tabular-nums"
-        :aria-label="$t('edit.previewPanel.zoomLevel')"
-      >
-        {{ zoomPercent }}
-      </output>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="buttonClass"
+          :disabled="props.disabled"
+          @click="emit('zoomIn')"
+        >
+          <Plus />
+          <span class="sr-only">{{ $t('edit.previewPanel.zoomIn') }}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{{ $t('edit.previewPanel.zoomIn') }}</p>
+      </TooltipContent>
+    </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <Button
-            variant="ghost"
-            size="icon"
-            :class="buttonClass"
-            :disabled="props.disabled"
-            @click="emit('zoomIn')"
-          >
-            <Plus />
-            <span class="sr-only">{{ $t('edit.previewPanel.zoomIn') }}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{{ $t('edit.previewPanel.zoomIn') }}</p>
-        </TooltipContent>
-      </Tooltip>
+    <div class="mx-0.5 bg-border h-4 w-px" />
 
-      <div class="mx-0.5 bg-border h-4 w-px" />
-
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <Button
-            variant="ghost"
-            size="icon"
-            :class="[buttonClass, 'ml-0.5']"
-            :disabled="props.disabled"
-            @click="emit('fitToView')"
-          >
-            <Maximize />
-            <span class="sr-only">{{ $t('edit.previewPanel.fitToView') }}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{{ $t('edit.previewPanel.fitToView') }}</p>
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <Button
+          variant="ghost"
+          size="icon"
+          :class="[buttonClass, 'ml-0.5']"
+          :disabled="props.disabled"
+          @click="emit('fitToView')"
+        >
+          <Maximize />
+          <span class="sr-only">{{ $t('edit.previewPanel.fitToView') }}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{{ $t('edit.previewPanel.fitToView') }}</p>
+      </TooltipContent>
+    </Tooltip>
+  </div>
 </template>

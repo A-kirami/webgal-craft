@@ -5,9 +5,11 @@ import { defineComponent, h } from 'vue'
 import { renderInBrowser } from '~/__tests__/browser-render'
 
 vi.mock('reka-ui', async () => {
+  const actual = await vi.importActual<typeof import('reka-ui')>('reka-ui')
   const { defineComponent, h } = await vi.importActual<typeof import('vue')>('vue')
 
   return {
+    ...actual,
     HoverCardPortal: defineComponent({
       name: 'StubHoverCardPortal',
       setup(_, { slots }) {

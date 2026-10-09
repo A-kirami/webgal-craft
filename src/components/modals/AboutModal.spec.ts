@@ -117,7 +117,8 @@ function createCopyEvent(): { clipboardData: DataTransfer, event: ClipboardEvent
 
 describe('AboutModal', () => {
   afterEach(() => {
-    document.body.innerHTML = ''
+    // 不能在这里清空 body：Teleport 内容（tooltip 等）的锚点在 body 里，
+    // 先清空会让随后的自动卸载在 removeFragment 时崩溃；交由 vitest-browser-vue 自动清理。
     openUrlMock.mockReset()
     platformMock.mockReturnValue('macos')
     globalThis.getSelection()?.removeAllRanges()

@@ -68,16 +68,14 @@ const selectedEngineId = useFieldValue<string>('gameEngine')
               </FormLabel>
               <div class="flex gap-2">
                 <FormControl>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <Input :id="gamePathFieldId" v-bind="componentField" class="bg-accent flex-1 cursor-default!" disabled />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{{ componentField.modelValue }}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Input :id="gamePathFieldId" v-bind="componentField" class="bg-accent flex-1 cursor-default!" disabled />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{{ componentField.modelValue }}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </FormControl>
                 <Button v-if="canSelectGamePath" :aria-label="$t('modals.createGame.selectSaveLocation')" variant="outline" size="icon" type="button" @click="handleSelectFolder">
                   <FolderOpen />

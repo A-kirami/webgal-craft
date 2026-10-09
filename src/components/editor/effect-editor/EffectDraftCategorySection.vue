@@ -106,18 +106,24 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 <span class="block truncate">{{ resolveLabel(param.label) }}</span>
               </Label>
               <div class="flex shrink-0 size-5 items-center justify-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  :class="getClearButtonClass([param.key])"
-                  :aria-hidden="!isClearButtonEnabled([param.key]) ? 'true' : undefined"
-                  :tabindex="!isClearButtonEnabled([param.key]) ? -1 : undefined"
-                  :title="getClearPropertyLabel(param.label)"
-                  :aria-label="getClearPropertyLabel(param.label)"
-                  @click="clearPaths([param.key])"
-                >
-                  <div class="i-lucide-rotate-ccw size-3" />
-                </Button>
+                <Tooltip :delay-duration="0">
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      :class="getClearButtonClass([param.key])"
+                      :aria-hidden="!isClearButtonEnabled([param.key]) ? 'true' : undefined"
+                      :tabindex="!isClearButtonEnabled([param.key]) ? -1 : undefined"
+                      :aria-label="getClearPropertyLabel(param.label)"
+                      @click="clearPaths([param.key])"
+                    >
+                      <div class="i-lucide-rotate-ccw size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" class="px-2 py-1">
+                    {{ getClearPropertyLabel(param.label) }}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
             <InputGroup class="flex-1 h-7">
@@ -148,18 +154,24 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
             </Label>
             <div class="flex shrink-0 size-5 items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                :class="getClearButtonClass(getClearPathsForItem(item))"
-                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                :title="getClearPropertyLabel(item.param.label)"
-                :aria-label="getClearPropertyLabel(item.param.label)"
-                @click="clearPaths(getClearPathsForItem(item))"
-              >
-                <div class="i-lucide-rotate-ccw size-3" />
-              </Button>
+              <Tooltip :delay-duration="0">
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :class="getClearButtonClass(getClearPathsForItem(item))"
+                    :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                    :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                    :aria-label="getClearPropertyLabel(item.param.label)"
+                    @click="clearPaths(getClearPathsForItem(item))"
+                  >
+                    <div class="i-lucide-rotate-ccw size-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" class="px-2 py-1">
+                  {{ getClearPropertyLabel(item.param.label) }}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
           <InputGroup class="flex-1 h-7">
@@ -183,18 +195,24 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
             </Label>
             <div class="flex shrink-0 size-5 items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                :class="getClearButtonClass(getClearPathsForItem(item))"
-                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                :title="getClearPropertyLabel(item.param.label)"
-                :aria-label="getClearPropertyLabel(item.param.label)"
-                @click="clearPaths(getClearPathsForItem(item))"
-              >
-                <div class="i-lucide-rotate-ccw size-3" />
-              </Button>
+              <Tooltip :delay-duration="0">
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :class="getClearButtonClass(getClearPathsForItem(item))"
+                    :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                    :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                    :aria-label="getClearPropertyLabel(item.param.label)"
+                    @click="clearPaths(getClearPathsForItem(item))"
+                  >
+                    <div class="i-lucide-rotate-ccw size-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" class="px-2 py-1">
+                  {{ getClearPropertyLabel(item.param.label) }}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
           <div class="flex flex-1 gap-2 items-center" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
@@ -230,43 +248,47 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 {{ controls.getLinkedSliderLabel(item.param) }}
               </span>
               <div class="flex shrink-0 size-5 items-center justify-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  :class="getClearButtonClass(getClearPathsForItem(item))"
-                  :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                  :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                  :title="getClearPropertyLabel(item.param.linkedGroupLabel ?? item.param.label)"
-                  :aria-label="getClearPropertyLabel(item.param.linkedGroupLabel ?? item.param.label)"
-                  @click="clearPaths(getClearPathsForItem(item))"
-                >
-                  <div class="i-lucide-rotate-ccw size-3" />
-                </Button>
+                <Tooltip :delay-duration="0">
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      :class="getClearButtonClass(getClearPathsForItem(item))"
+                      :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                      :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                      :aria-label="getClearPropertyLabel(item.param.linkedGroupLabel ?? item.param.label)"
+                      @click="clearPaths(getClearPathsForItem(item))"
+                    >
+                      <div class="i-lucide-rotate-ccw size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" class="px-2 py-1">
+                    {{ getClearPropertyLabel(item.param.linkedGroupLabel ?? item.param.label) }}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
-            <TooltipProvider :delay-duration="0">
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <Button
-                    size="icon-sm"
-                    variant="ghost"
-                    :aria-label="controls.isLinkedSliderLocked(item.param) ? $t('modals.effectEditor.unlinkScale') : $t('modals.effectEditor.linkScale')"
-                    :aria-pressed="controls.isLinkedSliderLocked(item.param)"
-                    :class="[controls.isLinkedSliderLocked(item.param) && 'bg-primary/10 text-primary hover:bg-primary/15']"
-                    @click="controls.toggleLinkedSliderLock(item.param)"
-                  >
-                    <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" class="px-2 py-1">
-                  {{
-                    controls.isLinkedSliderLocked(item.param)
-                      ? $t('modals.effectEditor.unlinkScale')
-                      : $t('modals.effectEditor.linkScale')
-                  }}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Tooltip :delay-duration="0">
+              <TooltipTrigger as-child>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  :aria-label="controls.isLinkedSliderLocked(item.param) ? $t('modals.effectEditor.unlinkScale') : $t('modals.effectEditor.linkScale')"
+                  :aria-pressed="controls.isLinkedSliderLocked(item.param)"
+                  :class="[controls.isLinkedSliderLocked(item.param) && 'bg-primary/10 text-primary hover:bg-primary/15']"
+                  @click="controls.toggleLinkedSliderLock(item.param)"
+                >
+                  <div :class="controls.isLinkedSliderLocked(item.param) ? 'i-lucide-link' : 'i-lucide-unlink'" class="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top" class="px-2 py-1">
+                {{
+                  controls.isLinkedSliderLocked(item.param)
+                    ? $t('modals.effectEditor.unlinkScale')
+                    : $t('modals.effectEditor.linkScale')
+                }}
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           <div class="flex flex-col gap-2" :class="isPanelLayout ? 'max-w-[28rem]' : 'max-w-76'">
@@ -315,18 +337,24 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
                 <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
               </Label>
               <div class="flex shrink-0 size-5 items-center justify-center">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  :class="getClearButtonClass(getClearPathsForItem(item))"
-                  :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                  :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                  :title="getClearPropertyLabel(item.param.label)"
-                  :aria-label="getClearPropertyLabel(item.param.label)"
-                  @click="clearPaths(getClearPathsForItem(item))"
-                >
-                  <div class="i-lucide-rotate-ccw size-3" />
-                </Button>
+                <Tooltip :delay-duration="0">
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      :class="getClearButtonClass(getClearPathsForItem(item))"
+                      :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                      :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                      :aria-label="getClearPropertyLabel(item.param.label)"
+                      @click="clearPaths(getClearPathsForItem(item))"
+                    >
+                      <div class="i-lucide-rotate-ccw size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" class="px-2 py-1">
+                    {{ getClearPropertyLabel(item.param.label) }}
+                  </TooltipContent>
+                </Tooltip>
               </div>
             </div>
             <div class="flex gap-2 items-center">
@@ -366,42 +394,40 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
           <span class="text-xs text-muted-foreground shrink-0">
             {{ $t('modals.effectEditor.flip') }}
           </span>
-          <TooltipProvider :delay-duration="0">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  class="w-9"
-                  :aria-label="$t('modals.effectEditor.flipHorizontal')"
-                  @click="controls.flipScaleAxis('x')"
-                >
-                  <div class="i-lucide-flip-horizontal size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" class="px-2 py-1">
-                {{ $t('modals.effectEditor.flipHorizontal') }}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant="ghost"
-                  class="w-9"
-                  :aria-label="$t('modals.effectEditor.flipVertical')"
-                  @click="controls.flipScaleAxis('y')"
-                >
-                  <div class="i-lucide-flip-vertical size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" class="px-2 py-1">
-                {{ $t('modals.effectEditor.flipVertical') }}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip :delay-duration="0">
+            <TooltipTrigger as-child>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                class="w-9"
+                :aria-label="$t('modals.effectEditor.flipHorizontal')"
+                @click="controls.flipScaleAxis('x')"
+              >
+                <div class="i-lucide-flip-horizontal size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" class="px-2 py-1">
+              {{ $t('modals.effectEditor.flipHorizontal') }}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip :delay-duration="0">
+            <TooltipTrigger as-child>
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                class="w-9"
+                :aria-label="$t('modals.effectEditor.flipVertical')"
+                @click="controls.flipScaleAxis('y')"
+              >
+                <div class="i-lucide-flip-vertical size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" class="px-2 py-1">
+              {{ $t('modals.effectEditor.flipVertical') }}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div v-else-if="item.kind === 'color'" class="group/field flex gap-2 w-full items-start">
@@ -410,18 +436,24 @@ function getLinkedSliderPath(param: EffectDraftLinkedNumberField, index: 0 | 1):
               <span class="block truncate">{{ resolveLabel(item.param.label) }}</span>
             </Label>
             <div class="pt-0.5 flex shrink-0 size-5 items-center justify-center">
-              <Button
-                variant="ghost"
-                size="icon"
-                :class="getClearButtonClass(getClearPathsForItem(item))"
-                :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
-                :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
-                :title="getClearPropertyLabel(item.param.label)"
-                :aria-label="getClearPropertyLabel(item.param.label)"
-                @click="clearPaths(getClearPathsForItem(item))"
-              >
-                <div class="i-lucide-rotate-ccw size-3" />
-              </Button>
+              <Tooltip :delay-duration="0">
+                <TooltipTrigger as-child>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    :class="getClearButtonClass(getClearPathsForItem(item))"
+                    :aria-hidden="!isClearButtonEnabled(getClearPathsForItem(item)) ? 'true' : undefined"
+                    :tabindex="!isClearButtonEnabled(getClearPathsForItem(item)) ? -1 : undefined"
+                    :aria-label="getClearPropertyLabel(item.param.label)"
+                    @click="clearPaths(getClearPathsForItem(item))"
+                  >
+                    <div class="i-lucide-rotate-ccw size-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" class="px-2 py-1">
+                  {{ getClearPropertyLabel(item.param.label) }}
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
           <div class="flex flex-1 gap-2 items-center">

@@ -324,7 +324,7 @@ describe('CommandPanel', () => {
   it('点击命令默认值按钮会打开默认值模态框', async () => {
     await renderCommandPanel()
 
-    await page.getByTitle('edit-defaults').first().click()
+    await page.getByRole('button', { name: 'edit-defaults' }).first().click()
 
     expect(modalOpenMock).toHaveBeenCalledWith('CommandDefaultsModal', expect.objectContaining({
       type: expect.any(Number),
@@ -341,7 +341,7 @@ describe('CommandPanel', () => {
     })
     store.setActiveCategory('groups')
 
-    await page.getByTitle('delete-action').click()
+    await page.getByRole('button', { name: 'delete-action', exact: true }).first().click()
     await page.getByRole('button', { name: 'delete-action', exact: true }).nth(1).click()
 
     expect(store.groups.find(item => item.id === group.id)).toBeUndefined()

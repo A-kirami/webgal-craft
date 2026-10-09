@@ -71,7 +71,6 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
                 size="icon-sm"
                 variant="ghost"
                 :disabled="!props.canUndo"
-                :title="$t('edit.visualEditor.animation.toolbar.undo')"
                 @click="emit('undo')"
               >
                 <div class="i-lucide-undo-2 size-3.5" />
@@ -81,7 +80,6 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
                 size="icon-sm"
                 variant="ghost"
                 :disabled="!props.canRedo"
-                :title="$t('edit.visualEditor.animation.toolbar.redo')"
                 @click="emit('redo')"
               >
                 <div class="i-lucide-redo-2 size-3.5" />

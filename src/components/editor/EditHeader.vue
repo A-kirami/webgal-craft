@@ -291,7 +291,6 @@ onBeforeUnmount(() => {
         v-if="canOpenGameConfig"
         variant="ghost"
         size="icon"
-        :title="$t('edit.header.gameSettings')"
         @click="handleOpenGameConfig"
       >
         <Settings2 />

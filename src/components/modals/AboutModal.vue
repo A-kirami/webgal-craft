@@ -93,17 +93,22 @@ function handleOpenBugReport(): void {
             <Tag class="size-3.5" :stroke-width="2.5" aria-hidden="true" />
             <span>{{ version.name }}</span>
           </button>
-          <Button
-            v-if="canCheckForUpdate"
-            size="icon-sm"
-            variant="ghost"
-            class="text-muted-foreground bg-muted"
-            :title="$t('appUpdate.action.checkForUpdate')"
-            :aria-label="$t('appUpdate.action.checkForUpdate')"
-            @click="handleCheckForUpdate"
-          >
-            <RefreshCw aria-hidden="true" />
-          </Button>
+          <Tooltip v-if="canCheckForUpdate">
+            <TooltipTrigger as-child>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                class="text-muted-foreground bg-muted"
+                :aria-label="$t('appUpdate.action.checkForUpdate')"
+                @click="handleCheckForUpdate"
+              >
+                <RefreshCw aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {{ $t('appUpdate.action.checkForUpdate') }}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 

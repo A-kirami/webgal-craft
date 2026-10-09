@@ -222,7 +222,7 @@ function getPreviewFrameSize(
         <div
           class="text-center max-w-64 self-center"
         >
-          <div class="text-xs text-foreground font-medium truncate" :title="props.item.name">
+          <div class="text-xs text-foreground font-medium truncate">
             {{ props.item.name }}
           </div>
           <div

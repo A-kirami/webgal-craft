@@ -272,31 +272,43 @@ useShortcutContext({
               @click="emit('insertCommand', entry.type)"
             >
               <template #actions>
-                <Button
-                  v-if="!entry.locked"
-                  variant="ghost"
-                  size="icon-xs"
-                  class="opacity-0 transition-all group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100"
-                  :title="$t('edit.visualEditor.commandPanel.editDefaults')"
-                  @click="openDefaultsModal(entry.type)"
-                >
-                  <Pencil aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  class="transition-all hover:text-amber-500 hover:opacity-100"
-                  :class="commandPanelStore.isFavorite(entry.type) ? 'text-amber-500 opacity-100' : 'opacity-60'"
-                  :title="getFavoriteActionLabel(entry.type)"
-                  :aria-label="getFavoriteActionLabel(entry.type)"
-                  :aria-pressed="commandPanelStore.isFavorite(entry.type)"
-                  @click="commandPanelStore.toggleFavorite(entry.type)"
-                >
-                  <Star
-                    :fill="commandPanelStore.isFavorite(entry.type) ? 'currentColor' : 'none'"
-                    aria-hidden="true"
-                  />
-                </Button>
+                <Tooltip v-if="!entry.locked">
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      class="opacity-0 transition-all group-focus-visible:opacity-60 group-has-[:focus-visible]:opacity-60 group-hover:opacity-60 hover:opacity-100"
+                      :aria-label="$t('edit.visualEditor.commandPanel.editDefaults')"
+                      @click="openDefaultsModal(entry.type)"
+                    >
+                      <Pencil aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ $t('edit.visualEditor.commandPanel.editDefaults') }}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      class="transition-all hover:text-amber-500 hover:opacity-100"
+                      :class="commandPanelStore.isFavorite(entry.type) ? 'text-amber-500 opacity-100' : 'opacity-60'"
+                      :aria-label="getFavoriteActionLabel(entry.type)"
+                      :aria-pressed="commandPanelStore.isFavorite(entry.type)"
+                      @click="commandPanelStore.toggleFavorite(entry.type)"
+                    >
+                      <Star
+                        :fill="commandPanelStore.isFavorite(entry.type) ? 'currentColor' : 'none'"
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {{ getFavoriteActionLabel(entry.type) }}
+                  </TooltipContent>
+                </Tooltip>
               </template>
             </CommandPanelCard>
           </template>
@@ -341,7 +353,7 @@ useShortcutContext({
                   variant="ghost"
                   size="icon-xs"
                   class="opacity-60 hover:opacity-100"
-                  :title="$t('common.edit')"
+                  :aria-label="$t('common.edit')"
                   @click="openGroupModal(group)"
                 >
                   <Pencil aria-hidden="true" />
@@ -352,7 +364,7 @@ useShortcutContext({
                       variant="ghost"
                       size="icon-xs"
                       class="opacity-60 hover:text-destructive hover:opacity-100"
-                      :title="$t('common.delete')"
+                      :aria-label="$t('common.delete')"
                       @click="requestDeleteGroup(group.id)"
                     >
                       <Trash2 aria-hidden="true" />

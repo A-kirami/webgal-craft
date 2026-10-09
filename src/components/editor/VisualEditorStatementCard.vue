@@ -199,25 +199,39 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
         <!-- 操作按钮组 -->
         <div class="gap-1 inline-grid grid-flow-col items-center">
           <slot name="actions" :collapsed="collapsed" :entry="entry">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              class="opacity-60 w-0 transition-all overflow-hidden disabled:text-muted-foreground/50 hover:text-green-600 group-hover:p-1 disabled:opacity-100 hover:opacity-100 group-hover:w-6 disabled:cursor-not-allowed disabled:pointer-events-none"
-              :disabled="playToDisabled"
-              :title="$t('edit.visualEditor.playToLine')"
-              @click.stop="emit('playTo', entry.id)"
-            >
-              <div class="i-lucide-play size-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              class="opacity-60 w-0 transition-all overflow-hidden hover:text-destructive group-hover:p-1 hover:opacity-100 group-hover:w-6"
-              :title="$t('common.delete')"
-              @click.stop="emit('delete', entry.id)"
-            >
-              <div class="i-lucide-trash-2 size-3.5" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  class="opacity-60 w-0 transition-all overflow-hidden disabled:text-muted-foreground/50 hover:text-green-600 group-hover:p-1 disabled:opacity-100 hover:opacity-100 group-hover:w-6 disabled:cursor-not-allowed disabled:pointer-events-none"
+                  :disabled="playToDisabled"
+                  :aria-label="$t('edit.visualEditor.playToLine')"
+                  @click.stop="emit('playTo', entry.id)"
+                >
+                  <div class="i-lucide-play size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ $t('edit.visualEditor.playToLine') }}
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  class="opacity-60 w-0 transition-all overflow-hidden hover:text-destructive group-hover:p-1 hover:opacity-100 group-hover:w-6"
+                  :aria-label="$t('common.delete')"
+                  @click.stop="emit('delete', entry.id)"
+                >
+                  <div class="i-lucide-trash-2 size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {{ $t('common.delete') }}
+              </TooltipContent>
+            </Tooltip>
 
             <Button
               v-if="!readonly && !config.locked"
