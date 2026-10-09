@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, net::SocketAddr};
 
 use crate::generated::editor_preview_protocol::{
     is_preview_request_type, is_preview_response_type, HOST_EVENT_TYPES, PREVIEW_COMMAND_TYPES,
-    PREVIEW_QUERY_TYPES, SET_EFFECT_COMMAND_TYPE,
+    PREVIEW_QUERY_TYPES,
 };
 pub use crate::generated::editor_preview_protocol::{
     EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL, SESSION_REGISTER_PREVIEW_TYPE,
@@ -115,10 +115,7 @@ pub fn target_scope_for_preview_request(message: &str) -> Option<PreviewRequestT
 }
 
 fn target_scope_for_preview_request_type(message_type: &str) -> Option<PreviewRequestTargetScope> {
-    if message_type == SET_EFFECT_COMMAND_TYPE {
-        return Some(PreviewRequestTargetScope::EmbeddedPreview);
-    }
-
+    // 全部命令（含 set-effect）走 session fan-out；只有 Overlay 查询定向 embedded preview
     if PREVIEW_COMMAND_TYPES.contains(&message_type) {
         return Some(PreviewRequestTargetScope::SessionMembers);
     }
@@ -436,7 +433,7 @@ mod tests {
     }
 
     #[test]
-    fn target_scope_for_preview_request_routes_set_effect_to_embedded_preview() {
+    fn target_scope_for_preview_request_routes_set_effect_to_session_members() {
         let target_scope = target_scope_for_preview_request(
             r#"{
                 "kind": "request",
@@ -454,7 +451,7 @@ mod tests {
 
         assert_eq!(
             target_scope,
-            Some(PreviewRequestTargetScope::EmbeddedPreview)
+            Some(PreviewRequestTargetScope::SessionMembers)
         );
     }
 

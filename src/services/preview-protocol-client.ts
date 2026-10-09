@@ -15,10 +15,6 @@ export function isPreviewPanelOpen(): boolean {
   return usePreferenceStore().showPreviewPanel
 }
 
-export function isPreviewStateResetError(error: unknown): boolean {
-  return error instanceof Error && error.message === PREVIEW_STATE_RESET_REASON
-}
-
 function createPreviewRequestId(): string {
   return globalThis.crypto?.randomUUID?.()
     ?? `preview-sync-${Date.now()}-${Math.random().toString(16).slice(2)}`
@@ -38,14 +34,12 @@ export function createPreviewRequestEnvelope<TType extends PreviewRequestType>(
 /**
  * 通过 Tauri IPC 发送预览请求，但不等待预览端 ack 或响应。
  * 返回的 promise 只表示本地命令派发完成。
+ *
+ * 不检查面板开关或连接状态：无已注册预览端时后端 fan-out 天然 no-op。
  */
 export async function sendPreviewRequestEnvelope<TType extends PreviewRequestType>(
   request: RequestEnvelopeByType<TType>,
 ): Promise<void> {
-  if (!isPreviewPanelOpen()) {
-    throw new Error(PREVIEW_STATE_RESET_REASON)
-  }
-
   await serverCmds.sendPreviewCommand(JSON.stringify(request))
 }
 
@@ -57,18 +51,6 @@ export async function sendPreviewCommandRequest<TType extends PreviewCommandType
   type: TType,
   payload: RequestPayloadByType[TType],
 ): Promise<void> {
-  if (!isPreviewPanelOpen()) {
-    return
-  }
-
   const request = createPreviewRequestEnvelope(type, payload)
-  try {
-    await sendPreviewRequestEnvelope(request)
-  } catch (error) {
-    if (isPreviewStateResetError(error)) {
-      return
-    }
-
-    throw error
-  }
+  await sendPreviewRequestEnvelope(request)
 }

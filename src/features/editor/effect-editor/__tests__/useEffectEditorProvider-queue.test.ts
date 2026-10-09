@@ -309,7 +309,7 @@ afterEach(() => {
 })
 
 describe('useEffectEditorProvider', () => {
-  it('预览面板关闭时会丢弃运行时请求但仍允许应用脚本变更', async () => {
+  it('预览面板关闭但预览就绪时仍会发送运行时请求', async () => {
     usePreferenceStore().showPreviewPanel = false
     useEditSettingsStore().autoApplyEffectEditorChanges = false
     const applyMock = vi.fn()
@@ -322,12 +322,23 @@ describe('useEffectEditorProvider', () => {
       expect(provider.canApply).toBe(true)
     })
 
-    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    await vi.waitFor(() => {
+      expect(debugCommanderMock.setEffect).toHaveBeenCalledWith(
+        'fig-center',
+        expect.objectContaining({ blur: 12 }),
+        { phase: 'preview' },
+      )
+    })
+
     await expect(provider.apply()).resolves.toBe(true)
     expect(applyMock).toHaveBeenCalledWith(expect.objectContaining({
       transform: { blur: 12 },
     }))
-    expect(debugCommanderMock.setEffect).not.toHaveBeenCalled()
+    expect(debugCommanderMock.setEffect).toHaveBeenCalledWith(
+      'fig-center',
+      expect.objectContaining({ blur: 12 }),
+      { phase: 'commit' },
+    )
   })
 
   it('预览未启动时会跳过运行时请求但仍允许应用脚本变更', async () => {

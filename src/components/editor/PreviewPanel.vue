@@ -21,7 +21,7 @@ import {
   DEFAULT_PREVIEW_PANEL_STAGE_WIDTH,
   resolvePreviewPanelStageSize,
 } from '~/features/editor/preview/preview-panel'
-import { resolvePreviewReadySyncTarget } from '~/features/editor/preview/preview-ready-sync-target'
+import { resolveCurrentPreviewReadySyncTarget } from '~/features/editor/preview/preview-ready-sync-target'
 import { useSceneEntryStatus } from '~/features/editor/scene-entry/useSceneEntryStatus'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
@@ -458,24 +458,11 @@ function handleEmbeddedPreviewSpaceKey(event: MessageEvent<unknown>): void {
   previewViewport.setSpacePressed(event.data.pressed)
 }
 
-function resolveCurrentReadySyncTarget() {
-  const currentState = editorStore.currentState
-  const activeDocumentKind = currentState && 'kind' in currentState ? currentState.kind : undefined
-  const activeDocumentPath = currentState && 'path' in currentState ? currentState.path : undefined
-
-  return resolvePreviewReadySyncTarget({
-    activeDocumentKind,
-    activeDocumentPath,
-    selectedLineNumber: editorStore.currentSceneSelection?.lastLineNumber,
-    textContent: editorStore.currentTextProjection?.textContent,
-  })
-}
-
 async function initializeEmbeddedPreview(currentEmbeddedLaunchId: string): Promise<void> {
   consumedReadyLaunchId = currentEmbeddedLaunchId
 
   try {
-    const syncTarget = resolveCurrentReadySyncTarget()
+    const syncTarget = resolveCurrentPreviewReadySyncTarget(editorStore)
     if (!syncTarget) {
       return
     }

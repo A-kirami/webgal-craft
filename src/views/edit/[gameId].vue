@@ -3,6 +3,7 @@ import { ResizablePanel } from '~/components/ui/resizable'
 import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useAnimationTableSyncBootstrap'
 import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import { useExternalPreviewReadySync } from '~/features/editor/preview/useExternalPreviewReadySync'
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
@@ -51,6 +52,7 @@ function exitEditMode(): Promise<void> {
 }
 
 useAnimationTableSyncBootstrap()
+useExternalPreviewReadySync()
 useResourceIndexBootstrap(querySentenceResourceReferences)
 
 useEditorTour()

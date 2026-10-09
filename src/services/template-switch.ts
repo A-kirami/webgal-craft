@@ -6,7 +6,6 @@ import { AbsPath, RelPath } from '~/domain/path'
 import { debugCommander } from '~/services/debug-commander'
 import { engineManager, isEngineUsable } from '~/services/engine-manager'
 import { runExclusiveGameSwitch } from '~/services/game-switch-guard'
-import { isPreviewStateResetError } from '~/services/preview-protocol-client'
 import { useEditorStore } from '~/stores/editor'
 import { useFileStore } from '~/stores/file'
 import { useTabsStore } from '~/stores/tabs'
@@ -79,15 +78,7 @@ async function refreshTemplateOverlayAndPreview(
   })
 
   if (!options.skipPreviewTemplateReload) {
-    try {
-      await debugCommander.refetchTemplates()
-    } catch (error) {
-      if (isPreviewStateResetError(error)) {
-        logger.warn(`[模板切换] 通知预览刷新模板失败: ${error}`)
-        return
-      }
-      throw error
-    }
+    await debugCommander.refetchTemplates()
   }
 }
 
