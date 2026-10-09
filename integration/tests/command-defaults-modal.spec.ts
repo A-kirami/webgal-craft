@@ -22,7 +22,7 @@ test.describe('默认命令弹窗文件选择器', () => {
 
     const commandCard = page.locator(`[data-command-panel-command-type="${CHANGE_BG_TYPE}"]`)
     await commandCard.hover()
-    await commandCard.getByTitle(/Edit defaults|编辑默认值/).click()
+    await commandCard.getByRole('button', { name: /Edit defaults|编辑默认值/ }).click()
 
     const dialog = page.getByRole('dialog')
     await expect(dialog).toBeVisible()
