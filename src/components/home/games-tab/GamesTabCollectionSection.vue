@@ -214,39 +214,37 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
           </div>
         </div>
         <div v-if="!hasGameProgress(item.game)" class="flex gap-2 items-center">
-          <TooltipProvider>
-            <Tooltip v-if="item.game.availability !== 'missing'">
-              <TooltipTrigger as-child>
-                <Button
-                  :aria-label="$t('common.openFolder')"
-                  variant="ghost"
-                  size="icon-sm"
-                  @click.stop="emit('openFolder', item.game)"
-                >
-                  <Folder />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{{ $t('common.openFolder') }}</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  :aria-label="$t('home.games.deleteGame')"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                  @click.stop="emit('deleteGame', item.game)"
-                >
-                  <Trash2 />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{{ $t('home.games.deleteGame') }}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip v-if="item.game.availability !== 'missing'">
+            <TooltipTrigger as-child>
+              <Button
+                :aria-label="$t('common.openFolder')"
+                variant="ghost"
+                size="icon-sm"
+                @click.stop="emit('openFolder', item.game)"
+              >
+                <Folder />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{{ $t('common.openFolder') }}</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                :aria-label="$t('home.games.deleteGame')"
+                variant="ghost"
+                size="icon-sm"
+                class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+                @click.stop="emit('deleteGame', item.game)"
+              >
+                <Trash2 />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{{ $t('home.games.deleteGame') }}</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none h-0.75 inset-x-0 bottom-0 absolute" />
       </div>

@@ -156,45 +156,73 @@ function handleEditorModeChange(value: unknown): void {
                 @update:collapsed="val => handleCollapsedUpdate(index, val)"
               >
                 <template #actions>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="opacity-70 hover:opacity-100"
-                    :disabled="index === 0"
-                    :title="$t('edit.visualEditor.commandPanel.moveUp')"
-                    @click.stop="moveEntry(index, -1)"
-                  >
-                    <div class="i-lucide-arrow-up size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="opacity-70 hover:opacity-100"
-                    :disabled="index === draftEntries.length - 1"
-                    :title="$t('edit.visualEditor.commandPanel.moveDown')"
-                    @click.stop="moveEntry(index, 1)"
-                  >
-                    <div class="i-lucide-arrow-down size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="opacity-70 hover:opacity-100"
-                    :disabled="isEntryAtFactory(entry)"
-                    :title="$t('edit.visualEditor.commandPanel.resetDefaults')"
-                    @click.stop="resetEntry(entry.id)"
-                  >
-                    <div class="i-lucide-rotate-ccw size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="opacity-70 hover:text-destructive hover:opacity-100"
-                    :title="$t('common.delete')"
-                    @click.stop="deleteEntry(entry.id)"
-                  >
-                    <div class="i-lucide-trash-2 size-3.5" />
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="opacity-70 hover:opacity-100"
+                        :disabled="index === 0"
+                        :aria-label="$t('edit.visualEditor.commandPanel.moveUp')"
+                        @click.stop="moveEntry(index, -1)"
+                      >
+                        <div class="i-lucide-arrow-up size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ $t('edit.visualEditor.commandPanel.moveUp') }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="opacity-70 hover:opacity-100"
+                        :disabled="index === draftEntries.length - 1"
+                        :aria-label="$t('edit.visualEditor.commandPanel.moveDown')"
+                        @click.stop="moveEntry(index, 1)"
+                      >
+                        <div class="i-lucide-arrow-down size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ $t('edit.visualEditor.commandPanel.moveDown') }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="opacity-70 hover:opacity-100"
+                        :disabled="isEntryAtFactory(entry)"
+                        :aria-label="$t('edit.visualEditor.commandPanel.resetDefaults')"
+                        @click.stop="resetEntry(entry.id)"
+                      >
+                        <div class="i-lucide-rotate-ccw size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ $t('edit.visualEditor.commandPanel.resetDefaults') }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        class="opacity-70 hover:text-destructive hover:opacity-100"
+                        :aria-label="$t('common.delete')"
+                        @click.stop="deleteEntry(entry.id)"
+                      >
+                        <div class="i-lucide-trash-2 size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {{ $t('common.delete') }}
+                    </TooltipContent>
+                  </Tooltip>
                 </template>
               </VisualEditorStatementCard>
             </div>

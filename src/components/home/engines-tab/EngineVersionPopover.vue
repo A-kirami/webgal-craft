@@ -63,92 +63,90 @@ const latestVersion = computed(() => versionItems.value[0]?.version)
 </script>
 
 <template>
-  <TooltipProvider>
-    <div class="p-0 flex flex-col gap-1 min-w-0">
-      <div
-        v-if="group.remote?.status === 'loading'"
-        class="text-xs text-muted-foreground px-1 py-2 flex gap-2 items-center"
-      >
-        <LoaderCircle class="size-3.5 animate-spin" />
-        {{ $t('home.engines.official.checking') }}
-      </div>
-      <div
-        v-else-if="group.remote?.status === 'error'"
-        class="text-xs text-destructive px-1 py-2 flex gap-2 items-center"
-      >
-        <TriangleAlert class="size-3.5" />
-        {{ $t('home.engines.official.loadFailed') }}
-      </div>
-      <div
-        v-for="item in versionItems"
-        :key="item.id"
-        class="rounded-md flex items-center justify-between"
-      >
-        <div class="min-w-0">
-          <div class="ml-1 flex flex-wrap gap-1.5 items-center">
-            <span class="text-13px font-medium">
-              {{ item.version ?? $t('common.unknown') }}
-            </span>
-            <Badge v-if="latestVersion && latestVersion === item.version" variant="secondary">
-              {{ $t('engine.latestBadge') }}
-            </Badge>
-            <Badge v-if="item.engine && item.engine.availability !== 'available'" variant="outline">
-              <TriangleAlert class="size-3" />
-              {{ $t('engine.unavailable') }}
-            </Badge>
-          </div>
+  <div class="p-0 flex flex-col gap-1 min-w-0">
+    <div
+      v-if="group.remote?.status === 'loading'"
+      class="text-xs text-muted-foreground px-1 py-2 flex gap-2 items-center"
+    >
+      <LoaderCircle class="size-3.5 animate-spin" />
+      {{ $t('home.engines.official.checking') }}
+    </div>
+    <div
+      v-else-if="group.remote?.status === 'error'"
+      class="text-xs text-destructive px-1 py-2 flex gap-2 items-center"
+    >
+      <TriangleAlert class="size-3.5" />
+      {{ $t('home.engines.official.loadFailed') }}
+    </div>
+    <div
+      v-for="item in versionItems"
+      :key="item.id"
+      class="rounded-md flex items-center justify-between"
+    >
+      <div class="min-w-0">
+        <div class="ml-1 flex flex-wrap gap-1.5 items-center">
+          <span class="text-13px font-medium">
+            {{ item.version ?? $t('common.unknown') }}
+          </span>
+          <Badge v-if="latestVersion && latestVersion === item.version" variant="secondary">
+            {{ $t('engine.latestBadge') }}
+          </Badge>
+          <Badge v-if="item.engine && item.engine.availability !== 'available'" variant="outline">
+            <TriangleAlert class="size-3" />
+            {{ $t('engine.unavailable') }}
+          </Badge>
         </div>
+      </div>
 
-        <div class="flex gap-0.5 items-center">
-          <Tooltip v-if="item.releaseUrl">
-            <TooltipTrigger as-child>
-              <Button
-                :aria-label="$t('common.openReleasePage')"
-                variant="ghost"
-                size="icon-xs"
-                @click="emit('openVersionRelease', item.releaseUrl)"
-              >
-                <ExternalLink />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{{ $t('common.openReleasePage') }}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip v-if="item.downloadable">
-            <TooltipTrigger as-child>
-              <Button
-                :aria-label="$t('home.engines.official.download')"
-                :disabled="group.remote?.status !== 'ready'"
-                variant="ghost"
-                size="icon-xs"
-                @click="item.version && emit('downloadVersion', item.version)"
-              >
-                <Download />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{{ $t('home.engines.official.download') }}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip v-else-if="canDelete && item.engine">
-            <TooltipTrigger as-child>
-              <Button
-                :aria-label="$t('engine.deleteVersion')"
-                variant="ghost"
-                size="icon-xs"
-                class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                @click="emit('deleteEngine', item.engine)"
-              >
-                <Trash2 />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{{ $t('engine.deleteVersion') }}</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
+      <div class="flex gap-0.5 items-center">
+        <Tooltip v-if="item.releaseUrl">
+          <TooltipTrigger as-child>
+            <Button
+              :aria-label="$t('common.openReleasePage')"
+              variant="ghost"
+              size="icon-xs"
+              @click="emit('openVersionRelease', item.releaseUrl)"
+            >
+              <ExternalLink />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{{ $t('common.openReleasePage') }}</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip v-if="item.downloadable">
+          <TooltipTrigger as-child>
+            <Button
+              :aria-label="$t('home.engines.official.download')"
+              :disabled="group.remote?.status !== 'ready'"
+              variant="ghost"
+              size="icon-xs"
+              @click="item.version && emit('downloadVersion', item.version)"
+            >
+              <Download />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{{ $t('home.engines.official.download') }}</p>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip v-else-if="canDelete && item.engine">
+          <TooltipTrigger as-child>
+            <Button
+              :aria-label="$t('engine.deleteVersion')"
+              variant="ghost"
+              size="icon-xs"
+              class="text-destructive hover:text-destructive-foreground hover:bg-destructive"
+              @click="emit('deleteEngine', item.engine)"
+            >
+              <Trash2 />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{{ $t('engine.deleteVersion') }}</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
-  </TooltipProvider>
+  </div>
 </template>

@@ -67,32 +67,45 @@ function handleChipKeydown(event: KeyboardEvent, index: number) {
       <div class="text-xs text-muted-foreground">
         {{ title }}
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        class="text-muted-foreground size-5 hover:text-primary [&_svg]:size-3"
-        :title="clearLabel"
-        :aria-label="clearLabel"
-        @click="emit('clear')"
-      >
-        <Trash2 />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="text-muted-foreground size-5 hover:text-primary [&_svg]:size-3"
+            :aria-label="clearLabel"
+            @click="emit('clear')"
+          >
+            <Trash2 />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {{ clearLabel }}
+        </TooltipContent>
+      </Tooltip>
     </div>
     <div class="py-1 max-h-[3.5rem] overflow-hidden">
       <div class="flex flex-wrap gap-1">
-        <button
+        <Tooltip
           v-for="(path, index) in items"
           :key="path"
-          :ref="element => setChipRef(index, element as Element | null)"
-          type="button"
-          class="text-[11px] px-1.5 py-0.5 border rounded inline-flex gap-0.5 max-w-32 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
-          :class="{ 'text-muted-foreground border-dashed': isInvalid(path) }"
-          :title="path"
-          @click="emit('select', path)"
-          @keydown="(event) => handleChipKeydown(event, index)"
         >
-          <span class="truncate">{{ getFilePickerName(path) }}</span>
-        </button>
+          <TooltipTrigger as-child>
+            <button
+              :ref="element => setChipRef(index, element as Element | null)"
+              type="button"
+              class="text-[11px] px-1.5 py-0.5 border rounded inline-flex gap-0.5 max-w-32 items-center focus-visible:outline-none hover:bg-accent focus-visible:ring-1 focus-visible:ring-ring"
+              :class="{ 'text-muted-foreground border-dashed': isInvalid(path) }"
+              @click="emit('select', path)"
+              @keydown="(event) => handleChipKeydown(event, index)"
+            >
+              <span class="truncate">{{ getFilePickerName(path) }}</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {{ path }}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   </div>

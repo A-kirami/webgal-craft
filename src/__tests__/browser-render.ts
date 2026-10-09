@@ -1,9 +1,11 @@
 import { render } from 'vitest-browser-vue'
 import { defineComponent, h } from 'vue'
 
+import { TooltipProvider } from '~/components/ui/tooltip'
+
 import { createBrowserTestPlugins, isBrowserTestI18nPlugin } from './browser'
 
-import type { ComponentObjectPropsOptions } from 'vue'
+import type { Component, ComponentObjectPropsOptions } from 'vue'
 
 type BrowserRenderCall = typeof render
 type BrowserRenderComponent = Parameters<BrowserRenderCall>[0]
@@ -266,8 +268,18 @@ export async function renderInBrowser(component: BrowserRenderComponent, options
     pinia: resolvedPinia,
   })
   const plugins = [...browserPlugins, ...normalizedGlobalPlugins]
+  // 应用根部（App.vue）挂了全局 TooltipProvider，reka 的 Tooltip 必须在其上下文中工作；
+  // 测试渲染补齐同样的环境，用到 Tooltip 的组件 spec 就无需各自包一层。
+  const renderedComponent = defineComponent({
+    inheritAttrs: false,
+    setup(_, { attrs, slots }) {
+      return () => h(TooltipProvider, {}, {
+        default: () => h(component as Component, attrs, slots),
+      })
+    },
+  })
 
-  const result = await render(component, {
+  const result = await render(renderedComponent, {
     ...renderOptions,
     global: {
       ...global,

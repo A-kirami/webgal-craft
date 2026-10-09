@@ -256,36 +256,34 @@ onBeforeUnmount(disposeDiffEditor)
         </div>
 
         <div class="flex gap-1 items-center">
-          <TooltipProvider :delay-duration="300">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  :disabled="lineChanges.length === 0"
-                  :aria-label="$t('modals.externalDocumentChange.diff.previousChange')"
-                  @click="selectPreviousChange"
-                >
-                  <ChevronUp />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{{ $t('modals.externalDocumentChange.diff.previousChange') }}</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  :disabled="lineChanges.length === 0"
-                  :aria-label="$t('modals.externalDocumentChange.diff.nextChange')"
-                  @click="selectNextChange"
-                >
-                  <ChevronDown />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{{ $t('modals.externalDocumentChange.diff.nextChange') }}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip :delay-duration="300">
+            <TooltipTrigger as-child>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                :disabled="lineChanges.length === 0"
+                :aria-label="$t('modals.externalDocumentChange.diff.previousChange')"
+                @click="selectPreviousChange"
+              >
+                <ChevronUp />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{{ $t('modals.externalDocumentChange.diff.previousChange') }}</TooltipContent>
+          </Tooltip>
+          <Tooltip :delay-duration="300">
+            <TooltipTrigger as-child>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                :disabled="lineChanges.length === 0"
+                :aria-label="$t('modals.externalDocumentChange.diff.nextChange')"
+                @click="selectNextChange"
+              >
+                <ChevronDown />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{{ $t('modals.externalDocumentChange.diff.nextChange') }}</TooltipContent>
+          </Tooltip>
           <div class="mx-1 bg-border h-5 w-px" />
           <Button
             variant="outline"

@@ -27,44 +27,42 @@ function handleSidebarToggle() {
 </script>
 
 <template>
-  <TooltipProvider>
-    <div class="flex gap-0.5 items-center">
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <button
-            :class="toggleVariants({ size: 'sm' })"
-            :aria-label="isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode')"
-            data-tour="mode-switch"
-            :disabled="!canToggleMode"
-            class="px-0! disabled:opacity-40 disabled:pointer-events-none"
-            @click="handleModeToggle"
-          >
-            <Paintbrush v-if="isVisualMode" class="size-4" />
-            <Code v-else class="size-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {{ isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode') }}
-        </TooltipContent>
-      </Tooltip>
+  <div class="flex gap-0.5 items-center">
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <button
+          :class="toggleVariants({ size: 'sm' })"
+          :aria-label="isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode')"
+          data-tour="mode-switch"
+          :disabled="!canToggleMode"
+          class="px-0! disabled:opacity-40 disabled:pointer-events-none"
+          @click="handleModeToggle"
+        >
+          <Paintbrush v-if="isVisualMode" class="size-4" />
+          <Code v-else class="size-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {{ isVisualMode ? $t('edit.editorMode.textMode') : $t('edit.editorMode.visualMode') }}
+      </TooltipContent>
+    </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger as-child>
-          <button
-            :aria-label="$t('edit.editorMode.toggleSidebar')"
-            :class="toggleVariants({ size: 'sm' })"
-            :data-state="preferenceStore.showSidebar ? 'on' : 'off'"
-            :disabled="!canToggleSidebar"
-            class="px-0! disabled:opacity-40 disabled:pointer-events-none"
-            @click="handleSidebarToggle"
-          >
-            <PanelRight class="size-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          {{ $t('edit.editorMode.toggleSidebar') }}
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger as-child>
+        <button
+          :aria-label="$t('edit.editorMode.toggleSidebar')"
+          :class="toggleVariants({ size: 'sm' })"
+          :data-state="preferenceStore.showSidebar ? 'on' : 'off'"
+          :disabled="!canToggleSidebar"
+          class="px-0! disabled:opacity-40 disabled:pointer-events-none"
+          @click="handleSidebarToggle"
+        >
+          <PanelRight class="size-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {{ $t('edit.editorMode.toggleSidebar') }}
+      </TooltipContent>
+    </Tooltip>
+  </div>
 </template>

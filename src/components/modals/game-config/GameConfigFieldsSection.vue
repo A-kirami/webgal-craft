@@ -551,24 +551,22 @@ function scrollCustomAddButtonIntoView() {
                 class="text-xs text-muted-foreground font-mono cursor-default!"
               />
               <InputGroupAddon align="inline-end" class="pr-1.5">
-                <TooltipProvider :delay-duration="0">
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <InputGroupButton
-                        data-testid="game-config-game-key-regenerate"
-                        :aria-label="$t('modals.gameConfig.fields.gameKey.regenerate')"
-                        size="icon-sm"
-                        class="text-muted-foreground"
-                        @click="applyGeneratedGameKey(handleChange)"
-                      >
-                        <div class="i-lucide-rotate-ccw size-3.5" />
-                      </InputGroupButton>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" class="px-2 py-1">
-                      {{ $t('modals.gameConfig.fields.gameKey.regenerate') }}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Tooltip :delay-duration="0">
+                  <TooltipTrigger as-child>
+                    <InputGroupButton
+                      data-testid="game-config-game-key-regenerate"
+                      :aria-label="$t('modals.gameConfig.fields.gameKey.regenerate')"
+                      size="icon-sm"
+                      class="text-muted-foreground"
+                      @click="applyGeneratedGameKey(handleChange)"
+                    >
+                      <div class="i-lucide-rotate-ccw size-3.5" />
+                    </InputGroupButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" class="px-2 py-1">
+                    {{ $t('modals.gameConfig.fields.gameKey.regenerate') }}
+                  </TooltipContent>
+                </Tooltip>
               </InputGroupAddon>
             </InputGroup>
           </FormControl>
@@ -636,26 +634,24 @@ function scrollCustomAddButtonIntoView() {
             </FormItem>
           </FormField>
 
-          <TooltipProvider :delay-duration="0">
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  class="text-muted-foreground self-start hover:text-destructive"
-                  :aria-label="$t('modals.gameConfig.custom.remove')"
-                  :data-testid="`game-config-custom-remove-${index}`"
-                  @click="handleRemoveCustomConfig(index)"
-                >
-                  <X />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" class="px-2 py-1">
-                {{ $t('modals.gameConfig.custom.remove') }}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip :delay-duration="0">
+            <TooltipTrigger as-child>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                class="text-muted-foreground self-start hover:text-destructive"
+                :aria-label="$t('modals.gameConfig.custom.remove')"
+                :data-testid="`game-config-custom-remove-${index}`"
+                @click="handleRemoveCustomConfig(index)"
+              >
+                <X />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" class="px-2 py-1">
+              {{ $t('modals.gameConfig.custom.remove') }}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div ref="customAddButtonContainerRef">

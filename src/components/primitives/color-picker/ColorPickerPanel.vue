@@ -280,26 +280,24 @@ const fieldInputClass = 'h-full px-1.5 text-[11px] text-center tabular-nums'
 
     <!-- 字段行：格式循环钮 + 值区 + 透明度 -->
     <div class="flex gap-1.5 items-center">
-      <TooltipProvider :delay-duration="300">
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="xs"
-              class="text-muted-foreground font-medium shrink-0 gap-0 w-12"
-              :aria-label="formatSwitchA11yLabel"
-              data-testid="color-picker-format-switch"
-              @click="cycleFormat"
-            >
-              {{ FORMAT_LABELS[format] }}
-              <div class="i-lucide-chevrons-up-down opacity-50 shrink-0 size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="top" class="px-2 py-1" data-testid="color-picker-format-tooltip">
-            {{ t('common.colorPicker.switchFormat') }}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip :delay-duration="300">
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="xs"
+            class="text-muted-foreground font-medium shrink-0 gap-0 w-12"
+            :aria-label="formatSwitchA11yLabel"
+            data-testid="color-picker-format-switch"
+            @click="cycleFormat"
+          >
+            {{ FORMAT_LABELS[format] }}
+            <div class="i-lucide-chevrons-up-down opacity-50 shrink-0 size-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="top" class="px-2 py-1" data-testid="color-picker-format-tooltip">
+          {{ t('common.colorPicker.switchFormat') }}
+        </TooltipContent>
+      </Tooltip>
 
       <InputGroup class="flex-1 gap-0.5 h-6 min-w-0">
         <ColorValueField

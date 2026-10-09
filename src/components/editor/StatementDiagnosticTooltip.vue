@@ -37,8 +37,8 @@ const contentClass = $computed(() => cn(
 </script>
 
 <template>
-  <TooltipProvider :delay-duration="250" :skip-delay-duration="0" :disable-closing-trigger="true">
-    <Tooltip :disabled="!hasTooltipContent">
+  <TooltipProvider :skip-delay-duration="0">
+    <Tooltip :disabled="!hasTooltipContent" :delay-duration="250" :disable-closing-trigger="true">
       <TooltipTrigger as-child>
         <div
           :class="cn('group/statement-diagnostic inline-flex max-w-full min-w-0', props.class)"

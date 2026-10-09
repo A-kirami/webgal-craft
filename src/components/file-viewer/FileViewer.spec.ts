@@ -592,7 +592,8 @@ describe('FileViewer', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
-    document.body.innerHTML = ''
+    // 不能在这里清空 body：Teleport 内容（tooltip/hovercard）的锚点在 body 里，
+    // 先清空会让随后的自动卸载在 removeFragment 时崩溃；交由 vitest-browser-vue 自动清理。
   })
 
   it('默认不会为图片项私自生成预览 URL', async () => {

@@ -206,137 +206,135 @@ function closeOutputControl(control: PreviewOutputControl): void {
       </div>
     </div>
 
-    <TooltipProvider>
-      <div data-testid="preview-toolbar-actions" class="text-muted-foreground flex flex-shrink-0 gap-1">
-        <Popover
-          :open="volumeControlsOpen"
-          @update:open="handleVolumeControlsOpenChange"
-        >
-          <PopoverTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              :aria-label="volumeButtonLabel"
-              :aria-pressed="preferenceStore.previewMuted"
-              @click="toggleMute"
-              @pointerenter="showVolumeControls"
-              @pointerleave="volumeControlsClose.schedule"
-            >
-              <VolumeX
-                v-if="preferenceStore.previewMuted"
-                data-testid="preview-volume-muted-icon"
-              />
-              <Volume
-                v-else-if="preferenceStore.previewVolume[0] === 0"
-                data-testid="preview-volume-zero-icon"
-              />
-              <Volume1 v-else-if="preferenceStore.previewVolume[0] < 50" />
-              <Volume2 v-else />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="bottom"
-            align="end"
-            class="p-3 w-48"
-            :style="{ pointerEvents: volumeControlsOpen ? undefined : 'none' }"
-            @open-auto-focus="handleOutputControlOpenAutoFocus"
-            @close-auto-focus.prevent
-            @pointerenter="volumeControlsClose.cancel"
+    <div data-testid="preview-toolbar-actions" class="text-muted-foreground flex flex-shrink-0 gap-1">
+      <Popover
+        :open="volumeControlsOpen"
+        @update:open="handleVolumeControlsOpenChange"
+      >
+        <PopoverTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            :aria-label="volumeButtonLabel"
+            :aria-pressed="preferenceStore.previewMuted"
+            @click="toggleMute"
+            @pointerenter="showVolumeControls"
             @pointerleave="volumeControlsClose.schedule"
           >
-            <div class="text-xs mb-2 flex items-center justify-between">
-              <span>{{ $t('edit.previewPanel.volume') }}</span>
-              <output class="font-mono tabular-nums">{{ preferenceStore.previewVolume[0] }}%</output>
-            </div>
-            <Slider
-              ::="preferenceStore.previewVolume"
-              data-testid="preview-volume-slider"
-              :min="0"
-              :max="100"
-              :step="1"
-              :aria-label="$t('edit.previewPanel.volume')"
+            <VolumeX
+              v-if="preferenceStore.previewMuted"
+              data-testid="preview-volume-muted-icon"
             />
-          </PopoverContent>
-        </Popover>
-
-        <Popover
-          :open="brightnessControlsOpen"
-          @update:open="handleBrightnessControlsOpenChange"
+            <Volume
+              v-else-if="preferenceStore.previewVolume[0] === 0"
+              data-testid="preview-volume-zero-icon"
+            />
+            <Volume1 v-else-if="preferenceStore.previewVolume[0] < 50" />
+            <Volume2 v-else />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="bottom"
+          align="end"
+          class="p-3 w-48"
+          :style="{ pointerEvents: volumeControlsOpen ? undefined : 'none' }"
+          @open-auto-focus="handleOutputControlOpenAutoFocus"
+          @close-auto-focus.prevent
+          @pointerenter="volumeControlsClose.cancel"
+          @pointerleave="volumeControlsClose.schedule"
         >
-          <PopoverTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              :aria-label="brightnessButtonLabel"
-              :aria-pressed="preferenceStore.previewBrightnessEnabled"
-              @click="toggleBrightness"
-              @pointerenter="showBrightnessControls"
-              @pointerleave="brightnessControlsClose.schedule"
-            >
-              <Lightbulb v-if="preferenceStore.previewBrightnessEnabled" />
-              <LightbulbOff v-else />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="bottom"
-            align="end"
-            class="p-3 w-48"
-            :style="{ pointerEvents: brightnessControlsOpen ? undefined : 'none' }"
-            @open-auto-focus="handleOutputControlOpenAutoFocus"
-            @close-auto-focus.prevent
-            @pointerenter="brightnessControlsClose.cancel"
+          <div class="text-xs mb-2 flex items-center justify-between">
+            <span>{{ $t('edit.previewPanel.volume') }}</span>
+            <output class="font-mono tabular-nums">{{ preferenceStore.previewVolume[0] }}%</output>
+          </div>
+          <Slider
+            ::="preferenceStore.previewVolume"
+            data-testid="preview-volume-slider"
+            :min="0"
+            :max="100"
+            :step="1"
+            :aria-label="$t('edit.previewPanel.volume')"
+          />
+        </PopoverContent>
+      </Popover>
+
+      <Popover
+        :open="brightnessControlsOpen"
+        @update:open="handleBrightnessControlsOpenChange"
+      >
+        <PopoverTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            :aria-label="brightnessButtonLabel"
+            :aria-pressed="preferenceStore.previewBrightnessEnabled"
+            @click="toggleBrightness"
+            @pointerenter="showBrightnessControls"
             @pointerleave="brightnessControlsClose.schedule"
           >
-            <div class="text-xs mb-2 flex items-center justify-between">
-              <span>{{ $t('edit.previewPanel.brightness') }}</span>
-              <output class="font-mono tabular-nums">{{ preferenceStore.previewBrightness[0] }}%</output>
-            </div>
-            <Slider
-              ::="preferenceStore.previewBrightness"
-              data-testid="preview-brightness-slider"
-              :min="0"
-              :max="100"
-              :step="1"
-              :disabled="!preferenceStore.previewBrightnessEnabled"
-              :aria-label="$t('edit.previewPanel.brightness')"
-            />
-          </PopoverContent>
-        </Popover>
+            <Lightbulb v-if="preferenceStore.previewBrightnessEnabled" />
+            <LightbulbOff v-else />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="bottom"
+          align="end"
+          class="p-3 w-48"
+          :style="{ pointerEvents: brightnessControlsOpen ? undefined : 'none' }"
+          @open-auto-focus="handleOutputControlOpenAutoFocus"
+          @close-auto-focus.prevent
+          @pointerenter="brightnessControlsClose.cancel"
+          @pointerleave="brightnessControlsClose.schedule"
+        >
+          <div class="text-xs mb-2 flex items-center justify-between">
+            <span>{{ $t('edit.previewPanel.brightness') }}</span>
+            <output class="font-mono tabular-nums">{{ preferenceStore.previewBrightness[0] }}%</output>
+          </div>
+          <Slider
+            ::="preferenceStore.previewBrightness"
+            data-testid="preview-brightness-slider"
+            :min="0"
+            :max="100"
+            :step="1"
+            :disabled="!preferenceStore.previewBrightnessEnabled"
+            :aria-label="$t('edit.previewPanel.brightness')"
+          />
+        </PopoverContent>
+      </Popover>
 
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              :disabled="!previewAvailable"
-              @click="emit('refresh')"
-            >
-              <RotateCw />
-              <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{{ $t('edit.previewPanel.refreshPreview') }}</p>
-          </TooltipContent>
-        </Tooltip>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            :disabled="!previewAvailable"
+            @click="emit('refresh')"
+          >
+            <RotateCw />
+            <span class="sr-only">{{ $t('edit.previewPanel.refreshPreview') }}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{{ $t('edit.previewPanel.refreshPreview') }}</p>
+        </TooltipContent>
+      </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger as-child>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              :disabled="!previewAvailable"
-              @click="emit('openInBrowser')"
-            >
-              <ExternalLink />
-              <span class="sr-only">{{ $t('edit.previewPanel.openInBrowser') }}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{{ $t('edit.previewPanel.openInBrowser') }}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger as-child>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            :disabled="!previewAvailable"
+            @click="emit('openInBrowser')"
+          >
+            <ExternalLink />
+            <span class="sr-only">{{ $t('edit.previewPanel.openInBrowser') }}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{{ $t('edit.previewPanel.openInBrowser') }}</p>
+        </TooltipContent>
+      </Tooltip>
+    </div>
   </div>
 </template>

@@ -333,35 +333,33 @@ function confirmRestore(): void {
                   <div class="text-xs text-muted-foreground font-semibold px-3 pb-1 pt-3">
                     {{ sectionLabel(section.key) }}
                   </div>
-                  <TooltipProvider
+                  <Tooltip
                     v-for="entry in section.items"
                     :key="entry.backupPath"
                   >
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <button
-                          :class="[
-                            'text-left text-sm px-3 py-1.5 transition-colors flex gap-1.5 items-center',
-                            entryButtonClass(entry),
-                          ]"
-                          @click="selectedBackupPath = entry.backupPath"
-                        >
-                          <component
-                            :is="SOURCE_ICONS[entry.sourceKind]"
-                            class="shrink-0 size-3.5"
-                            :class="entry.sourceKind === 'auto-save' && 'opacity-60'"
-                          />
-                          <span class="text-13px truncate">{{ sourceLabel(entry.sourceKind) }}</span>
-                          <span class="text-xs text-muted-foreground ml-auto pl-2 shrink-0">
-                            {{ relativeTime(entry.timestamp) }}
-                          </span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        {{ absoluteTime(entry.timestamp) }}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                    <TooltipTrigger as-child>
+                      <button
+                        :class="[
+                          'text-left text-sm px-3 py-1.5 transition-colors flex gap-1.5 items-center',
+                          entryButtonClass(entry),
+                        ]"
+                        @click="selectedBackupPath = entry.backupPath"
+                      >
+                        <component
+                          :is="SOURCE_ICONS[entry.sourceKind]"
+                          class="shrink-0 size-3.5"
+                          :class="entry.sourceKind === 'auto-save' && 'opacity-60'"
+                        />
+                        <span class="text-13px truncate">{{ sourceLabel(entry.sourceKind) }}</span>
+                        <span class="text-xs text-muted-foreground ml-auto pl-2 shrink-0">
+                          {{ relativeTime(entry.timestamp) }}
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {{ absoluteTime(entry.timestamp) }}
+                    </TooltipContent>
+                  </Tooltip>
                 </template>
                 <button
                   v-if="hasMore"

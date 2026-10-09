@@ -54,7 +54,9 @@ useEventListener('mousedown', (e: MouseEvent) => {
 </script>
 
 <template>
-  <RouterView />
-  <Toaster />
-  <ModalWindow />
+  <TooltipProvider>
+    <RouterView />
+    <Toaster />
+    <ModalWindow />
+  </TooltipProvider>
 </template>

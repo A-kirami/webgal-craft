@@ -811,7 +811,7 @@ tryOnUnmounted(() => {
       selection-behavior="replace"
       class="text-13px h-full min-h-0"
     >
-      <TooltipProvider :skip-delay-duration="0" :ignore-non-keyboard-focus="true">
+      <TooltipProvider :skip-delay-duration="0">
         <div
           :ref="setFileTreeContainerElement"
           data-file-tree-root-surface="true"
@@ -889,7 +889,7 @@ tryOnUnmounted(() => {
                 @dblclick="emit('dblclick', renderItem.item)"
                 @auxclick="(e: MouseEvent) => e.button === 1 && emit('auxclick', renderItem.item)"
               >
-                <Tooltip :disabled="!enableTooltip">
+                <Tooltip :disabled="!enableTooltip" :ignore-non-keyboard-focus="true">
                   <TooltipTrigger as-child>
                     <TreeItemLabel :has-children="renderItem.item.hasChildren">
                       <span

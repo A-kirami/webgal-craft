@@ -128,7 +128,8 @@ export async function expectTestWindowOpened(page: Page) {
 }
 
 export async function expectUnsavedStatus(page: Page) {
-  await expect(page.getByTitle(/Unsaved|未保存|未儲存/)).toBeVisible()
+  const statusBar = page.getByTestId('editor-status-bar')
+  await expect(statusBar.getByText(/Unsaved|未保存|未儲存/)).toBeVisible()
 }
 
 export async function expectSavedStatus(page: Page) {
