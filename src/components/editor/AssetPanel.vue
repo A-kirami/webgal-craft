@@ -226,13 +226,12 @@ const canCreateFileInCurrentDirectory = $computed(() => canCreateAssetFile(prefe
             <Button
               variant="ghost"
               size="icon-xs"
-              :aria-label="$t('edit.assetPanel.actions.sortOrder')"
               @click="toggleSortOrder"
             >
               <ArrowUp v-if="isSortAsc" />
               <ArrowDown v-else />
               <span class="sr-only">
-                {{ isSortAsc ? $t('edit.assetPanel.sort.directionAsc') : $t('edit.assetPanel.sort.directionDesc') }}
+                {{ $t('edit.assetPanel.actions.sortOrder') }}: {{ isSortAsc ? $t('edit.assetPanel.sort.directionAsc') : $t('edit.assetPanel.sort.directionDesc') }}
               </span>
             </Button>
           </div>
