@@ -34,7 +34,7 @@ const engineById = $computed(() => {
 const gameCollectionItems = computed<GameCollectionItem[]>(() =>
   resourceStore.filteredGames.map((game) => {
     const isCreating = game.status === 'creating'
-    const engine = game.engineId ? engineById.get(game.engineId) : undefined
+    const engine = engineById.get(game.engineId)
     const useEngineAsRoot = isCreating && engine
 
     return {

@@ -1,12 +1,5 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
-import {
-  copyFile as copyFileFs,
-  exists,
-  mkdir,
-  rename,
-  stat,
-  writeTextFile,
-} from '@tauri-apps/plugin-fs'
+import { exists, rename, stat } from '@tauri-apps/plugin-fs'
 
 import { AbsPath } from '~/domain/path'
 import { AppError } from '~/types/errors'
@@ -24,10 +17,6 @@ type CopyEvent = {
   data: {
     error: string
   }
-}
-
-async function copyDirectory(source: AbsPath, destination: AbsPath): Promise<void> {
-  return safeInvoke<void>('copy_directory', { source, destination })
 }
 
 /**
@@ -112,20 +101,6 @@ async function generateUniqueFileName(parentPath: AbsPath, baseName: string, isD
   return newName
 }
 
-async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPath> {
-  const uniqueName = await generateUniqueFileName(targetPath, fileName, false)
-  const filePath = AbsPath.append(targetPath, uniqueName)
-  await writeTextFile(filePath, '')
-  return filePath
-}
-
-async function createFolder(targetPath: AbsPath, folderName: string): Promise<AbsPath> {
-  const uniqueName = await generateUniqueFileName(targetPath, folderName, true)
-  const folderPath = AbsPath.append(targetPath, uniqueName)
-  await mkdir(folderPath, { recursive: true })
-  return folderPath
-}
-
 async function deleteFile(path: AbsPath, permanent = false): Promise<void> {
   return safeInvoke<void>('delete_file', { path, permanent })
 }
@@ -149,12 +124,6 @@ async function getDestinationPath(sourcePath: AbsPath, targetPath: AbsPath, targ
   const uniqueName = targetName ?? await generateUniqueFileName(targetPath, sourceName, isDir)
   const destPath = AbsPath.append(targetPath, uniqueName)
   return { destPath, isDir }
-}
-
-async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
-  const { destPath, isDir } = await getDestinationPath(sourcePath, targetPath)
-  await (isDir ? copyDirectory(sourcePath, destPath) : copyFileFs(sourcePath, destPath))
-  return destPath
 }
 
 async function importExternalEntry(
@@ -187,15 +156,10 @@ async function getImageDimensions(path: AbsPath): Promise<[number, number]> {
 }
 
 export const fsCmds = {
-  copyDirectory,
   copyDirectoryWithProgress,
   validateDirectoryStructure,
-  generateUniqueFileName,
-  createFile,
-  createFolder,
   deleteFile,
   renameFile,
-  copyFile,
   importExternalEntry,
   moveFile,
   isBinaryFile,

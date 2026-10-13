@@ -188,10 +188,6 @@ async function performSwitchTemplate(
   newBinding: TemplateBinding | undefined,
   options: SwitchTemplateOptions = {},
 ): Promise<void> {
-  if (!game.engineId) {
-    throw new AppError('IO_ERROR', '自带引擎项目不支持模板切换')
-  }
-
   const engine = await db.engines.get(game.engineId)
   if (!engine || !isEngineUsable(engine)) {
     throw new AppError('IO_ERROR', '引擎不可用，无法切换模板', {

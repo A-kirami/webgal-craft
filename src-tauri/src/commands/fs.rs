@@ -187,37 +187,6 @@ pub async fn copy_directory_with_progress(
 }
 
 #[tauri::command]
-pub async fn copy_directory(source: String, destination: String) -> AppResult<()> {
-    let source_path = Path::new(&source);
-    let destination_path = Path::new(&destination);
-
-    if !source_path.exists() {
-        return Err(AppError::Server(format!("源目录不存在: {}", source)));
-    }
-
-    if !source_path.is_dir() {
-        return Err(AppError::Server(format!("源路径不是目录: {}", source)));
-    }
-
-    // 创建目标目录
-    if !destination_path.exists() {
-        fs::create_dir_all(destination_path)?;
-    }
-
-    // 递归复制目录
-    copy_dir_all(
-        source_path,
-        destination_path,
-        &mut None,
-        &[],
-        Path::new(""),
-        false,
-    )?;
-
-    Ok(())
-}
-
-#[tauri::command]
 pub fn validate_directory_structure(
     path: String,
     required_dirs: Vec<String>,

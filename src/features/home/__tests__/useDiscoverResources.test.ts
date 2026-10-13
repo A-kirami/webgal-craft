@@ -109,7 +109,7 @@ vi.mock('~/services/game-manager', () => ({
     getGameSnapshot: getGameSnapshotMock,
     identityKeyOf: gameIdentityKeyOfMock,
     importGame: gameImportMock,
-    resolvePreviewSite: vi.fn(),
+    resolveStaticAssetSite: vi.fn(),
     validateGame: vi.fn(),
   },
 }))
@@ -537,7 +537,7 @@ describe('useDiscoverResources', () => {
         cover: { path: 'game/background/cover.png' },
       },
     })
-    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+    vi.mocked(gameManager.resolveStaticAssetSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo-folder'),
     })
     resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
@@ -581,7 +581,7 @@ describe('useDiscoverResources', () => {
   it('已导入同路径游戏时通过 gameManager.identityKeyOf 去重', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+    vi.mocked(gameManager.resolveStaticAssetSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
     resolveHomeTabDefinitionMock.mockReturnValue({ discoveryType: 'games' })
@@ -635,7 +635,7 @@ describe('useDiscoverResources', () => {
     const { AppError } = await import('~/types/errors')
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+    vi.mocked(gameManager.resolveStaticAssetSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/broken-config'),
     })
     gameImportMock.mockRejectedValue(new AppError('INVALID_CONFIG', 'broken config', {
@@ -673,7 +673,7 @@ describe('useDiscoverResources', () => {
   it('批量导入发现的游戏时会提供组合依赖解析回调', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+    vi.mocked(gameManager.resolveStaticAssetSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
     vi.mocked(gameManager.importGame).mockResolvedValue({
@@ -714,7 +714,7 @@ describe('useDiscoverResources', () => {
   it('批量导入发现的游戏命中已注册资源时提示已导入', async () => {
     const { gameManager } = await import('~/services/game-manager')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+    vi.mocked(gameManager.resolveStaticAssetSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
     vi.mocked(gameManager.importGame).mockResolvedValue({
@@ -755,7 +755,7 @@ describe('useDiscoverResources', () => {
     const { gameManager } = await import('~/services/game-manager')
     const { AppError } = await import('~/types/errors')
     vi.mocked(gameManager.validateGame).mockResolvedValue(true)
-    vi.mocked(gameManager.resolvePreviewSite).mockResolvedValue({
+    vi.mocked(gameManager.resolveStaticAssetSite).mockResolvedValue({
       projectPath: AbsPath.from('/games/demo'),
     })
     vi.mocked(gameManager.importGame).mockRejectedValue(new AppError('IO_ERROR', 'cancelled', {

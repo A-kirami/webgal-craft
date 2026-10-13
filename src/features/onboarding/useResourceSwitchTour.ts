@@ -159,11 +159,16 @@ export function useResourceSwitchTour(): void {
     persistence: TOUR_PERSISTENCE.resourceSwitch,
     // 顺序编排：必须等编辑器的引导这一轮真正跑完。不能只看 localStorage，
     // 重置后它会被清空，而 editorWorkspace 引导此时可能还没就绪（要求已打开场景文件）。
-    ready: () => isTourCompleted(TOUR_PERSISTENCE.editorWorkspace) && hasSwitchableResourceAlternative({
-      currentEngineId: workspaceStore.currentGame?.engineId,
-      engines: engines ?? [],
-      templates: templates ?? [],
-    }),
+    ready: () => {
+      const currentGame = workspaceStore.currentGame
+      return isTourCompleted(TOUR_PERSISTENCE.editorWorkspace)
+        && !!currentGame
+        && hasSwitchableResourceAlternative({
+          currentEngineId: currentGame.engineId,
+          engines: engines ?? [],
+          templates: templates ?? [],
+        })
+    },
     steps: t => createResourceSwitchTourSteps(t, {
       openEngineModal,
       openTemplateModal,

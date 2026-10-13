@@ -91,12 +91,8 @@ watch(() => open.value, async (isOpen) => {
     isBindingKnown = false
   }
 
-  if (props.game.engineId) {
-    const engine = await db.engines.get(props.game.engineId)
-    isEngineAvailable = !!engine && isEngineUsable(engine)
-  } else {
-    isEngineAvailable = true
-  }
+  const engine = await db.engines.get(props.game.engineId)
+  isEngineAvailable = !!engine && isEngineUsable(engine)
 
   isDirty = await templateSwitch.isTemplateDirty(props.game.path)
 }, { immediate: true })

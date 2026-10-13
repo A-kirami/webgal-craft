@@ -6,7 +6,7 @@ export interface Game {
   id: string
   path: AbsPath
   pathLookupKey: string
-  engineId?: string
+  engineId: string
   createdAt: number
   lastModified: number
   status: GameStatus

@@ -3,7 +3,7 @@ import '~/__tests__/setup'
 import { LRUCache } from 'lru-cache'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { AbsPath, normalizePosix } from '~/domain/path'
+import { AbsPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { registerPendingFileWrite, rollbackPendingFileWrite } from '~/services/file-write-echo-registry'
 import {
@@ -12,23 +12,19 @@ import {
   updatePathOperationChannel,
 } from '~/services/path-operation-registry'
 import { useFileStore } from '~/stores/file'
+import { AppError } from '~/types/errors'
 
-import type { readDirectoryItemsCached } from '~/services/directory-cache'
 import type { VfsDirEntry } from '~/types/project-config'
 import type { handleError } from '~/utils/error-handler'
 
 const {
   clearDirectoryItemsCacheMock,
   fileSystemEventsEmitMock,
-  existsMock,
-  getGameEnginePathMock,
   handleErrorMock,
   invalidateDirectoryItemsCacheMock,
   loggerErrorMock,
   loggerWarnMock,
-  projectConfigPathMock,
   readFileMock,
-  readDirectoryItemsCachedMock,
   resolvePreviewSiteMock,
   statMock,
   useWorkspaceStoreMock,
@@ -43,15 +39,11 @@ const {
 } = vi.hoisted(() => ({
   clearDirectoryItemsCacheMock: vi.fn(),
   fileSystemEventsEmitMock: vi.fn(),
-  existsMock: vi.fn(),
-  getGameEnginePathMock: vi.fn<(game: { path: string, engineId?: string }) => Promise<string | undefined>>(),
   handleErrorMock: vi.fn<typeof handleError>(),
   invalidateDirectoryItemsCacheMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
-  projectConfigPathMock: vi.fn((gamePath: string) => `${gamePath}/project.wgcp`),
   readFileMock: vi.fn(),
-  readDirectoryItemsCachedMock: vi.fn<typeof readDirectoryItemsCached>(),
   resolvePreviewSiteMock: vi.fn(),
   statMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
@@ -81,7 +73,6 @@ let watchHandler: ((event: Record<string, unknown>) => Promise<void>) | undefine
 let pendingWrites: ReturnType<typeof registerPendingFileWrite>[] = []
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
-  exists: existsMock,
   readFile: readFileMock,
   stat: statMock,
   watch: watchFsMock,
@@ -116,14 +107,8 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
 }))
 
 vi.mock('~/services/directory-cache', () => ({
-  readDirectoryItemsCached: readDirectoryItemsCachedMock,
   invalidateDirectoryItemsCache: invalidateDirectoryItemsCacheMock,
   clearDirectoryItemsCache: clearDirectoryItemsCacheMock,
-}))
-
-vi.mock('~/services/platform/app-paths', () => ({
-  gameRootDir: async (path: string) => normalizePath(`${path}/game`),
-  projectConfigPath: projectConfigPathMock,
 }))
 
 vi.mock('~/utils/error-handler', () => ({
@@ -132,7 +117,6 @@ vi.mock('~/utils/error-handler', () => ({
 
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
-    getGameEnginePath: getGameEnginePathMock,
     resolvePreviewSite: resolvePreviewSiteMock,
   },
 }))
@@ -149,20 +133,12 @@ vi.mock('~/commands/vfs', () => ({
   },
 }))
 
-function normalizePath(path: string): string {
-  return normalizePosix(path)
-}
-
-function createFileViewerItem(path: string, isDir: boolean) {
-  const normalizedPath = normalizePath(path)
+function createVfsEntry(name: string, isDir: boolean, metadata: Partial<VfsDirEntry> = {}): VfsDirEntry {
   return {
-    name: normalizedPath.split('/').at(-1)!,
-    path: normalizedPath,
+    name,
     isDir,
-    mimeType: isDir ? undefined : 'text/plain',
-    size: isDir ? undefined : 12,
-    modifiedAt: 1,
-    createdAt: 2,
+    source: 'upper',
+    ...metadata,
   }
 }
 
@@ -209,17 +185,13 @@ describe('useFileStore', () => {
   beforeEach(() => {
     pendingWrites = []
     clearPendingPathOperations()
-    existsMock.mockReset()
-    getGameEnginePathMock.mockReset()
     statMock.mockReset()
     watchFsMock.mockReset()
-    readDirectoryItemsCachedMock.mockReset()
     invalidateDirectoryItemsCacheMock.mockReset()
     clearDirectoryItemsCacheMock.mockReset()
     handleErrorMock.mockReset()
     loggerErrorMock.mockReset()
     loggerWarnMock.mockReset()
-    projectConfigPathMock.mockClear()
     readFileMock.mockReset()
     resolvePreviewSiteMock.mockReset()
     vfsCopyPathMock.mockReset()
@@ -236,11 +208,16 @@ describe('useFileStore', () => {
     emittedEvents.length = 0
     watchHandler = undefined
     workspaceStoreState = reactive({
-      CWD: undefined,
-      currentGame: undefined,
+      CWD: '/workspace',
+      currentGame: { path: '/workspace' },
     })
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
-    resolvePreviewSiteMock.mockRejectedValue(new Error('preview site unavailable'))
+    resolvePreviewSiteMock.mockResolvedValue({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: undefined,
+    })
+    vfsListDirMock.mockResolvedValue([])
     readFileMock.mockResolvedValue(new Uint8Array())
 
     watchFsMock.mockImplementation(async (_path: string, handler: typeof watchHandler) => {
@@ -258,35 +235,46 @@ describe('useFileStore', () => {
     vi.useRealTimers()
   })
 
-  it('getFolderContents 会懒加载目录内容并复用缓存结果', async () => {
-    existsMock.mockResolvedValue(true)
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('/root/scene', true),
-      createFileViewerItem('/root/readme.txt', false),
-    ])
-
-    const store = useFileStore()
-
-    const firstRead = await store.getFolderContents(AbsPath.from('/root'))
-    const secondRead = await store.getFolderContents(AbsPath.from('/root'))
-
-    expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
-    expect(firstRead.map(item => item.path)).toEqual(['/root/scene', '/root/readme.txt'])
-    expect(secondRead.map(item => item.path)).toEqual(['/root/scene', '/root/readme.txt'])
-  })
-
-  it('initialize 后 create/remove 事件会同步到目录内容与事件总线', async () => {
-    existsMock.mockResolvedValue(true)
-    statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockImplementation(async (path: string) => {
-      if (path === '/workspace/game') {
-        return [createFileViewerItem('/workspace/game/scene', true)]
+  it('getFolderContents 会把逻辑路径交给 vfs.listDir 并复用加载结果', async () => {
+    vfsListDirMock.mockImplementation(async ({ relPath }) => {
+      if (relPath === 'game') {
+        return [createVfsEntry('scene', true)]
       }
-      return []
+      return [createVfsEntry('start.txt', false)]
     })
 
     const store = useFileStore()
-    workspaceStoreState.CWD = '/workspace'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    const firstRead = await store.getFolderContents(AbsPath.from('/workspace/game/scene'))
+    const secondRead = await store.getFolderContents(AbsPath.from('/workspace/game/scene'))
+
+    expect(vfsListDirMock).toHaveBeenNthCalledWith(1, {
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: undefined,
+      relPath: 'game',
+    })
+    expect(vfsListDirMock).toHaveBeenNthCalledWith(2, {
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: undefined,
+      relPath: 'game/scene',
+    })
+    expect(vfsListDirMock).toHaveBeenCalledTimes(2)
+    expect(firstRead.map(item => item.path)).toEqual(['/workspace/game/scene/start.txt'])
+    expect(secondRead.map(item => item.path)).toEqual(['/workspace/game/scene/start.txt'])
+  })
+
+  it('initialize 后 create/remove 事件会同步到目录内容与事件总线', async () => {
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('scene', true)] : []
+    ))
+    statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
+
+    const store = useFileStore()
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -296,7 +284,10 @@ describe('useFileStore', () => {
     })
 
     const afterCreate = await store.getFolderContents(AbsPath.from('/workspace/game'))
-    expect(afterCreate.map(item => item.path)).toContain('/workspace/game/new.txt')
+    expect(afterCreate.map(item => item.path)).toEqual([
+      '/workspace/game/scene',
+      '/workspace/game/new.txt',
+    ])
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:created',
       path: '/workspace/game/new.txt',
@@ -308,7 +299,7 @@ describe('useFileStore', () => {
     })
 
     const afterRemove = await store.getFolderContents(AbsPath.from('/workspace/game'))
-    expect(afterRemove.map(item => item.path)).not.toContain('/workspace/game/new.txt')
+    expect(afterRemove.map(item => item.path)).toEqual(['/workspace/game/scene'])
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:removed',
       path: '/workspace/game/new.txt',
@@ -316,14 +307,12 @@ describe('useFileStore', () => {
   })
 
   it('rename 事件会更新现有节点的路径与名称', async () => {
-    existsMock.mockResolvedValue(true)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('old.txt', false)] : []
+    ))
     statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('/workspace/game/old.txt', false),
-    ])
 
     const store = useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -347,17 +336,14 @@ describe('useFileStore', () => {
   })
 
   it('未加载到缓存的路径收到 modify 事件时仍会发布文件变更通知', async () => {
-    existsMock.mockResolvedValue(true)
     statMock.mockImplementation(async (path: string) => {
       if (path === '/workspace/game/unloaded.txt') {
         return createStatResult(path, false)
       }
       return createStatResult(path, true)
     })
-    readDirectoryItemsCachedMock.mockResolvedValue([])
 
     useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -373,11 +359,9 @@ describe('useFileStore', () => {
   })
 
   it('路径操作回声命中 pending 时会吞掉 modify 广播并只做缓存对账', async () => {
-    existsMock.mockResolvedValue(true)
-    statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('/workspace/game/pending.txt', false),
-    ])
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('pending.txt', false)] : []
+    ))
 
     const pendingId = registerPathOperation({
       sourcePath: AbsPath.from('/workspace/game/pending.txt'),
@@ -389,7 +373,6 @@ describe('useFileStore', () => {
     })
 
     const store = useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -412,11 +395,10 @@ describe('useFileStore', () => {
   })
 
   it('命中自写入回响且磁盘字节一致时不会广播 file:modified', async () => {
-    existsMock.mockResolvedValue(true)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('echo-loaded.txt', false)] : []
+    ))
     statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('/workspace/game/echo-loaded.txt', false),
-    ])
 
     const expectedBytes = new Uint8Array([104, 101, 108, 108, 111])
     readFileMock.mockResolvedValue(expectedBytes)
@@ -424,7 +406,6 @@ describe('useFileStore', () => {
     pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-loaded.txt'), expectedBytes))
 
     const store = useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -448,17 +429,12 @@ describe('useFileStore', () => {
   })
 
   it('未加载到缓存的路径命中自写入回响时仍会吞掉 file:modified', async () => {
-    existsMock.mockResolvedValue(true)
-    statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockResolvedValue([])
-
     const expectedBytes = new Uint8Array([111, 107])
     readFileMock.mockResolvedValue(expectedBytes)
 
     pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-unloaded.txt'), expectedBytes))
 
     useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -481,18 +457,16 @@ describe('useFileStore', () => {
   })
 
   it('命中待回响路径但磁盘字节不一致时仍广播外部修改', async () => {
-    existsMock.mockResolvedValue(true)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('echo-mismatch.txt', false)] : []
+    ))
     statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('/workspace/game/echo-mismatch.txt', false),
-    ])
 
     readFileMock.mockResolvedValue(new Uint8Array([98, 121, 101]))
 
     pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-mismatch.txt'), new Uint8Array([104, 101, 108, 108, 111])))
 
     const store = useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -512,11 +486,10 @@ describe('useFileStore', () => {
   })
 
   it('命中待回响路径且字节在短暂波动后稳定时仍识别为自写入回响', async () => {
-    existsMock.mockResolvedValue(true)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('echo-partial.txt', false)] : []
+    ))
     statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('/workspace/game/echo-partial.txt', false),
-    ])
 
     const expectedBytes = new Uint8Array([104, 101, 108, 108, 111])
     readFileMock
@@ -527,7 +500,6 @@ describe('useFileStore', () => {
     pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/echo-partial.txt'), expectedBytes))
 
     const store = useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -551,11 +523,7 @@ describe('useFileStore', () => {
   })
 
   it('未加载到缓存的路径收到 remove 事件时仍会发布删除通知', async () => {
-    existsMock.mockResolvedValue(true)
-    readDirectoryItemsCachedMock.mockResolvedValue([])
-
     useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -571,17 +539,14 @@ describe('useFileStore', () => {
   })
 
   it('未加载到缓存的路径收到 rename 事件时仍会发布重命名通知', async () => {
-    existsMock.mockResolvedValue(true)
     statMock.mockImplementation(async (path: string) => {
       if (path === '/workspace/game/renamed.txt') {
         return createStatResult(path, false)
       }
       return createStatResult(path, true)
     })
-    readDirectoryItemsCachedMock.mockResolvedValue([])
 
     useFileStore()
-    workspaceStoreState.CWD = '/workspace'
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
@@ -597,26 +562,36 @@ describe('useFileStore', () => {
     }))
   })
 
-  it('命中 system-refactor 的 file:written 时会刷新资源索引并跳过外部修改分支', async () => {
-    existsMock.mockResolvedValue(true)
+  it('命中 system-refactor 的 file:written 时会刷新元信息与父目录缓存并跳过外部修改分支', async () => {
+    vfsListDirMock.mockImplementation(async ({ relPath }) => {
+      if (relPath === 'game') {
+        return [createVfsEntry('scene', true)]
+      }
+      return [createVfsEntry('start.txt', false)]
+    })
     statMock.mockImplementation(async (path: string) => createStatResult(path, false))
-    readDirectoryItemsCachedMock.mockResolvedValue([createFileViewerItem('/workspace/game/scene/start.txt', false)])
     readFileMock.mockResolvedValue(new Uint8Array([104, 101, 108, 108, 111]))
 
     pendingWrites.push(registerPendingFileWrite(AbsPath.from('/workspace/game/scene/start.txt'), new Uint8Array([104, 101, 108, 108, 111])))
 
-    useFileStore()
-    workspaceStoreState.CWD = '/workspace'
+    const store = useFileStore()
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
+    await store.getFolderContents(AbsPath.from('/workspace/game/scene'))
 
     emittedEvents.length = 0
+    invalidateDirectoryItemsCacheMock.mockClear()
     await watchHandler?.({
       type: { modify: { kind: 'data' } },
       paths: ['/workspace/game/scene/start.txt'],
     })
 
+    expect(statMock).toHaveBeenCalledWith('/workspace/game/scene/start.txt')
+    expect(invalidateDirectoryItemsCacheMock).toHaveBeenCalledWith(
+      AbsPath.from('/workspace/game/scene'),
+      { includeChildren: false },
+    )
     expect(emittedEvents).toContainEqual(expect.objectContaining({
       type: 'file:written',
       path: '/workspace/game/scene/start.txt',
@@ -628,24 +603,11 @@ describe('useFileStore', () => {
     }))
   })
 
-  it('VFS 模式下收到已代理条目的 create 事件时不会重复追加同一子项', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
-    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
-    vfsListDirMock.mockResolvedValueOnce([{
-      isDir: false,
-      name: 'scene.txt',
-      source: 'upper',
-    }])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+  it('收到已存在条目的 create 事件时不会重复追加同一子项', async () => {
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('scene.txt', false)] : []
+    ))
+    statMock.mockImplementation(async (path: string) => createStatResult(String(path), false))
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -653,11 +615,7 @@ describe('useFileStore', () => {
     })
 
     const before = await store.getFolderContents(AbsPath.from('/workspace/game'))
-    expect(before).toEqual([
-      expect.objectContaining({
-        path: '/workspace/game/scene.txt',
-      }),
-    ])
+    expect(before.map(item => item.path)).toEqual(['/workspace/game/scene.txt'])
 
     await watchHandler?.({
       type: { create: {} },
@@ -665,33 +623,19 @@ describe('useFileStore', () => {
     })
 
     const after = await store.getFolderContents(AbsPath.from('/workspace/game'))
-    expect(after).toEqual([
-      expect.objectContaining({
-        path: '/workspace/game/scene.txt',
-      }),
-    ])
+    expect(after.map(item => item.path)).toEqual(['/workspace/game/scene.txt'])
   })
 
-  it('VFS 模式下列表项会携带大小与时间属性', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
-    vfsListDirMock.mockResolvedValueOnce([{
-      createdAt: 1700_0000_0000,
-      isDir: false,
-      modifiedAt: 1700_0001_0000,
-      name: 'scene.txt',
-      size: 2048,
-      source: 'upper',
-    }])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+  it('目录列举会保留条目的来源与大小时间属性', async () => {
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game'
+        ? [createVfsEntry('scene.txt', false, {
+            createdAt: 1700_0000_0000,
+            modifiedAt: 1700_0001_0000,
+            size: 2048,
+          })]
+        : []
+    ))
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -703,27 +647,21 @@ describe('useFileStore', () => {
       createdAt: 1700_0000_0000,
       modifiedAt: 1700_0001_0000,
       size: 2048,
+      source: 'upper',
     }))
+    expect(vfsListDirMock).toHaveBeenCalledWith({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: undefined,
+      relPath: 'game',
+    })
   })
 
   it('applyPathMutation 会立即更新目录视图路径', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('original.txt', false)] : []
+    ))
     statMock.mockImplementation(async (path: string) => createStatResult(path, false))
-    vfsListDirMock.mockResolvedValueOnce([{
-      isDir: false,
-      name: 'original.txt',
-      source: 'upper',
-    }])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -754,32 +692,13 @@ describe('useFileStore', () => {
   })
 
   it('applyPathMutation 会立即把条目迁移到目标目录', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
-    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
-    vfsListDirMock
-      .mockResolvedValueOnce([
-        {
-          isDir: false,
-          name: 'original.txt',
-          source: 'upper',
-        },
-        {
-          isDir: true,
-          name: 'folder',
-          source: 'upper',
-        },
-      ])
-      .mockResolvedValueOnce([])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
+    vfsListDirMock.mockImplementation(async ({ relPath }) => {
+      if (relPath === 'game') {
+        return [createVfsEntry('original.txt', false), createVfsEntry('folder', true)]
+      }
+      return []
     })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -813,95 +732,78 @@ describe('useFileStore', () => {
   })
 
   it('pathToId 与 items LRU 脱同步时会自动恢复而非抛错', async () => {
-    existsMock.mockResolvedValue(true)
-    readDirectoryItemsCachedMock
-      .mockResolvedValueOnce([
-        createFileViewerItem('/root/scene', true),
-      ])
-      .mockResolvedValueOnce([
-        createFileViewerItem('/root/scene', true),
-      ])
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('scene', true)] : []
+    ))
 
     const caches = captureFileStoreCaches()
 
     try {
       const store = useFileStore()
-      const firstRead = await store.getFolderContents(AbsPath.from('/root'))
-      expect(firstRead.map(item => item.path)).toEqual(['/root/scene'])
-      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+      await vi.waitFor(() => {
+        expect(watchFsMock).toHaveBeenCalledTimes(1)
+      })
+
+      const firstRead = await store.getFolderContents(AbsPath.from('/workspace/game'))
+      expect(firstRead.map(item => item.path)).toEqual(['/workspace/game/scene'])
+      expect(vfsListDirMock).toHaveBeenCalledTimes(1)
 
       const { pathToId, items } = caches
-      expect(pathToId).toBeDefined()
-      expect(items).toBeDefined()
-
-      const parentId = pathToId!.get('/root')
+      const parentId = pathToId!.get('/workspace/game')
       expect(parentId).toBeDefined()
 
       items!.delete(parentId!)
-      expect(pathToId!.get('/root')).toBe(parentId)
+      expect(pathToId!.get('/workspace/game')).toBe(parentId)
       expect(items!.has(parentId!)).toBe(false)
 
-      const secondRead = await store.getFolderContents(AbsPath.from('/root'))
-      expect(secondRead.map(item => item.path)).toEqual(['/root/scene'])
-      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
+      const secondRead = await store.getFolderContents(AbsPath.from('/workspace/game'))
+      expect(secondRead.map(item => item.path)).toEqual(['/workspace/game/scene'])
+      expect(vfsListDirMock).toHaveBeenCalledTimes(2)
     } finally {
       caches.restore()
     }
   })
 
   it('Windows 盘符大小写不同的路径会命中同一个缓存项', async () => {
-    existsMock.mockResolvedValue(true)
-    statMock.mockImplementation(async (path: string) => createStatResult(path, path.endsWith('/game')))
-    readDirectoryItemsCachedMock.mockResolvedValue([
-      createFileViewerItem('C:/workspace/game/scene.txt', false),
-    ])
-
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('scene.txt', false)] : []
+    ))
     workspaceStoreState = reactive({
       CWD: 'c:/workspace',
       currentGame: {
-        path: 'c:/workspace',
+        path: 'C:/workspace',
       },
     })
     useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
 
     const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
 
     const items = await store.getFolderContents(AbsPath.from('c:/workspace/game'))
     const sameItem = store.getItemByPath(AbsPath.from('c:/workspace/game/scene.txt'))
 
+    expect(vfsListDirMock).toHaveBeenCalledTimes(1)
     expect(items).toHaveLength(1)
+    expect(sameItem).toBe(items[0])
     expect(sameItem?.path).toBe('C:/workspace/game/scene.txt')
   })
 
   it('并发 getFolderContents 不会因加载锁缺失而返回空列表', async () => {
     let callCount = 0
     let resolveListDir: ((value: VfsDirEntry[]) => void) | undefined
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
     vfsListDirMock.mockImplementation(() => {
       callCount++
       if (callCount === 1) {
         // 初始化调用，立即返回
-        return Promise.resolve([{
-          isDir: true,
-          name: 'scene',
-          source: 'upper',
-        }])
+        return Promise.resolve([createVfsEntry('scene', true)])
       }
       // 第二次调用（并发目标），延迟 resolve
       return new Promise((resolve) => {
         resolveListDir = resolve
       })
     })
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -917,11 +819,7 @@ describe('useFileStore', () => {
       expect(resolveListDir).toBeDefined()
     })
 
-    resolveListDir!([{
-      isDir: false,
-      name: 'start.txt',
-      source: 'upper',
-    }])
+    resolveListDir!([createVfsEntry('start.txt', false)])
 
     const [resultA, resultB] = await Promise.all([loadA, loadB])
 
@@ -929,36 +827,40 @@ describe('useFileStore', () => {
     expect(resultB.map(item => item.path)).toEqual(['/workspace/game/scene/start.txt'])
     // 初始化 1 次 + scene 目录 1 次 = 2 次（加载锁保证 scene 只调用一次）
     expect(vfsListDirMock).toHaveBeenCalledTimes(2)
+    expect(vfsListDirMock).toHaveBeenNthCalledWith(2, {
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: undefined,
+      relPath: 'game/scene',
+    })
   })
 
   it('子项全部被 LRU 驱逐后 getFolderContents 会自动重新加载', async () => {
-    existsMock.mockResolvedValue(true)
-    readDirectoryItemsCachedMock
-      .mockResolvedValueOnce([
-        createFileViewerItem('/root/file-a.txt', false),
-        createFileViewerItem('/root/file-b.txt', false),
-      ])
-      .mockResolvedValueOnce([
-        createFileViewerItem('/root/file-a.txt', false),
-        createFileViewerItem('/root/file-b.txt', false),
-      ])
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game'
+        ? [createVfsEntry('file-a.txt', false), createVfsEntry('file-b.txt', false)]
+        : []
+    ))
 
     const caches = captureFileStoreCaches()
 
     try {
       const store = useFileStore()
+      await vi.waitFor(() => {
+        expect(watchFsMock).toHaveBeenCalledTimes(1)
+      })
 
-      const firstRead = await store.getFolderContents(AbsPath.from('/root'))
-      expect(firstRead).toHaveLength(2)
-      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+      const firstRead = await store.getFolderContents(AbsPath.from('/workspace/game'))
+      expect(firstRead.map(item => item.path)).toEqual([
+        '/workspace/game/file-a.txt',
+        '/workspace/game/file-b.txt',
+      ])
+      expect(vfsListDirMock).toHaveBeenCalledTimes(1)
 
       const { pathToId, items } = caches
-      expect(pathToId).toBeDefined()
-      expect(items).toBeDefined()
-
-      const parentId = pathToId!.get('/root')
-      const childIds = ['/root/file-a.txt', '/root/file-b.txt'].map(path => pathToId!.get(path))
-      expect(parentId).toBeDefined()
+      const parentId = pathToId!.get('/workspace/game')
+      const childIds = ['file-a.txt', 'file-b.txt']
+        .map(name => pathToId!.get(`/workspace/game/${name}`))
       expect(childIds).toEqual([expect.any(String), expect.any(String)])
 
       for (const childId of childIds) {
@@ -967,85 +869,79 @@ describe('useFileStore', () => {
       }
       expect(items!.has(parentId!)).toBe(true)
 
-      const secondRead = await store.getFolderContents(AbsPath.from('/root'))
-      expect(secondRead.map(item => item.path)).toEqual(['/root/file-a.txt', '/root/file-b.txt'])
-      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
+      const secondRead = await store.getFolderContents(AbsPath.from('/workspace/game'))
+      expect(secondRead.map(item => item.path)).toEqual([
+        '/workspace/game/file-a.txt',
+        '/workspace/game/file-b.txt',
+      ])
+      expect(vfsListDirMock).toHaveBeenCalledTimes(2)
     } finally {
       caches.restore()
     }
   })
 
   it('部分子项被 LRU 驱逐后 getFolderContents 也会自动重新加载', async () => {
-    existsMock.mockResolvedValue(true)
-    readDirectoryItemsCachedMock
-      .mockResolvedValueOnce([
-        createFileViewerItem('/root/file-a.txt', false),
-        createFileViewerItem('/root/file-b.txt', false),
-      ])
-      .mockResolvedValueOnce([
-        createFileViewerItem('/root/file-a.txt', false),
-        createFileViewerItem('/root/file-b.txt', false),
-      ])
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game'
+        ? [createVfsEntry('file-a.txt', false), createVfsEntry('file-b.txt', false)]
+        : []
+    ))
 
     const caches = captureFileStoreCaches()
 
     try {
       const store = useFileStore()
+      await vi.waitFor(() => {
+        expect(watchFsMock).toHaveBeenCalledTimes(1)
+      })
 
-      const firstRead = await store.getFolderContents(AbsPath.from('/root'))
+      const firstRead = await store.getFolderContents(AbsPath.from('/workspace/game'))
       expect(firstRead).toHaveLength(2)
-      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(1)
+      expect(vfsListDirMock).toHaveBeenCalledTimes(1)
 
       const { pathToId, items } = caches
-      const evictedId = pathToId!.get('/root/file-a.txt')
+      const evictedId = pathToId!.get('/workspace/game/file-a.txt')
       expect(evictedId).toBeDefined()
       items!.delete(evictedId!)
 
-      const secondRead = await store.getFolderContents(AbsPath.from('/root'))
-      expect(secondRead.map(item => item.path)).toEqual(['/root/file-a.txt', '/root/file-b.txt'])
-      expect(readDirectoryItemsCachedMock).toHaveBeenCalledTimes(2)
+      const secondRead = await store.getFolderContents(AbsPath.from('/workspace/game'))
+      expect(secondRead.map(item => item.path)).toEqual([
+        '/workspace/game/file-a.txt',
+        '/workspace/game/file-b.txt',
+      ])
+      expect(vfsListDirMock).toHaveBeenCalledTimes(2)
     } finally {
       caches.restore()
     }
   })
 
-  it('VFS 命令会携带 templatePath，删除还会透传删除方式', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+  it('文件视图命令会携带 templatePath，删除会透传删除方式并返回 void', async () => {
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
       templatePath: '/templates/current',
     })
-    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
     vfsDeletePathMock.mockResolvedValue(undefined)
     vfsEnsureWritableMock.mockResolvedValue('/workspace/game/original.txt')
     vfsResolvePathMock.mockResolvedValue('/templates/current/game/original.txt')
-    vfsListDirMock.mockResolvedValueOnce([{
-      isDir: false,
-      name: 'original.txt',
-      source: 'upper',
-    }])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('original.txt', false)] : []
+    ))
 
     const store = useFileStore()
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.ensureWritable(AbsPath.from('/workspace/game/original.txt'))
-    await store.resolveFilePath(AbsPath.from('/workspace/game/original.txt'))
-    await store.deleteEntry(AbsPath.from('/workspace/game/original.txt'), false)
-    await store.deleteEntry(AbsPath.from('/workspace/game/original.txt'), true)
+    await expect(store.ensureWritable(AbsPath.from('/workspace/game/original.txt')))
+      .resolves.toBe('/workspace/game/original.txt')
+    await expect(store.resolveFilePath(AbsPath.from('/workspace/game/original.txt')))
+      .resolves.toBe('/templates/current/game/original.txt')
+    await expect(store.deleteEntry(AbsPath.from('/workspace/game/original.txt'), false))
+      .resolves.toBeUndefined()
+    await expect(store.deleteEntry(AbsPath.from('/workspace/game/original.txt'), true))
+      .resolves.toBeUndefined()
 
-    expect(vfsRenamePathMock).not.toHaveBeenCalled()
     expect(vfsEnsureWritableMock).toHaveBeenCalledWith({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
@@ -1075,8 +971,7 @@ describe('useFileStore', () => {
     })
   })
 
-  it('VFS copy 会在 resolvePath 与后续命令中携带 templatePath', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
+  it('copyEntry 会在 resolvePath 与复制命令中携带 templatePath 并返回新路径', async () => {
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
@@ -1085,37 +980,23 @@ describe('useFileStore', () => {
     statMock.mockImplementation(async (path: string) => createStatResult(path, false))
     vfsResolvePathMock.mockResolvedValue('/templates/current/game/original.txt')
     vfsCopyPathMock.mockResolvedValue('game/folder-copy/original.txt')
-    vfsListDirMock
-      .mockResolvedValueOnce([
-        {
-          isDir: false,
-          name: 'original.txt',
-          source: 'upper',
-        },
-        {
-          isDir: true,
-          name: 'folder-copy',
-          source: 'upper',
-        },
-      ])
-      .mockResolvedValueOnce([])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game'
+        ? [createVfsEntry('original.txt', false), createVfsEntry('folder-copy', true)]
+        : []
+    ))
 
     const store = useFileStore()
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    await store.copyEntry(AbsPath.from('/workspace/game/original.txt'), AbsPath.from('/workspace/game/folder-copy'))
+    const copiedPath = await store.copyEntry(
+      AbsPath.from('/workspace/game/original.txt'),
+      AbsPath.from('/workspace/game/folder-copy'),
+    )
 
+    expect(copiedPath).toBe('/workspace/game/folder-copy/original.txt')
     expect(vfsResolvePathMock).toHaveBeenNthCalledWith(1, {
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
@@ -1135,21 +1016,12 @@ describe('useFileStore', () => {
   it('refreshTemplateOverlay 后会丢弃旧 overlay 的目录结果并重新加载', async () => {
     let resolveOldTemplateList: ((value: VfsDirEntry[]) => void) | undefined
 
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
       templatePath: '/templates/old',
     })
-    vfsListDirMock.mockImplementation(async ({ relPath, templatePath }: { relPath: string, templatePath?: string }) => {
-      if (relPath === '') {
-        return [{
-          isDir: true,
-          name: 'template',
-          source: 'upper',
-        }]
-      }
-
+    vfsListDirMock.mockImplementation(async ({ relPath, templatePath }) => {
       if (relPath === 'game/template' && templatePath === '/templates/old') {
         return await new Promise<VfsDirEntry[]>((resolve) => {
           resolveOldTemplateList = resolve
@@ -1157,24 +1029,11 @@ describe('useFileStore', () => {
       }
 
       if (relPath === 'game/template' && templatePath === '/templates/new') {
-        return [{
-          isDir: false,
-          name: 'new.txt',
-          source: 'templateLower',
-        }]
+        return [createVfsEntry('new.txt', false, { source: 'templateLower' })]
       }
 
       return []
     })
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: {
-        engineId: 'engine-1',
-        path: '/workspace',
-      },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -1193,14 +1052,11 @@ describe('useFileStore', () => {
 
     const refreshedLoad = store.getFolderContents(AbsPath.from('/workspace/game/template'))
     await vi.waitFor(() => {
+      // 初始化 1 次 + 旧 overlay 1 次 + 新 overlay 1 次
       expect(vfsListDirMock).toHaveBeenCalledTimes(3)
     })
 
-    resolveOldTemplateList!([{
-      isDir: false,
-      name: 'old.txt',
-      source: 'templateLower',
-    }])
+    resolveOldTemplateList!([createVfsEntry('old.txt', false, { source: 'templateLower' })])
 
     const refreshedItems = await refreshedLoad
     await staleLoad
@@ -1209,36 +1065,28 @@ describe('useFileStore', () => {
 
     const finalItems = await store.getFolderContents(AbsPath.from('/workspace/game/template'))
     expect(finalItems.map(item => item.path)).toEqual(['/workspace/game/template/new.txt'])
+    // 显式传入两层路径时不再回查当前游戏快照
+    expect(resolvePreviewSiteMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toContainEqual({
+      type: 'directory:modified',
+      path: '/workspace/game/template',
+    })
   })
 
   it('applyPathMutation 会递归迁移已加载目录子树', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
-    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
-    vfsListDirMock.mockImplementation(async ({ relPath }: { relPath: string }) => {
-      if (relPath === '') {
-        return [
-          { isDir: true, name: 'foo', source: 'upper' },
-          { isDir: true, name: 'dest', source: 'upper' },
-        ]
+    vfsListDirMock.mockImplementation(async ({ relPath }) => {
+      if (relPath === 'game') {
+        return [createVfsEntry('foo', true), createVfsEntry('dest', true)]
       }
       if (relPath === 'game/foo') {
-        return [{ isDir: true, name: 'bar', source: 'upper' }]
+        return [createVfsEntry('bar', true)]
       }
       if (relPath === 'game/foo/bar') {
-        return [{ isDir: false, name: 'baz.txt', source: 'upper' }]
-      }
-      if (relPath === 'game/dest') {
-        return []
+        return [createVfsEntry('baz.txt', false)]
       }
       return []
     })
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: { engineId: 'engine-1', path: '/workspace' },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    statMock.mockImplementation(async (path: string) => createStatResult(path, false))
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -1271,21 +1119,14 @@ describe('useFileStore', () => {
   })
 
   it('refreshTemplateOverlay 会同步失效父 game 目录', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
       templatePath: '/templates/old',
     })
-    vfsListDirMock.mockResolvedValue([
-      { isDir: true, name: 'template', source: 'upper' },
-    ])
-
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: { engineId: 'engine-1', path: '/workspace' },
-    })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    vfsListDirMock.mockImplementation(async ({ relPath }) => (
+      relPath === 'game' ? [createVfsEntry('template', true)] : []
+    ))
 
     const store = useFileStore()
     await vi.waitFor(() => {
@@ -1294,51 +1135,151 @@ describe('useFileStore', () => {
 
     await store.getFolderContents(AbsPath.from('/workspace/game'))
     const gameItem = store.getItemByPath(AbsPath.from('/workspace/game'))
-    expect(gameItem).toBeDefined()
     expect(gameItem?.isDir).toBe(true)
     expect((gameItem as { isLoaded: boolean }).isLoaded).toBe(true)
 
+    emittedEvents.length = 0
     await store.refreshTemplateOverlay(AbsPath.from('/workspace'), { nextTemplatePath: AbsPath.from('/templates/new') })
 
     const refreshedGameItem = store.getItemByPath(AbsPath.from('/workspace/game'))
     expect((refreshedGameItem as { isLoaded: boolean }).isLoaded).toBe(false)
+    expect(emittedEvents).toContainEqual({
+      type: 'directory:modified',
+      path: '/workspace/game/template',
+    })
   })
 
   it('refreshTemplateOverlay 在父 game 目录尚未加载时不会抛错', async () => {
-    existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
       templatePath: '/templates/old',
     })
-    vfsListDirMock.mockResolvedValue([])
 
-    workspaceStoreState = reactive({
-      CWD: '/workspace',
-      currentGame: { engineId: 'engine-1', path: '/workspace' },
+    const caches = captureFileStoreCaches()
+
+    try {
+      const store = useFileStore()
+      await vi.waitFor(() => {
+        expect(watchFsMock).toHaveBeenCalledTimes(1)
+      })
+
+      // initialize 内部已加载 game/，需要把它从 items 里移除以模拟"未加载"
+      const { pathToId, items } = caches
+      const gameId = pathToId!.get('/workspace/game')
+      expect(gameId).toBeDefined()
+      items!.delete(gameId!)
+      expect(items!.has(gameId!)).toBe(false)
+
+      await expect(
+        store.refreshTemplateOverlay(AbsPath.from('/workspace'), { nextTemplatePath: AbsPath.from('/templates/new') }),
+      ).resolves.toBeUndefined()
+      expect(store.getItemByPath(AbsPath.from('/workspace/game'))).toBeUndefined()
+    } finally {
+      caches.restore()
+    }
+  })
+
+  it('引擎不可用时文件视图操作会被拒绝', async () => {
+    resolvePreviewSiteMock.mockRejectedValue(new AppError('CONFIG_ERROR', '游戏未绑定可用引擎'))
+
+    const store = useFileStore()
+
+    await expect(store.getFolderContents(AbsPath.from('/workspace/game'))).rejects.toMatchObject({
+      code: 'FS_ERROR',
+      message: '加载目录失败: 当前项目没有可用的引擎，无法解析文件视图',
     })
-    useWorkspaceStoreMock.mockReturnValue(workspaceStoreState)
+    await expect(store.ensureWritable(AbsPath.from('/workspace/game/a.txt'))).rejects.toMatchObject({
+      code: 'FS_ERROR',
+      message: '当前项目没有可用的引擎，无法解析文件视图',
+    })
+    await expect(store.resolveFilePath(AbsPath.from('/workspace/game/a.txt'))).rejects.toMatchObject({
+      code: 'FS_ERROR',
+      message: '当前项目没有可用的引擎，无法解析文件视图',
+    })
+    await expect(store.deleteEntry(AbsPath.from('/workspace/game/a.txt'), false)).rejects.toMatchObject({
+      code: 'FS_ERROR',
+      message: '当前项目没有可用的引擎，无法解析文件视图',
+    })
+    await expect(store.copyEntry(AbsPath.from('/workspace/game/a.txt'), AbsPath.from('/workspace/game'))).rejects.toMatchObject({
+      code: 'FS_ERROR',
+      message: '当前项目没有可用的引擎，无法解析文件视图',
+    })
 
+    expect(resolvePreviewSiteMock).toHaveBeenCalledWith({ path: '/workspace' })
+    expect(vfsListDirMock).not.toHaveBeenCalled()
+    expect(vfsDeletePathMock).not.toHaveBeenCalled()
+    expect(watchFsMock).not.toHaveBeenCalled()
+  })
+
+  it('deleteEntry 拒绝删除项目根目录', async () => {
     const store = useFileStore()
     await vi.waitFor(() => {
       expect(watchFsMock).toHaveBeenCalledTimes(1)
     })
 
-    // initialize 内部已加载 game/，需要把它从 items 里移除以模拟"未加载"
-    const caches = captureFileStoreCaches()
-    try {
-      const { pathToId, items } = caches
-      const gameId = pathToId?.get(AbsPath.from('/workspace/game'))
-      if (gameId) {
-        items?.delete(gameId)
-        pathToId?.delete(AbsPath.from('/workspace/game'))
-      }
+    await expect(store.deleteEntry(AbsPath.from('/workspace'), false)).rejects.toMatchObject({
+      code: 'FS_ERROR',
+      message: '不能通过资源视图删除项目根目录',
+    })
+    expect(vfsDeletePathMock).not.toHaveBeenCalled()
+  })
 
-      await expect(
-        store.refreshTemplateOverlay(AbsPath.from('/workspace'), { nextTemplatePath: AbsPath.from('/templates/new') }),
-      ).resolves.toBeUndefined()
-    } finally {
-      caches.restore()
-    }
+  it('copyEntry 拒绝项目根与项目外的路径', async () => {
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    await expect(
+      store.copyEntry(AbsPath.from('/workspace'), AbsPath.from('/workspace/game')),
+    ).rejects.toMatchObject({
+      code: 'PATH_DENIED',
+      message: '不能复制或移动项目根目录',
+    })
+    await expect(
+      store.copyEntry(AbsPath.from('/outside/a.txt'), AbsPath.from('/workspace/game')),
+    ).rejects.toMatchObject({
+      code: 'PATH_DENIED',
+      message: '路径不在当前项目内',
+    })
+    await expect(
+      store.copyEntry(AbsPath.from('/workspace/game/a.txt'), AbsPath.from('/outside')),
+    ).rejects.toMatchObject({
+      code: 'PATH_DENIED',
+      message: '路径不在当前项目内',
+    })
+    expect(vfsCopyPathMock).not.toHaveBeenCalled()
+  })
+
+  it('refreshTemplateOverlay 在文件树尚未建立时会补建文件树并通知目录变更', async () => {
+    resolvePreviewSiteMock.mockRejectedValueOnce(new AppError('CONFIG_ERROR', '游戏未绑定可用引擎'))
+
+    const store = useFileStore()
+    await store.initialized
+
+    expect(watchFsMock).not.toHaveBeenCalled()
+
+    await store.refreshTemplateOverlay(AbsPath.from('/workspace'), {
+      nextEnginePath: AbsPath.from('/engines/webgal'),
+    })
+
+    // 引擎路径已显式给出，不再回查当前（落后的）游戏快照
+    expect(resolvePreviewSiteMock).toHaveBeenCalledTimes(1)
+    expect(vfsListDirMock).toHaveBeenCalledWith({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: undefined,
+      relPath: 'game',
+    })
+    expect(watchFsMock).toHaveBeenCalledWith('/workspace/game', expect.any(Function), {
+      recursive: true,
+      delayMs: 150,
+    })
+    expect(emittedEvents).toContainEqual({
+      type: 'directory:modified',
+      path: '/workspace/game',
+    })
+    expect(store.getItemByPath(AbsPath.from('/workspace/game'))).toBeDefined()
   })
 })

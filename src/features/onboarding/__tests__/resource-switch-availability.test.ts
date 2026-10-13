@@ -7,14 +7,6 @@ import { hasSwitchableResourceAlternative } from '../resource-switch-availabilit
 const CURRENT_ENGINE_ID = 'engine-current'
 
 describe('hasSwitchableResourceAlternative', () => {
-  it('自带引擎项目没有任何可切换的入口', () => {
-    expect(hasSwitchableResourceAlternative({
-      currentEngineId: undefined,
-      engines: [createTestEngine({ id: 'engine-2' })],
-      templates: [createTestTemplate()],
-    })).toBe(false)
-  })
-
   it('只有当前引擎且没有模板时没有替代项', () => {
     expect(hasSwitchableResourceAlternative({
       currentEngineId: CURRENT_ENGINE_ID,

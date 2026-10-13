@@ -141,7 +141,6 @@ pub fn run() {
             commands::server::set_embedded_preview_launch_id,
             commands::server::send_preview_command,
             // fs
-            commands::fs::copy_directory,
             commands::fs::copy_directory_with_progress,
             commands::fs::validate_directory_structure,
             commands::fs::delete_file,

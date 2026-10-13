@@ -43,7 +43,7 @@ async function buildRuntimeRebindContext(
   game: Game,
   options: RequestGameRuntimeRebindOptions,
 ): Promise<ImportDependencyResolutionContext> {
-  const currentEngine = game.engineId ? await db.engines.get(game.engineId) : undefined
+  const currentEngine = await db.engines.get(game.engineId)
   if (!currentEngine) {
     throw new AppError('IO_ERROR', '当前引擎记录缺失，无法安全重绑', {
       details: { reason: 'ENGINE_NOT_FOUND' },

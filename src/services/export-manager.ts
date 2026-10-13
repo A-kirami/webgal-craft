@@ -95,9 +95,6 @@ async function exportWeb(config: WebExportConfig): Promise<AbsPath> {
   }
 
   const site = await gameManager.resolvePreviewSite(config.game)
-  if (!site.enginePath) {
-    throw new AppError('ENGINE_EDITOR_INCOMPATIBLE', '当前游戏没有可用的导出引擎')
-  }
 
   const exportId = crypto.randomUUID()
   const unlisten = await listen<ExportProgress>('export-progress', (event) => {
@@ -135,9 +132,6 @@ async function exportAndroidWebZip(config: AndroidWebExportConfig): Promise<void
   }
 
   const site = await gameManager.resolvePreviewSite(config.game)
-  if (!site.enginePath) {
-    throw new AppError('ENGINE_EDITOR_INCOMPATIBLE', '当前游戏没有可用的导出引擎')
-  }
 
   const exportId = crypto.randomUUID()
   const unlisten = await listen<ExportProgress>('export-progress', (event) => {
@@ -172,9 +166,6 @@ async function exportPc(config: PcExportConfig): Promise<AbsPath> {
   }
   const outputPath = resolvePcExportOutputPath(config.outputRoot, gameName, config.targetOs, config.targetArch)!
   const site = await gameManager.resolvePreviewSite(config.game)
-  if (!site.enginePath) {
-    throw new AppError('ENGINE_EDITOR_INCOMPATIBLE', '当前游戏没有可用的导出引擎')
-  }
   const exportId = crypto.randomUUID()
   const unlisten = await listen<ExportProgress>('export-progress', (event) => {
     const progress = event.payload

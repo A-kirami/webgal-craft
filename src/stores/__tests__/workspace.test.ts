@@ -117,6 +117,7 @@ describe('useWorkspaceStore', () => {
       id: 'game-1',
       path: '/games/game-1',
       pathLookupKey: '/games/game-1',
+      engineId: 'engine-1',
       createdAt: 0,
       lastModified: 0,
       status: 'created',
