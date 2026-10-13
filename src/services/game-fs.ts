@@ -265,10 +265,10 @@ async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutati
   return renameNativePath(oldPath, newName)
 }
 
-async function deleteFile(path: AbsPath, permanent?: boolean): Promise<void> {
+async function deleteFile(path: AbsPath, permanent = false): Promise<void> {
   assertMutableSceneEntry(path)
   const fileStore = useFileStore()
-  if (fileStore.isVfs && await fileStore.deleteEntry(path)) {
+  if (fileStore.isVfs && await fileStore.deleteEntry(path, permanent)) {
     markPathChanged(path, { includeChildren: true })
     return
   }

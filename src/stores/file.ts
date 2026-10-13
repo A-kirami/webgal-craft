@@ -986,7 +986,7 @@ export const useFileStore = defineStore('file', () => {
   const isVfs = $computed(() => !!enginePath)
 
   return $$({
-    deleteEntry: async (path: AbsPath): Promise<boolean> => {
+    deleteEntry: async (path: AbsPath, permanent: boolean): Promise<boolean> => {
       const currentProjectPath = getCurrentProjectPath()
       const currentEnginePath = getCurrentEnginePath()
       const currentTemplatePath = getCurrentTemplatePath()
@@ -1004,6 +1004,7 @@ export const useFileStore = defineStore('file', () => {
         enginePath: currentEnginePath,
         templatePath: currentTemplatePath,
         relPath,
+        permanent,
       })
       await handleRemoveEvent(path)
       return true

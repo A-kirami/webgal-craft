@@ -1,5 +1,6 @@
 use tauri::Manager;
 mod commands;
+mod file_removal;
 mod generated;
 mod mobile;
 mod vfs;

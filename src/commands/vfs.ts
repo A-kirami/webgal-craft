@@ -23,7 +23,8 @@ async function ensureWritable(args: VfsLayerArgs): Promise<AbsPath> {
   return AbsPath.from(await safeInvoke<string>('ensure_vfs_writable', { ...args }))
 }
 
-function deletePath(args: VfsLayerArgs): Promise<void> {
+/** `permanent` 为 false 时后端把 upper 层文件移入系统回收站 */
+function deletePath(args: VfsLayerArgs & { permanent: boolean }): Promise<void> {
   return safeInvoke<void>('delete_vfs_path', { ...args })
 }
 
