@@ -78,7 +78,7 @@ const props = defineProps<ToasterProps>()
 
     /* 触发区 24px(Button icon-xs 档),-m-0.5 补偿保持字形光学位置 */
     & [data-close-button] {
-      @apply static border-none rounded-md size-6 -m-0.5 transform-none text-muted-foreground hover:bg-accent hover:text-accent-foreground;
+      @apply static border-none rounded-md size-6 -m-0.5 transform-none bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground;
 
       bottom: auto;
       left: auto;
