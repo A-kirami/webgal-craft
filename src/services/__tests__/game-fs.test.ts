@@ -436,9 +436,29 @@ describe('gameFs', () => {
     })
     expect(copyEntryMock).toHaveBeenNthCalledWith(1, '/project/from.txt', '/project/game')
     expect(deleteEntryMock).toHaveBeenCalledOnce()
-    expect(deleteEntryMock).toHaveBeenCalledWith('/project/game/deleted.txt')
+    expect(deleteEntryMock).toHaveBeenCalledWith('/project/game/deleted.txt', true)
     expect(fsRenameFileMock).not.toHaveBeenCalledWith('/project/game/template/old.txt', 'new.txt')
     expect(fsMoveFileMock).not.toHaveBeenCalledWith('/project/game/template/old.txt', '/project/game/template/folder')
+  })
+
+  it('VFS 模式下删除资源会把回收站意图透传给 file store', async () => {
+    const deleteEntryMock = vi.fn(async () => true)
+
+    useFileStoreMock.mockReturnValue({
+      copyEntry: copyEntryMock,
+      deleteEntry: deleteEntryMock,
+      ensureWritable: ensureWritableMock,
+      getFolderContents: getFolderContentsMock,
+      isVfs: true,
+      resolveFilePath: resolveFilePathMock,
+    })
+
+    await gameFs.deleteFile(AbsPath.from('/project/game/bgm/theme.ogg'))
+    await gameFs.deleteFile(AbsPath.from('/project/game/bgm/theme.ogg'), true)
+
+    expect(deleteEntryMock).toHaveBeenNthCalledWith(1, '/project/game/bgm/theme.ogg', false)
+    expect(deleteEntryMock).toHaveBeenNthCalledWith(2, '/project/game/bgm/theme.ogg', true)
+    expect(deleteFileMock).not.toHaveBeenCalled()
   })
 
   it('VFS 模式下创建同名条目时会先按 overlay 视图生成唯一名称，再解析最终可写路径', async () => {

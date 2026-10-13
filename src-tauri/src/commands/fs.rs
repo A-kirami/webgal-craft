@@ -13,6 +13,7 @@ static RENAME_FILE_LOCK: Mutex<()> = Mutex::new(());
 use tauri::ipc::Channel;
 
 use super::{AppError, AppResult};
+use crate::file_removal::{self, RemovalMode};
 use crate::vfs::to_posix_string;
 
 // 定义复制事件枚举
@@ -279,25 +280,7 @@ pub async fn delete_file(path: String, permanent: Option<bool>) -> AppResult<()>
         return Err(AppError::Server(format!("路径不存在: {}", path.display())));
     }
 
-    let should_permanent_delete = permanent.unwrap_or(false);
-
-    if !should_permanent_delete {
-        #[cfg(desktop)]
-        {
-            trash::delete(path)
-                .map_err(|e| AppError::Server(format!("移动到回收站失败: {}", e)))?;
-            return Ok(());
-        }
-
-        #[cfg(mobile)]
-        return Err(AppError::Server("移动端暂不支持将文件移入回收站".into()));
-    }
-
-    if path.is_dir() {
-        fs::remove_dir_all(path)?;
-    } else {
-        fs::remove_file(path)?;
-    }
+    file_removal::remove(path, RemovalMode::from_permanent(permanent))?;
 
     Ok(())
 }

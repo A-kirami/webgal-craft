@@ -13,6 +13,7 @@ use tempfile::NamedTempFile;
 use thiserror::Error;
 
 use crate::commands::{AppError, AppResult};
+use crate::file_removal::{self, RemovalMode};
 
 const PROJECT_CONFIG_FILE: &str = "project.wgcp";
 const CURRENT_SCHEMA_VERSION: u32 = 1;
@@ -335,7 +336,13 @@ impl OverlayFs {
         Ok(fs::metadata(resolved.physical_path)?.is_dir())
     }
 
-    pub fn remove_logical_path(&self, logical_path: &Path) -> Result<(), VfsError> {
+    /// 移除逻辑路径。`mode` 决定 upper 层的物理文件是移入回收站还是永久删除，
+    /// whiteout 语义（隐藏 lower 同名文件）不受删除方式影响。
+    pub fn remove_logical_path(
+        &self,
+        logical_path: &Path,
+        mode: RemovalMode,
+    ) -> Result<(), VfsError> {
         let category = classify_path(logical_path);
         category.ensure_mutable()?;
 
@@ -346,7 +353,7 @@ impl OverlayFs {
 
         if category == PathCategory::EngineOverride {
             if upper_path.exists() {
-                remove_path(&upper_path)?;
+                file_removal::remove(&upper_path, mode)?;
                 self.clear_whiteout(logical_path)?;
                 return Ok(());
             }
@@ -360,7 +367,7 @@ impl OverlayFs {
 
         // TemplateContent | GameContent
         if upper_path.exists() {
-            remove_path(&upper_path)?;
+            file_removal::remove(&upper_path, mode)?;
         }
 
         if lower_exists {
@@ -418,7 +425,7 @@ impl OverlayFs {
             if source_upper.exists() {
                 if source_lower.is_some() && source_upper.is_dir() {
                     self.copy_overlay_path(from, to)?;
-                    remove_path(&source_upper)?;
+                    file_removal::remove(&source_upper, RemovalMode::Permanent)?;
                 } else {
                     fs::rename(&source_upper, &target_upper)?;
                 }
@@ -949,7 +956,7 @@ pub fn clean_template_upper(project_path: &Path) -> Result<(), VfsError> {
 
     if paths.upper.is_dir() {
         for entry in fs::read_dir(&paths.upper)? {
-            remove_path(&entry?.path())?;
+            file_removal::remove(&entry?.path(), RemovalMode::Permanent)?;
         }
     }
 
@@ -1100,16 +1107,6 @@ fn copy_dir_recursive(source: &Path, destination: &Path) -> Result<(), VfsError>
     Ok(())
 }
 
-fn remove_path(path: &Path) -> Result<(), VfsError> {
-    if path.is_dir() {
-        fs::remove_dir_all(path)?;
-    } else {
-        fs::remove_file(path)?;
-    }
-
-    Ok(())
-}
-
 fn ensure_parent_dir(path: &Path) -> Result<(), VfsError> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -1176,7 +1173,7 @@ mod tests {
     use super::{
         classify_path, read_project_config, sanitize_logical_path, validate_project_config,
         write_project_config, AppError, EngineRef, OverlayFs, PathCategory, ProjectConfig,
-        TemplateBinding, VfsDirEntry, VfsError, VfsSource, CURRENT_SCHEMA_VERSION,
+        RemovalMode, TemplateBinding, VfsDirEntry, VfsError, VfsSource, CURRENT_SCHEMA_VERSION,
     };
     #[cfg(windows)]
     use std::process::Command;
@@ -1600,7 +1597,7 @@ mod tests {
         .expect("overlay should be created");
 
         overlay
-            .remove_logical_path(Path::new("icons/favicon.ico"))
+            .remove_logical_path(Path::new("icons/favicon.ico"), RemovalMode::Permanent)
             .expect("deleting upper override should fall back to lower");
 
         let resolved = overlay
@@ -1694,7 +1691,7 @@ mod tests {
         .expect("overlay should be created");
 
         let error = overlay
-            .remove_logical_path(Path::new("game/scene/start.txt"))
+            .remove_logical_path(Path::new("game/scene/start.txt"), RemovalMode::Permanent)
             .expect_err("linked whiteout metadata path should be rejected");
 
         assert!(matches!(error, VfsError::PathDenied));
@@ -1746,7 +1743,10 @@ mod tests {
         .expect("overlay should be created");
 
         overlay
-            .remove_logical_path(Path::new("game/template/scene/b.txt"))
+            .remove_logical_path(
+                Path::new("game/template/scene/b.txt"),
+                RemovalMode::Permanent,
+            )
             .expect("lower file should be whiteouted");
         overlay
             .copy_logical_path(
@@ -2042,7 +2042,7 @@ mod tests {
         .expect("overlay should be created");
 
         let error = overlay
-            .remove_logical_path(Path::new("icons/favicon.ico"))
+            .remove_logical_path(Path::new("icons/favicon.ico"), RemovalMode::Permanent)
             .expect_err("lower-only engine override deletion should be rejected");
 
         assert!(matches!(error, VfsError::WriteToEngineRuntime));

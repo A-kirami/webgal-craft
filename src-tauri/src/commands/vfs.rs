@@ -6,6 +6,7 @@ use std::{
 
 use tauri::State;
 
+use crate::file_removal::RemovalMode;
 use crate::vfs::{
     self, resolve_default_template_path, sanitize_logical_path, to_posix_string, CachedCanonicals,
     OverlayFs, VfsDirEntry, VfsError,
@@ -160,10 +161,11 @@ pub fn delete_vfs_path(
     engine_path: String,
     template_path: Option<String>,
     rel_path: String,
+    permanent: Option<bool>,
 ) -> AppResult<()> {
     let logical_path = sanitize_logical_path(&rel_path)?;
     let overlay = build_overlay(&project_path, &engine_path, template_path, &factory_cache)?;
-    overlay.remove_logical_path(&logical_path)?;
+    overlay.remove_logical_path(&logical_path, RemovalMode::from_permanent(permanent))?;
     Ok(())
 }
 

@@ -1009,7 +1009,7 @@ describe('useFileStore', () => {
     }
   })
 
-  it('VFS 写操作会携带 templatePath 传给 delete/ensureWritable/resolveFilePath', async () => {
+  it('VFS 命令会携带 templatePath，删除还会透传删除方式', async () => {
     existsMock.mockImplementation(async (path: string) => path === '/workspace/project.wgcp')
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/workspace',
@@ -1042,7 +1042,8 @@ describe('useFileStore', () => {
 
     await store.ensureWritable(AbsPath.from('/workspace/game/original.txt'))
     await store.resolveFilePath(AbsPath.from('/workspace/game/original.txt'))
-    await store.deleteEntry(AbsPath.from('/workspace/game/original.txt'))
+    await store.deleteEntry(AbsPath.from('/workspace/game/original.txt'), false)
+    await store.deleteEntry(AbsPath.from('/workspace/game/original.txt'), true)
 
     expect(vfsRenamePathMock).not.toHaveBeenCalled()
     expect(vfsEnsureWritableMock).toHaveBeenCalledWith({
@@ -1057,11 +1058,20 @@ describe('useFileStore', () => {
       templatePath: '/templates/current',
       relPath: 'game/original.txt',
     })
+    expect(vfsDeletePathMock).toHaveBeenCalledTimes(2)
     expect(vfsDeletePathMock).toHaveBeenCalledWith({
       projectPath: '/workspace',
       enginePath: '/engines/webgal',
       templatePath: '/templates/current',
       relPath: 'game/original.txt',
+      permanent: false,
+    })
+    expect(vfsDeletePathMock).toHaveBeenCalledWith({
+      projectPath: '/workspace',
+      enginePath: '/engines/webgal',
+      templatePath: '/templates/current',
+      relPath: 'game/original.txt',
+      permanent: true,
     })
   })
 
