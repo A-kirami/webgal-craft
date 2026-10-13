@@ -39,7 +39,7 @@ const controller = useStatementAnimationEditorPanel({
 })
 
 // 帧级快捷键跟着面板走，而不是跟着宿主：抽屉与模态框共用这个面板，各自只操作自己那份草稿。
-// 宿主（如模态框）打开期间窗口级 isModalOpen 为 true，因此这些绑定必须显式放行模态场景。
+// 两类宿主都会独占键盘（模态 isModalOpen、抽屉 editorDrawerOpen），这些绑定必须两边都显式放行。
 useShortcutContext({
   animationHistoryShortcuts: () => props.enableHistoryShortcuts,
   panelFocus: 'animationEditor',
@@ -49,6 +49,7 @@ useShortcutContext({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   allowInModal: true,
   execute: () => {
     controller.handleUndo()
@@ -60,6 +61,7 @@ useShortcut({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   allowInModal: true,
   execute: () => {
     controller.handleRedo()
@@ -72,6 +74,7 @@ useShortcut({
 
 useAnimationFrameShortcuts({
   actions: controller,
+  allowInEditorDrawer: true,
   allowInModal: true,
   when: { panelFocus: 'animationEditor' },
 })

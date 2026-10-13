@@ -30,7 +30,7 @@ describe('createEditorShortcutDefinitions', () => {
     expect(definitions.find(item => item.id === 'editor.save')).toMatchObject({
       keys: 'Mod+S',
       overrideMonaco: true,
-      when: { editorMode: '!none', effectEditorOpen: false },
+      when: { editorMode: '!none' },
     })
     expect(definitions.find(item => item.id === 'editor.commandPanel')).toMatchObject({
       keys: 'Mod+P',
@@ -40,8 +40,9 @@ describe('createEditorShortcutDefinitions', () => {
     expect(definitions.find(item => item.id === 'editor.togglePreview')).toMatchObject({
       keys: 'Mod+J',
       overrideMonaco: true,
-      when: { effectEditorOpen: false },
     })
+    // 效果编辑器抽屉打开期间键盘归抽屉所有，全局快捷键不再需要各自的 when 条件，也不属于会话绑定
+    expect(definitions.every(item => !item.allowInEditorDrawer)).toBe(true)
   })
 
   it('全局快捷键避开 macOS 默认菜单占用的键位', () => {

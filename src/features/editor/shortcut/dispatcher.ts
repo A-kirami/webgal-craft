@@ -77,6 +77,11 @@ export function dispatchShortcut<TExecuteContext>(
     return false
   }
 
+  // 独占键盘的浮层：模态框与编辑器抽屉会话。模态框压在抽屉之上，模态打开期间抽屉锁让位，
+  // 否则模态自己那批绑定会被压在下面的抽屉挡下。
+  const modalOwnsKeyboard = options.context.isModalOpen === true
+  const drawerOwnsKeyboard = options.context.editorDrawerOpen === true && !modalOwnsKeyboard
+
   const candidates = options.bindings
     .map((binding, index) => ({
       binding,
@@ -87,7 +92,12 @@ export function dispatchShortcut<TExecuteContext>(
     .filter(candidate => candidate.keys.includes(triggeredKey))
     .filter(candidate => matchesShortcutWhen(candidate.binding.when, options.context))
     .filter((candidate) => {
-      if (options.context.isModalOpen === true && !candidate.binding.allowInModal) {
+      if (modalOwnsKeyboard && !candidate.binding.allowInModal) {
+        return false
+      }
+
+      // 抽屉会话期间键盘归抽屉所有，外部绑定即使持有焦点也不得响应
+      if (drawerOwnsKeyboard && !candidate.binding.allowInEditorDrawer) {
         return false
       }
 

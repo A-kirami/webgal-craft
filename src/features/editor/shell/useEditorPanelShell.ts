@@ -172,6 +172,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     when: { panelFocus: 'statementEditor' },
   })
 
+  // 变换浮层是效果编辑器会话在预览区的编辑面，与抽屉共用这批绑定；两者都在抽屉打开期间运行
   const effectEditorShortcutPanelFocuses = ['effectEditor', 'transformOverlay'] as const
   const effectEditorShortcutDefinitions: EffectEditorShortcutDefinition[] = [
     {
@@ -215,6 +216,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
   for (const panelFocus of effectEditorShortcutPanelFocuses) {
     for (const shortcut of effectEditorShortcutDefinitions) {
       useShortcut({
+        allowInEditorDrawer: true,
         execute: shortcut.action,
         i18nKey: shortcut.i18nKey,
         id: shortcut.id,

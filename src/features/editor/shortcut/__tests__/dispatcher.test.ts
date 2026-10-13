@@ -203,6 +203,75 @@ describe('快捷键分发与匹配', () => {
     expect(call).not.toHaveBeenCalled()
   })
 
+  it('抽屉会话打开时同一面板焦点下只执行声明放行过的绑定', () => {
+    const call = vi.fn()
+    const context = {
+      editorDrawerOpen: true,
+      panelFocus: 'effectEditor',
+    }
+    const event = createKeyboardEvent({
+      ctrlKey: true,
+      key: 'Enter',
+    })
+
+    const externalHandled = dispatchShortcut({
+      bindings: [createBinding({
+        id: 'editor.save',
+        keys: 'Mod+Enter',
+        when: { panelFocus: 'effectEditor' },
+      })],
+      context,
+      event,
+      executeContext: { call },
+      platform: 'windows',
+    })
+
+    const sessionHandled = dispatchShortcut({
+      bindings: [createBinding({
+        allowInEditorDrawer: true,
+        id: 'effect.apply',
+        keys: 'Mod+Enter',
+        when: { panelFocus: 'effectEditor' },
+      })],
+      context,
+      event,
+      executeContext: { call },
+      platform: 'windows',
+    })
+
+    expect(externalHandled).toBe(false)
+    expect(sessionHandled).toBe(true)
+    expect(call).toHaveBeenCalledOnce()
+    expect(call).toHaveBeenCalledWith('effect.apply')
+  })
+
+  it('模态框压在抽屉会话之上时仍会执行模态自己的绑定', () => {
+    const call = vi.fn()
+
+    const handled = dispatchShortcut({
+      bindings: [createBinding({
+        allowInModal: true,
+        id: 'effectDialog.apply',
+        keys: 'Mod+Enter',
+        when: { panelFocus: 'effectEditor' },
+      })],
+      context: {
+        editorDrawerOpen: true,
+        isModalOpen: true,
+        panelFocus: 'effectEditor',
+      },
+      event: createKeyboardEvent({
+        ctrlKey: true,
+        key: 'Enter',
+      }),
+      executeContext: { call },
+      platform: 'windows',
+    })
+
+    expect(handled).toBe(true)
+    expect(call).toHaveBeenCalledWith('effectDialog.apply')
+  })
+
   it('allowInModal、allowInInput 和 overrideMonaco 会显式放开过滤', () => {
     const call = vi.fn()
 

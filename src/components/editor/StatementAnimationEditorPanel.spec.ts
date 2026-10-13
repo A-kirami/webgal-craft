@@ -86,6 +86,7 @@ function createAnimationEditorPaneStub() {
 }
 
 function createShortcutHarness(options: {
+  editorDrawerOpen?: boolean
   enableHistoryShortcuts: boolean
   frames?: AnimationFrame[]
   isModalOpen: boolean
@@ -112,8 +113,12 @@ function createShortcutHarness(options: {
         platform: 'windows',
       })
 
-      // 模态宿主打开期间窗口级 isModalOpen 为 true，面板自己的绑定必须显式放行模态场景
-      useShortcutContext({ isModalOpen: options.isModalOpen })
+      // 模态宿主打开期间窗口级 isModalOpen 为 true，面板自己的绑定必须显式放行模态场景；
+      // 抽屉宿主打开期间键盘归抽屉会话所有，同理必须显式放行抽屉会话
+      useShortcutContext({
+        editorDrawerOpen: options.editorDrawerOpen ?? false,
+        isModalOpen: options.isModalOpen,
+      })
 
       return () => h(StatementAnimationEditorPanel, {
         'enableHistoryShortcuts': options.enableHistoryShortcuts,
@@ -127,6 +132,7 @@ function createShortcutHarness(options: {
 }
 
 async function renderShortcutHarness(options: {
+  editorDrawerOpen?: boolean
   enableHistoryShortcuts: boolean
   frames?: AnimationFrame[]
   isModalOpen: boolean
@@ -262,7 +268,11 @@ describe('StatementAnimationEditorPanel', () => {
   })
 
   it('抽屉场景下响应撤销、重做与删除帧快捷键', async () => {
-    const { frames } = await renderShortcutHarness({ enableHistoryShortcuts: true, isModalOpen: false })
+    const { frames } = await renderShortcutHarness({
+      editorDrawerOpen: true,
+      enableHistoryShortcuts: true,
+      isModalOpen: false,
+    })
 
     await page.getByRole('button', { name: 'select-frame-2' }).click()
     await nextTick()
@@ -285,6 +295,7 @@ describe('StatementAnimationEditorPanel', () => {
 
   it('抽屉场景下响应帧编辑与首尾选择快捷键', async () => {
     const { frames, state } = await renderShortcutHarness({
+      editorDrawerOpen: true,
       enableHistoryShortcuts: true,
       frames: [
         { duration: 120, alpha: 0.1 },

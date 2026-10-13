@@ -19,8 +19,6 @@ import { useShortcutDispatcher } from '../useShortcutDispatcher'
 
 import type { ComponentPublicInstance } from 'vue'
 
-const effectEditorOpen = ref(false)
-
 const shortcutActions = vi.hoisted(() => ({
   rename: vi.fn(),
   save: vi.fn(),
@@ -101,7 +99,6 @@ function createHarnessComponent() {
       useShortcutContext({
         commandPanelOpen: false,
         editorMode: 'visual',
-        effectEditorOpen,
         hasSelection: true,
         isDirty: true,
         isModalOpen: false,
@@ -431,6 +428,7 @@ function createEffectEditorFocusHarness() {
       const canClear = ref(true)
 
       useShortcut({
+        allowInEditorDrawer: true,
         execute: () => {
           shortcutActions.undoEffect()
         },
@@ -470,8 +468,14 @@ function createEffectEditorFocusHarness() {
     name: 'EffectEditorFocusHarness',
     setup() {
       useShortcutDispatcher({
-        bindings: [],
-        executeContext: {},
+        bindings: createEditorShortcutDefinitions(),
+        executeContext: {
+          saveCurrentFile: shortcutActions.save,
+          setLeftPanelView: shortcutActions.setLeftPanelView,
+          toggleCommandPanel: shortcutActions.toggleCommandPanel,
+          togglePreviewPanel: shortcutActions.togglePreviewPanel,
+          toggleSidebar: shortcutActions.toggleSidebar,
+        },
         platform: 'windows',
       })
 
@@ -556,26 +560,9 @@ function createComponentTargetHarnessComponent() {
 
 describe('useShortcutDispatcher', () => {
   beforeEach(() => {
-    effectEditorOpen.value = false
     for (const action of Object.values(shortcutActions)) {
       action.mockReset()
     }
-  })
-
-  it('效果编辑器打开时屏蔽会打扰会话的全局快捷键', async () => {
-    effectEditorOpen.value = true
-
-    await renderInBrowser(createHarnessComponent(), {
-      global: {
-        plugins: [createPinia()],
-      },
-    })
-
-    await userEvent.keyboard('{Control>}s{/Control}')
-    await userEvent.keyboard('{Control>}j{/Control}')
-
-    expect(shortcutActions.save).not.toHaveBeenCalled()
-    expect(shortcutActions.togglePreviewPanel).not.toHaveBeenCalled()
   })
 
   it('会响应静态注册的全局快捷键', async () => {
@@ -716,6 +703,46 @@ describe('useShortcutDispatcher', () => {
     }))
 
     expect(shortcutActions.undo).toHaveBeenCalledOnce()
+  })
+
+  it('编辑器抽屉打开时会屏蔽全局与抽屉外快捷键', async () => {
+    const { component, openEffectEditor } = createEffectEditorFocusHarness()
+
+    await renderInBrowser(component, {
+      global: {
+        plugins: [createPinia()],
+        stubs: createEffectEditorFocusStubs(),
+      },
+    })
+
+    const editorElement = await page.getByRole('button', { name: 'file-editor-surface' }).element()
+    editorElement.focus()
+
+    await userEvent.keyboard('{Control>}s{/Control}')
+    await userEvent.keyboard('{Control>}b{/Control}')
+
+    expect(shortcutActions.save).toHaveBeenCalledOnce()
+    expect(shortcutActions.toggleSidebar).toHaveBeenCalledOnce()
+
+    openEffectEditor()
+    await expect.element(page.getByText('effect-draft-form')).toBeVisible()
+
+    // 焦点可以停在打开抽屉前的编辑器表面上：会话锁不吃焦点，全局快捷键与编辑器表面的绑定都要停用
+    editorElement.focus()
+    await vi.waitFor(() => {
+      expect(useShortcutContextRegistry().resolveContext()).toMatchObject({
+        editorDrawerOpen: true,
+        panelFocus: 'editor',
+      })
+    })
+
+    await userEvent.keyboard('{Control>}s{/Control}')
+    await userEvent.keyboard('{Control>}b{/Control}')
+    await userEvent.keyboard('{Control>}z{/Control}')
+
+    expect(shortcutActions.save).toHaveBeenCalledOnce()
+    expect(shortcutActions.toggleSidebar).toHaveBeenCalledOnce()
+    expect(shortcutActions.undo).not.toHaveBeenCalled()
   })
 
   it('效果编辑器打开后会接管焦点上下文并响应自身快捷键', async () => {

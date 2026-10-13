@@ -549,6 +549,7 @@ describe('EditorPanel', () => {
     const binding = [...bindings.values()].find(item => item.id === 'effect.applyFromTransformOverlay')
     expect(binding?.when).toEqual({ panelFocus: 'transformOverlay' })
     expect(binding?.keys).toBe('Mod+Enter')
+    expect(binding?.allowInEditorDrawer).toBe(true)
 
     await binding!.execute(undefined)
 
@@ -704,12 +705,15 @@ describe('EditorPanel', () => {
     })
   })
 
-  it('动画编辑器抽屉打开时不会把界面标记为全局模态', async () => {
+  it('动画编辑器抽屉打开时独占键盘，但不会把界面标记为全局模态', async () => {
     statementAnimationDialogMock.isOpen = true
 
     await renderEditorPanel()
 
-    expect(useShortcutContextRegistry().resolveContext().isModalOpen).toBeFalsy()
+    // 会话锁与焦点无关：焦点仍留在打开抽屉前的面板上时同样生效；它也不是全局模态
+    const context = useShortcutContextRegistry().resolveContext()
+    expect(context.editorDrawerOpen).toBe(true)
+    expect(context.isModalOpen).toBeFalsy()
   })
 
   it('动画编辑器抽屉聚焦时会注册应用与关闭快捷键', async () => {
@@ -722,6 +726,8 @@ describe('EditorPanel', () => {
     const closeBinding = [...bindings.values()].find(item => item.id === 'animation.close')
     expect(applyBinding?.when).toEqual({ panelFocus: 'animationEditor' })
     expect(closeBinding?.when).toEqual({ panelFocus: 'animationEditor' })
+    expect(applyBinding?.allowInEditorDrawer).toBe(true)
+    expect(closeBinding?.allowInEditorDrawer).toBe(true)
 
     await applyBinding!.execute(undefined)
     await closeBinding!.execute(undefined)
