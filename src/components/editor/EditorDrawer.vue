@@ -29,6 +29,15 @@ const dismissLayers = useDrawerDismissLayers({
   isOpen: () => props.open,
 })
 
+// 抽屉是独占键盘的编辑会话：打开期间派发器只放行声明了 allowInEditorDrawer 的绑定。
+// 会话锁与焦点无关，单独登记成一条不跟踪焦点的条目：抽屉不抢焦点时（效果编辑器就是如此），
+// 焦点仍停在打开抽屉的触发元素上，跟着焦点走的上下文拦不住全局快捷键。
+useShortcutContext({
+  editorDrawerOpen: true,
+}, {
+  active: () => props.open,
+})
+
 // 上下文挂在抽屉表面上而不是某个子面板上：焦点落在头部、页脚或关闭按钮时快捷键同样成立。
 // active 必须跟随 open：Presence 会等退场动画结束才卸载内容，这段时间 target 仍在、焦点也可能仍留在
 // 抽屉内，只靠 target 判定会让已关闭的抽屉继续占用快捷键上下文并覆盖其他编辑器

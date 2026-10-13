@@ -18,6 +18,8 @@ export interface AnimationFrameShortcutActions {
 
 interface UseAnimationFrameShortcutsOptions {
   actions: AnimationFrameShortcutActions
+  /** 宿主是编辑器抽屉（效果 / 动画编辑器会话）时置位：抽屉打开期间键盘归会话所有 */
+  allowInEditorDrawer?: boolean
   allowInModal?: boolean
   when: ShortcutWhen
 }
@@ -30,7 +32,7 @@ interface UseAnimationFrameShortcutsOptions {
  * 宿主只提供动作。撤销/重做不在此列：模态宿主没有历史体系，由各宿主自己决定。
  */
 export function useAnimationFrameShortcuts(options: UseAnimationFrameShortcutsOptions): void {
-  const { actions, allowInModal, when } = options
+  const { actions, allowInEditorDrawer, allowInModal, when } = options
   const definitions: ShortcutDefinition[] = [
     {
       execute: actions.handleAddFrame,
@@ -116,6 +118,7 @@ export function useAnimationFrameShortcuts(options: UseAnimationFrameShortcutsOp
 
   for (const definition of definitions) {
     useShortcut({
+      allowInEditorDrawer,
       allowInModal,
       execute: definition.execute,
       i18nKey: definition.i18nKey,

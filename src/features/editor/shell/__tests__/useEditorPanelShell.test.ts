@@ -299,6 +299,8 @@ describe('useEditorPanelShell', () => {
       expect(focusedBindings.map(binding => [binding.id, binding.keys])).toEqual(expectedBindings)
     }
     expect(effectBindings.every(binding => binding.allowInInput !== true)).toBe(true)
+    // 抽屉会话打开期间键盘归会话所有，未声明放行的绑定会被派发器整体挡下
+    expect(effectBindings.every(binding => binding.allowInEditorDrawer === true)).toBe(true)
 
     scope.stop()
   })

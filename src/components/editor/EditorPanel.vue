@@ -119,6 +119,7 @@ useShortcutContext({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   allowInInput: true,
   execute: () => {
     void handleEffectApply()
@@ -130,6 +131,7 @@ useShortcut({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   execute: () => {
     void handleEffectApply()
   },
@@ -140,6 +142,7 @@ useShortcut({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   allowInInput: true,
   execute: () => {
     void closeEffectEditor()
@@ -151,6 +154,7 @@ useShortcut({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   allowInInput: true,
   execute: () => {
     statementAnimationDialog.handleApply()
@@ -162,6 +166,7 @@ useShortcut({
 })
 
 useShortcut({
+  allowInEditorDrawer: true,
   allowInInput: true,
   execute: () => {
     statementAnimationDialog.requestClose()
