@@ -408,7 +408,7 @@ describe('gameManager', () => {
     })
   })
 
-  it('getGamePreviewAssets 会通过 VFS overlay 解析引擎绑定项目的图标', async () => {
+  it('getGamePreviewAssets 会按项目配置解析未登记目录的引擎图标', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       path: AbsPath.from('/engines/WebGAL/4.5.0'),
@@ -447,12 +447,7 @@ describe('gameManager', () => {
     expect(existsMock).not.toHaveBeenCalledWith('/games/vfs/icons/icon-192.png')
   })
 
-  it('getGamePreviewAssets 在绑定引擎不兼容时仍按项目静态资源解析图标', async () => {
-    dbEngineGetMock.mockResolvedValue(createTestEngine({
-      id: 'engine-legacy',
-      metadata: { webgalVersion: '4.6.0' },
-      path: AbsPath.from('/engines/WebGAL/4.6.0'),
-    }))
+  it('getGamePreviewAssets 在项目配置匹配不到引擎时按项目静态资源解析图标', async () => {
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -460,6 +455,7 @@ describe('gameManager', () => {
         version: '4.6.0',
       },
     })
+    engineFindByRefMock.mockResolvedValue(undefined)
     existsMock.mockImplementation(async (path: string) => path === '/games/vfs/icons/icon-192.png')
 
     await expect(gameManager.getGamePreviewAssets(AbsPath.from('/games/vfs'))).resolves.toEqual({
@@ -479,12 +475,14 @@ describe('gameManager', () => {
     vi.setSystemTime(new Date('2026-03-28T10:00:00.000Z'))
 
     await gameManager.registerGame(AbsPath.from('/games/demo'), {
+      engineId: 'engine-1',
       metadata: {
         name: 'Provided Name',
       },
     })
 
     expect(dbGameAddMock).toHaveBeenCalledWith(expect.objectContaining({
+      engineId: 'engine-1',
       metadata: {
         name: 'Provided Name',
       },
@@ -790,7 +788,7 @@ describe('gameManager', () => {
     })
   })
 
-  it('importGame 对带自带引擎入口的旧项目会要求选择兼容引擎并写入 project.wgcp', async () => {
+  it('importGame 对没有 project.wgcp 的旧项目会要求选择兼容引擎并写入引擎引用', async () => {
     mockExistingPaths(
       '/games/self-contained',
       '/games/self-contained/game/config.txt',
@@ -1498,7 +1496,7 @@ describe('gameManager', () => {
     )
   })
 
-  it('importGame 不会因为 project.wgcp 损坏且存在 index.html 而降级成自带引擎项目', async () => {
+  it('importGame 在 project.wgcp 损坏时直接拒绝导入', async () => {
     mockExistingPaths(
       '/games/broken-config',
       '/games/broken-config/game/config.txt',
@@ -1547,20 +1545,7 @@ describe('gameManager', () => {
     })
   })
 
-  it('getGameEnginePath 会忽略 broken availability 引擎，允许回退为仅编辑本地 game 目录', async () => {
-    dbEngineGetMock.mockResolvedValue(createTestEngine({
-      id: 'engine-1',
-      path: AbsPath.from('/engines/WebGAL/4.5.0'),
-      availability: 'broken',
-    }))
-
-    await expect(gameManager.getGameEnginePath({
-      path: AbsPath.from('/games/demo'),
-      engineId: 'engine-1',
-    })).resolves.toBeUndefined()
-  })
-
-  it('resolvePreviewSite 会在引擎绑定项目的引擎不可用时直接拒绝预览', async () => {
+  it('resolvePreviewSite 会在引擎不可用时直接拒绝预览', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       path: AbsPath.from('/engines/WebGAL/4.5.0'),
@@ -1586,16 +1571,8 @@ describe('gameManager', () => {
     })
   })
 
-  it('resolvePreviewSite 会在已绑定引擎记录缺失且配置引用无匹配时返回结构化缺失原因', async () => {
+  it('resolvePreviewSite 会在引擎记录缺失时拒绝预览', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(undefined)
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.2',
-      },
-    })
 
     await expect(gameManager.resolvePreviewSite({
       path: AbsPath.from('/games/demo'),
@@ -1606,36 +1583,8 @@ describe('gameManager', () => {
         reason: 'ENGINE_NOT_FOUND',
       },
     })
-  })
 
-  it('resolvePreviewSite 会在引擎主键失效时按项目配置引用回退引擎', async () => {
-    dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(createTestEngine({
-      id: 'engine-reinstalled',
-      path: AbsPath.from('/engines/WebGAL/4.6.2'),
-    }))
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.2',
-      },
-    })
-
-    await expect(gameManager.resolvePreviewSite({
-      path: AbsPath.from('/games/demo'),
-      engineId: 'engine-stale',
-    })).resolves.toMatchObject({
-      projectPath: '/games/demo',
-      enginePath: '/engines/WebGAL/4.6.2',
-    })
-
-    expect(engineFindByRefMock).toHaveBeenCalledWith({
-      id: 'default-publisher.default-engine',
-      version: '4.6.2',
-    })
-    // 探测性调用不携带游戏记录 id，不写库修复
-    expect(dbGameUpdateMock).not.toHaveBeenCalled()
+    expect(engineFindByRefMock).not.toHaveBeenCalled()
   })
 
   it('resolvePreviewSite 会拒绝协议不兼容的已绑定引擎', async () => {
@@ -1664,19 +1613,12 @@ describe('gameManager', () => {
     })
   })
 
-  it('resolveStaticAssetSite 会在绑定引擎不兼容时回退为项目静态站点', async () => {
+  it('resolveStaticAssetSite 会在引擎不可用时退化为项目静态站点', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
-      path: AbsPath.from('/engines/WebGAL/4.6.0'),
-      metadata: { webgalVersion: '4.6.0' },
+      path: AbsPath.from('/engines/WebGAL/4.6.2'),
+      availability: 'broken',
     }))
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.0',
-      },
-    })
 
     await expect(gameManager.resolveStaticAssetSite({
       path: AbsPath.from('/games/demo'),
@@ -1688,7 +1630,29 @@ describe('gameManager', () => {
     expect(resolveTemplatePathMock).not.toHaveBeenCalled()
   })
 
-  it('resolveStaticAssetSite 会在绑定引擎兼容时保留 VFS 静态资源上下文', async () => {
+  it('resolveStaticAssetSite 会按项目配置为未登记目录解析引擎层', async () => {
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: importedProjectEngineRef,
+    })
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-1',
+      path: AbsPath.from('/engines/WebGAL/4.6.2'),
+    }))
+    resolveTemplatePathMock.mockResolvedValue(AbsPath.from('/engines/WebGAL/4.6.2/game/template'))
+
+    await expect(gameManager.resolveStaticAssetSite({
+      path: AbsPath.from('/games/demo'),
+    })).resolves.toEqual({
+      projectPath: '/games/demo',
+      enginePath: '/engines/WebGAL/4.6.2',
+      templatePath: '/engines/WebGAL/4.6.2/game/template',
+    })
+
+    expect(dbEngineGetMock).not.toHaveBeenCalled()
+  })
+
+  it('resolveStaticAssetSite 会在引擎可用时保留 VFS 静态资源上下文', async () => {
     dbEngineGetMock.mockResolvedValue(createTestEngine({
       id: 'engine-1',
       path: AbsPath.from('/engines/WebGAL/4.6.2'),
@@ -1745,16 +1709,8 @@ describe('gameManager', () => {
     expect(dbGameUpdateMock).not.toHaveBeenCalled()
   })
 
-  it('ensureEditorRuntimeCompatible 会在已绑定引擎记录缺失且配置引用无匹配时返回结构化缺失原因', async () => {
+  it('ensureEditorRuntimeCompatible 会在引擎记录缺失时拒绝进入编辑器', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(undefined)
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.2',
-      },
-    })
 
     await expect(gameManager.ensureEditorRuntimeCompatible({
       path: AbsPath.from('/games/demo'),
@@ -1765,81 +1721,8 @@ describe('gameManager', () => {
         reason: 'ENGINE_NOT_FOUND',
       },
     })
-  })
 
-  it('ensureEditorRuntimeCompatible 会在引擎主键失效时按项目配置找回引擎并修复绑定', async () => {
-    dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.2',
-      },
-    })
-
-    const game = createTestGame({
-      availability: 'available',
-      engineId: 'engine-stale',
-      id: 'game-1',
-      path: AbsPath.from('/games/demo'),
-    })
-
-    await expect(gameManager.ensureEditorRuntimeCompatible(game)).resolves.toBeUndefined()
-
-    expect(engineFindByRefMock).toHaveBeenCalledWith({
-      id: 'default-publisher.default-engine',
-      version: '4.6.2',
-    })
-    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', { engineId: 'engine-reinstalled' })
-  })
-
-  it('重装引擎后首次进入编辑器会同步刷新当前游戏快照，状态栏不再读到悬空绑定', async () => {
-    dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.2',
-      },
-    })
-
-    const game = createTestGame({
-      availability: 'available',
-      engineId: 'engine-stale',
-      id: 'game-1',
-      path: AbsPath.from('/games/demo'),
-    })
-    workspaceStoreState.currentGame = game
-
-    await gameManager.ensureEditorRuntimeCompatible(game)
-
-    expect(workspaceStoreState.currentGame?.engineId).toBe('engine-reinstalled')
-  })
-
-  it('ensureEditorRuntimeCompatible 在绑定修复写库失败时仍正常放行', async () => {
-    dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
-    readProjectConfigMock.mockResolvedValue({
-      version: 1,
-      engine: {
-        id: 'default-publisher.default-engine',
-        version: '4.6.2',
-      },
-    })
-    dbGameUpdateMock.mockRejectedValue(new Error('write failed'))
-
-    const game = createTestGame({
-      availability: 'available',
-      engineId: 'engine-stale',
-      id: 'game-1',
-      path: AbsPath.from('/games/demo'),
-    })
-
-    await expect(gameManager.ensureEditorRuntimeCompatible(game)).resolves.toBeUndefined()
-
-    expect(warnMock).toHaveBeenCalledWith(expect.stringContaining('[引擎绑定修复]'))
+    expect(engineFindByRefMock).not.toHaveBeenCalled()
   })
 
   it('importGame 遇到不存在的目录时抛出 DIR_NOT_FOUND', async () => {
@@ -2258,6 +2141,7 @@ describe('gameManager', () => {
       id: 'game-1',
       path: '/games/demo',
       pathLookupKey: '/games/demo',
+      engineId: 'engine-1',
       createdAt: 0,
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
       status: 'created',
@@ -2342,6 +2226,7 @@ describe('gameManager', () => {
       id: 'game-1',
       path: '/games/demo',
       pathLookupKey: '/games/demo',
+      engineId: 'engine-1',
       createdAt: 0,
       lastModified: new Date('2026-03-28T10:00:00.000Z').getTime(),
       status: 'created',

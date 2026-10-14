@@ -141,14 +141,6 @@ describe('engineSwitch.switchEngine', () => {
     dbGameUpdateMock.mockResolvedValue(undefined)
   })
 
-  it('在自带引擎项目上拒绝切换', async () => {
-    const game = createTestGame({ engineId: undefined })
-    const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
-
-    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toBeInstanceOf(AppError)
-    expect(writeProjectConfigMock).not.toHaveBeenCalled()
-  })
-
   it('在旧引擎记录缺失时直接拒绝，不产生任何副作用', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
     const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })

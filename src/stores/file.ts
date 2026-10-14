@@ -1,4 +1,4 @@
-import { exists, readFile, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
+import { readFile, stat, watch as watchFs } from '@tauri-apps/plugin-fs'
 import { LRUCache } from 'lru-cache'
 import { defineStore } from 'pinia'
 
@@ -6,14 +6,12 @@ import { vfsCmds } from '~/commands/vfs'
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath, RelPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
-import { clearDirectoryItemsCache, invalidateDirectoryItemsCache, readDirectoryItemsCached } from '~/services/directory-cache'
+import { clearDirectoryItemsCache, invalidateDirectoryItemsCache } from '~/services/directory-cache'
 import { hasPendingFileWrite, matchesPendingFileWrite } from '~/services/file-write-echo-registry'
 import { gameManager } from '~/services/game-manager'
 import { pathOperationRegistry } from '~/services/path-operation-registry'
-import { projectConfigPath } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { AppError } from '~/types/errors'
-import { FileViewerItem } from '~/types/file-viewer'
 import { buildUniqueEntryName } from '~/utils/entry-name'
 import { handleError } from '~/utils/error-handler'
 
@@ -137,16 +135,22 @@ export const useFileStore = defineStore('file', () => {
     resolveInitialized = r
   }))
 
-  function getCurrentEnginePath(): AbsPath | undefined {
-    return enginePath
+  interface VfsContext {
+    projectPath: AbsPath
+    enginePath: AbsPath
+    templatePath: AbsPath | undefined
   }
 
-  function getCurrentProjectPath(): AbsPath | undefined {
-    return workspaceStore.currentGame?.path ?? projectPath
-  }
+  /**
+   * VFS 上下文：项目 upper + 引擎 lower + 可选模板 lower。
+   * 项目未打开或引擎不可用时没有上下文，此时文件视图操作直接失败，不回退到物理路径。
+   */
+  function requireVfsContext(): VfsContext {
+    if (!projectPath || !enginePath) {
+      throw new AppError('FS_ERROR', '当前项目没有可用的引擎，无法解析文件视图')
+    }
 
-  function getCurrentTemplatePath(): AbsPath | undefined {
-    return templatePath
+    return { projectPath, enginePath, templatePath }
   }
 
   function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
@@ -172,36 +176,42 @@ export const useFileStore = defineStore('file', () => {
    * @param options.nextEnginePath 切换后的引擎路径。引擎切换路径上必须显式传入，
    *   因为此时 `workspaceStore.currentGame.engineId` 仍是切换前的快照
    *   （上层 modal 在 switchEngine 返回后才会调 refreshCurrentGameSnapshot），
-   *   仅靠当前 game 反查会拿到旧引擎路径。
+   *   仅靠当前 game 反查会拿到旧引擎路径。传入后模板层默认回到新引擎的默认模板。
    * @param options.nextTemplatePath 切换后的模板路径。模板切换时必须显式传入；
    *   `null` 表示回到"跟随当前引擎默认"，此时后端会从 enginePath 推导默认 template_lower。
+   *   两个层都省略时按当前游戏快照重新解析。
    */
   async function refreshTemplateOverlay(
-    projectPath: AbsPath,
+    gamePath: AbsPath,
     options: { nextEnginePath?: AbsPath, nextTemplatePath?: AbsPath | null } = {},
   ): Promise<void> {
-    const currentProjectPath = getCurrentProjectPath()
-    if (!currentProjectPath || !AbsPath.equals(projectPath, currentProjectPath)) {
+    const game = workspaceStore.currentGame
+    if (!projectPath || !game || !AbsPath.equals(gamePath, projectPath)) {
       return
     }
 
-    if (options.nextEnginePath !== undefined) {
+    if (options.nextEnginePath === undefined) {
+      // 引擎未变：按当前游戏快照重新解析（切换流程的快照可能落后，由调用方显式传入）
+      const site = await gameManager.resolvePreviewSite(game)
+      enginePath = site.enginePath
+      templatePath = options.nextTemplatePath === undefined
+        ? site.templatePath
+        : options.nextTemplatePath ?? undefined
+    } else {
+      // 引擎已切换：模板未显式给出时回到新引擎的默认模板
       enginePath = options.nextEnginePath
-    } else if (workspaceStore.currentGame) {
-      try {
-        const nextEnginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
-        enginePath = nextEnginePath
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error)
-        void logger.warn(`[FileStore] 刷新 enginePath 失败: ${msg}`)
-      }
-    }
-
-    if (options.nextTemplatePath !== undefined) {
       templatePath = options.nextTemplatePath ?? undefined
     }
 
-    const templateRoot = AbsPath.join(currentProjectPath, RelPath.from('game/template'))
+    // 引擎不可用时不会建立文件树；切换到可用引擎后在这里补建，并通知订阅者重读
+    if (!unwatch) {
+      const rootPath = projectGameRoot(projectPath)
+      await startWatchingProjectTree(rootPath)
+      fileSystemEvents.emit({ type: 'directory:modified', path: rootPath })
+      return
+    }
+
+    const templateRoot = AbsPath.join(projectPath, RelPath.from('game/template'))
 
     for (const item of items.values()) {
       if (!item.isDir) {
@@ -220,7 +230,7 @@ export const useFileStore = defineStore('file', () => {
 
     // 失效父 game 目录：`game/template` 的 source/existence 字段是在加载父目录时
     // 写入的，只刷新模板子树自身无法让父目录下次重渲染时看到新 lower 配置。
-    const parentGameDir = AbsPath.join(currentProjectPath, RelPath.from('game'))
+    const parentGameDir = AbsPath.join(projectPath, RelPath.from('game'))
     const parentItem = getItemByPath(parentGameDir)
     if (parentItem?.isDir) {
       parentItem.loadRevision += 1
@@ -318,43 +328,6 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  function createFileSystemItemFromDirectoryEntry(
-    entry: FileViewerItem,
-    parentId: string | undefined,
-  ): FileSystemItem {
-    const entryPath = AbsPath.from(entry.path)
-    const id = getOrCreateItemId(entryPath)
-    const metadata = {
-      size: entry.size,
-      modifiedAt: entry.modifiedAt,
-      createdAt: entry.createdAt,
-    }
-
-    if (entry.isDir) {
-      return {
-        id,
-        name: entry.name,
-        path: entryPath,
-        parentId,
-        isDir: true,
-        childIds: [],
-        isLoaded: false,
-        loadRevision: 0,
-        ...metadata,
-      }
-    }
-
-    return {
-      id,
-      name: entry.name,
-      path: entryPath,
-      parentId,
-      isDir: false,
-      mimeType: entry.mimeType || mime.getType(entry.path) || '',
-      ...metadata,
-    }
-  }
-
   function createFileSystemItemFromVfsEntry(entry: VfsDirEntry, parentPath: AbsPath, parentId: string | undefined): FileSystemItem {
     const path = AbsPath.append(parentPath, entry.name)
     const id = getOrCreateItemId(path)
@@ -448,21 +421,14 @@ export const useFileStore = defineStore('file', () => {
     parent.loadingRevision = loadRevision
     const loadPromise = (async () => {
       try {
-        let resolvedItems: FileSystemItem[]
-        const currentTemplatePath = getCurrentTemplatePath()
-
-        if (enginePath && projectPath) {
-          const entries = await vfsCmds.listDir({
-            projectPath,
-            enginePath,
-            relPath: toRelativeProjectPath(path),
-            templatePath: currentTemplatePath,
-          })
-          resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
-        } else {
-          const entries = await readDirectoryItemsCached(path, { includeStats: true })
-          resolvedItems = entries.map(entry => createFileSystemItemFromDirectoryEntry(entry, parentId))
-        }
+        const context = requireVfsContext()
+        const entries = await vfsCmds.listDir({
+          projectPath: context.projectPath,
+          enginePath: context.enginePath,
+          relPath: requireProjectRelativePath(path),
+          templatePath: context.templatePath,
+        })
+        const resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
 
         if (parent.loadRevision !== loadRevision) {
           return
@@ -496,10 +462,6 @@ export const useFileStore = defineStore('file', () => {
   }
 
   async function getFolderContents(path: AbsPath): Promise<FileSystemItem[]> {
-    if (!enginePath && !(await exists(path))) {
-      throw new AppError('DIR_NOT_FOUND', '目录不存在')
-    }
-
     let parentId = pathToId.get(path)
 
     // LRU 脱同步：pathToId 仍持有映射但 items 已驱逐该条目
@@ -624,15 +586,13 @@ export const useFileStore = defineStore('file', () => {
     ])
   }
 
-  function toRelativeProjectPath(path: AbsPath): RelPath {
-    if (!projectPath) {
-      return RelPath.empty()
-    }
-
+  /** 项目内相对路径（项目根为空路径）。视图操作只接受项目内路径，越界即失败而不是退化成根路径 */
+  function requireProjectRelativePath(path: AbsPath): RelPath {
+    const context = requireVfsContext()
     try {
-      return AbsPath.relativize(path, projectPath)
+      return AbsPath.relativize(path, context.projectPath)
     } catch {
-      return RelPath.empty()
+      throw new AppError('PATH_DENIED', '路径不在当前项目内', { details: { path } })
     }
   }
 
@@ -640,36 +600,23 @@ export const useFileStore = defineStore('file', () => {
     sourcePath: AbsPath,
     targetPath: AbsPath,
   ): Promise<{
-    currentEnginePath: AbsPath
-    currentProjectPath: AbsPath
+    context: VfsContext
     nextPath: AbsPath
     nextRelPath: RelPath
     relSourcePath: RelPath
-  } | undefined> {
-    const currentProjectPath = getCurrentProjectPath()
-    const currentEnginePath = getCurrentEnginePath()
-    const currentTemplatePath = getCurrentTemplatePath()
-    if (!currentEnginePath || !currentProjectPath) {
-      return undefined
-    }
-
-    const relSourcePath = toRelativeProjectPath(sourcePath)
-    const relTargetDir = toRelativeProjectPath(targetPath)
-    if (
-      RelPath.equals(relSourcePath, RelPath.empty())
-      || (
-        RelPath.equals(relTargetDir, RelPath.empty())
-        && !AbsPath.equals(targetPath, currentProjectPath)
-      )
-    ) {
-      return undefined
+  }> {
+    const context = requireVfsContext()
+    const relSourcePath = requireProjectRelativePath(sourcePath)
+    const relTargetDir = requireProjectRelativePath(targetPath)
+    if (RelPath.equals(relSourcePath, RelPath.empty())) {
+      throw new AppError('PATH_DENIED', '不能复制或移动项目根目录')
     }
 
     const sourceName = AbsPath.basename(sourcePath)
     const resolvedSourcePath = await vfsCmds.resolvePath({
-      projectPath: currentProjectPath,
-      enginePath: currentEnginePath,
-      templatePath: currentTemplatePath,
+      projectPath: context.projectPath,
+      enginePath: context.enginePath,
+      templatePath: context.templatePath,
       relPath: relSourcePath,
     })
     const sourceInfo = await stat(resolvedSourcePath)
@@ -682,9 +629,8 @@ export const useFileStore = defineStore('file', () => {
     const nextRelPath = RelPath.append(relTargetDir, uniqueName)
 
     return {
-      currentEnginePath,
-      currentProjectPath,
-      nextPath: AbsPath.join(currentProjectPath, nextRelPath),
+      context,
+      nextPath: AbsPath.join(context.projectPath, nextRelPath),
       nextRelPath,
       relSourcePath,
     }
@@ -928,44 +874,46 @@ export const useFileStore = defineStore('file', () => {
     }
   }
 
-  async function initialize(): Promise<void> {
-    if (!workspaceStore.CWD) {
+  /** 解析当前游戏的 VFS 上下文；引擎不可用时保持无上下文，由 requireVfsContext 拒绝后续操作 */
+  async function applyVfsContext(): Promise<void> {
+    const game = workspaceStore.currentGame
+    projectPath = game?.path
+    if (!game) {
+      enginePath = undefined
+      templatePath = undefined
       return
     }
-    if (unwatch) {
+
+    const site = await gameManager.resolvePreviewSite(game)
+    enginePath = site.enginePath
+    templatePath = site.templatePath
+  }
+
+  function projectGameRoot(gamePath: AbsPath): AbsPath {
+    return AbsPath.join(gamePath, RelPath.from('game'))
+  }
+
+  /** 建立项目文件树：加载 `game/` 根目录并挂上磁盘监听 */
+  async function startWatchingProjectTree(rootPath: AbsPath): Promise<void> {
+    await getFolderContents(rootPath)
+    unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
+  }
+
+  async function initialize(): Promise<void> {
+    const cwd = workspaceStore.CWD
+    if (!cwd || unwatch) {
       return
     }
 
     try {
-      projectPath = workspaceStore.currentGame?.path
-      const configPath = projectPath ? projectConfigPath(projectPath) : undefined
-      const hasProjectConfig = configPath ? await exists(configPath) : false
-      if (hasProjectConfig && workspaceStore.currentGame) {
-        try {
-          const site = await gameManager.resolvePreviewSite(workspaceStore.currentGame)
-          enginePath = site.enginePath
-          templatePath = site.templatePath
-        } catch (error) {
-          const msg = error instanceof Error ? error.message : String(error)
-          void logger.warn(`[FileStore] 解析项目站点失败，回退仅引擎路径: ${msg}`)
-          const fallbackEnginePath = await gameManager.getGameEnginePath(workspaceStore.currentGame)
-          enginePath = fallbackEnginePath
-          templatePath = undefined
-        }
-      } else {
-        enginePath = undefined
-        templatePath = undefined
-      }
-
-      const rootPath = AbsPath.join(AbsPath.from(workspaceStore.CWD), RelPath.from('game'))
-      await getFolderContents(rootPath)
-      unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
+      await applyVfsContext()
+      await startWatchingProjectTree(projectGameRoot(cwd))
       resolveInitialized()
     } catch (error) {
       resolveInitialized()
       const msg = error instanceof Error ? error.message : String(error)
-      void logger.error(`[FileStore] 初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${msg}`)
-      throw new AppError('FS_ERROR', `初始化工作目录 ${workspaceStore.CWD} 文件系统失败: ${msg}`)
+      void logger.error(`[FileStore] 初始化工作目录 ${cwd} 文件系统失败: ${msg}`)
+      throw new AppError('FS_ERROR', `初始化工作目录 ${cwd} 文件系统失败: ${msg}`)
     }
   }
 
@@ -983,92 +931,66 @@ export const useFileStore = defineStore('file', () => {
     }
   }, { immediate: true })
 
-  const isVfs = $computed(() => !!enginePath)
-
   return $$({
-    deleteEntry: async (path: AbsPath, permanent: boolean): Promise<boolean> => {
-      const currentProjectPath = getCurrentProjectPath()
-      const currentEnginePath = getCurrentEnginePath()
-      const currentTemplatePath = getCurrentTemplatePath()
-      if (!currentEnginePath || !currentProjectPath) {
-        return false
-      }
-
-      const relPath = toRelativeProjectPath(path)
+    deleteEntry: async (path: AbsPath, permanent: boolean): Promise<void> => {
+      const context = requireVfsContext()
+      const relPath = requireProjectRelativePath(path)
       if (RelPath.equals(relPath, RelPath.empty())) {
-        return false
+        throw new AppError('FS_ERROR', '不能通过资源视图删除项目根目录')
       }
 
       await vfsCmds.deletePath({
-        projectPath: currentProjectPath,
-        enginePath: currentEnginePath,
-        templatePath: currentTemplatePath,
+        projectPath: context.projectPath,
+        enginePath: context.enginePath,
+        templatePath: context.templatePath,
         relPath,
         permanent,
       })
       await handleRemoveEvent(path)
-      return true
     },
-    copyEntry: async (sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath | undefined> => {
-      const moveTarget = await prepareVfsPasteTarget(sourcePath, targetPath)
-      if (!moveTarget) {
-        return undefined
-      }
-
+    copyEntry: async (sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> => {
+      const target = await prepareVfsPasteTarget(sourcePath, targetPath)
       const copiedRelPath = await vfsCmds.copyPath({
-        projectPath: moveTarget.currentProjectPath,
-        enginePath: moveTarget.currentEnginePath,
-        templatePath: getCurrentTemplatePath(),
-        relPath: moveTarget.relSourcePath,
-        targetRelPath: moveTarget.nextRelPath,
+        projectPath: target.context.projectPath,
+        enginePath: target.context.enginePath,
+        templatePath: target.context.templatePath,
+        relPath: target.relSourcePath,
+        targetRelPath: target.nextRelPath,
       })
-      const nextPath = AbsPath.join(moveTarget.currentProjectPath, copiedRelPath)
+      const nextPath = AbsPath.join(target.context.projectPath, copiedRelPath)
       await handleCreateEvent(nextPath, getItemByPath(targetPath)?.id)
       return nextPath
     },
     ensureWritable: async (path: AbsPath): Promise<AbsPath> => {
-      const currentProjectPath = getCurrentProjectPath()
-      const currentEnginePath = getCurrentEnginePath()
-      const currentTemplatePath = getCurrentTemplatePath()
-      if (!currentEnginePath || !currentProjectPath) {
-        return path
-      }
-
-      const relPath = toRelativeProjectPath(path)
+      const context = requireVfsContext()
+      const relPath = requireProjectRelativePath(path)
       if (RelPath.equals(relPath, RelPath.empty())) {
         return path
       }
 
       return await vfsCmds.ensureWritable({
-        projectPath: currentProjectPath,
-        enginePath: currentEnginePath,
-        templatePath: currentTemplatePath,
+        projectPath: context.projectPath,
+        enginePath: context.enginePath,
+        templatePath: context.templatePath,
         relPath,
       })
     },
     getFolderContents,
     initialized,
     updateItemPath,
-    isVfs,
     applyPathMutation,
     invalidatePathOperationCaches,
     resolveFilePath: async (path: AbsPath): Promise<AbsPath> => {
-      const currentProjectPath = getCurrentProjectPath()
-      const currentEnginePath = getCurrentEnginePath()
-      const currentTemplatePath = getCurrentTemplatePath()
-      if (!currentEnginePath || !currentProjectPath) {
-        return path
-      }
-
-      const relPath = toRelativeProjectPath(path)
+      const context = requireVfsContext()
+      const relPath = requireProjectRelativePath(path)
       if (RelPath.equals(relPath, RelPath.empty())) {
         return path
       }
 
       return await vfsCmds.resolvePath({
-        projectPath: currentProjectPath,
-        enginePath: currentEnginePath,
-        templatePath: currentTemplatePath,
+        projectPath: context.projectPath,
+        enginePath: context.enginePath,
+        templatePath: context.templatePath,
         relPath,
       })
     },

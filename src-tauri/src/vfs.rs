@@ -255,7 +255,7 @@ impl OverlayFs {
     ) -> Result<ResolvedPhysicalPath, VfsError> {
         let category = classify_path(logical_path);
 
-        if category.prefers_upper_layer() || self.engine_lower.is_none() {
+        if category.prefers_upper_layer() {
             if let Some(resolved) = self.try_resolve_upper(logical_path)? {
                 return Ok(resolved);
             }
@@ -279,7 +279,8 @@ impl OverlayFs {
             return Err(VfsError::NotFound);
         }
 
-        // 仅对允许 upper fallback 的路径继续解析 project upper。
+        // 引擎运行时之外的路径允许回退到项目 upper：模板与游戏内容可被 overlay 覆盖，
+        // 无引擎层的纯目录站点（引擎自身、未绑定工程的静态资源）也在这里命中。
         if let Some(resolved) = self.try_resolve_upper(logical_path)? {
             return Ok(resolved);
         }
@@ -1258,6 +1259,32 @@ mod tests {
             classify_path(Path::new("game/scene/start.txt")),
             PathCategory::GameContent
         );
+    }
+
+    #[test]
+    fn resolve_physical_path_serves_plain_directory_without_engine_lower() {
+        let root_dir = create_temp_dir();
+        let root = root_dir.path().to_path_buf();
+        fs::write(root.join("index.html"), "plain site").expect("index should be written");
+        fs::create_dir_all(root.join("game")).expect("game directory should be created");
+        fs::write(root.join("game").join("start.txt"), "scene").expect("scene should be written");
+
+        let overlay =
+            OverlayFs::new(root.clone(), None, None).expect("plain directory overlay should build");
+        let canonical_root = root.canonicalize().expect("root should canonicalize");
+
+        for logical_path in ["index.html", "game/start.txt"] {
+            let resolved = overlay
+                .resolve_physical_path(Path::new(logical_path))
+                .expect("plain directory path should resolve from upper");
+            assert_eq!(resolved.physical_path, root.join(logical_path));
+            assert_eq!(resolved.canonical_root, canonical_root);
+        }
+
+        assert!(matches!(
+            overlay.resolve_physical_path(Path::new("assets/js/main.js")),
+            Err(VfsError::NotFound)
+        ));
     }
 
     #[test]

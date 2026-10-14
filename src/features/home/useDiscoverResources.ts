@@ -21,7 +21,6 @@ import type { DiscoveredResource } from './discovered-resource'
 import type { Engine, Game, Template } from '~/database/model'
 import type { HomeResourceImportOutcome } from '~/features/home/shared/home-resource-import'
 import type { HomeResourceImportMessages, HomeResourceType } from '~/features/home/shared/useHomeResourceImportActions'
-import type { StaticSiteConfig } from '~/types/server'
 
 export type { DiscoveredResource } from './discovered-resource'
 
@@ -83,13 +82,7 @@ async function discoverGames(): Promise<DiscoveredResource[]> {
   return Promise.all(
     games.map(async (resource) => {
       const snapshot = await gameManager.getGameSnapshot(resource.path)
-      let previewSite: StaticSiteConfig | undefined
-
-      try {
-        previewSite = await gameManager.resolvePreviewSite({ path: resource.path })
-      } catch {
-        previewSite = { projectPath: resource.path }
-      }
+      const previewSite = await gameManager.resolveStaticAssetSite({ path: resource.path })
 
       return {
         ...resource,

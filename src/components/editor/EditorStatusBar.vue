@@ -52,7 +52,8 @@ const isResourceIndexDegraded = $computed(() => resourceIndex.status.value === '
 
 const currentState = $computed(() => editorStore.currentState)
 
-const isEngineBound = $computed(() => !!workspaceStore.currentGame?.engineId)
+// 状态栏可能比 currentGame 更早渲染，没有当前游戏时不显示警告外观
+const hasCurrentGame = $computed(() => !!workspaceStore.currentGame)
 
 let engineLabel = $ref<string>()
 let isEngineResolved = $ref(false)
@@ -79,7 +80,7 @@ watch(() => workspaceStore.currentGame?.engineId, async (engineId) => {
 // 绑定引擎不可用（记录缺失或资源不可用）时，两个切换入口都改用警告外观。
 // 解析完成前不算不可用，否则每次进入编辑器都会闪一下警告色。
 const isBoundEngineUnavailable = $computed(() =>
-  isEngineBound && isEngineResolved && !engineLabel,
+  hasCurrentGame && isEngineResolved && !engineLabel,
 )
 
 const STATUS_CHIP_CLASS = 'flex gap-1 items-center cursor-pointer transition-colors'
@@ -87,7 +88,7 @@ const STATUS_CHIP_CLASS = 'flex gap-1 items-center cursor-pointer transition-col
 // 模板层解析不出来时（例如绑定的引擎已被卸载）也要警告，
 // 否则模板层已经断掉，外观却还和正常配置一样
 const isTemplateEntryUnavailable = $computed(() =>
-  isBoundEngineUnavailable || (isEngineBound && toValue(isTemplateResolvable) === false),
+  isBoundEngineUnavailable || (hasCurrentGame && toValue(isTemplateResolvable) === false),
 )
 
 /** 引擎不可用时入口仍然保留（那是修复路径），但外观要说明当前状态 */
@@ -214,7 +215,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
 <template>
   <div data-testid="editor-status-bar" class="text-xs px-3 border-t bg-card flex h-6 items-center">
     <div data-tour="resource-switch" class="flex gap-3 min-w-0 items-center">
-      <Tooltip v-if="isEngineBound" :delay-duration="0" :ignore-non-keyboard-focus="true">
+      <Tooltip v-if="hasCurrentGame" :delay-duration="0" :ignore-non-keyboard-focus="true">
         <TooltipTrigger as-child>
           <button
             :aria-label="$t('edit.statusBar.selectEngine')"
@@ -230,7 +231,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
         </TooltipContent>
       </Tooltip>
 
-      <Tooltip v-if="isEngineBound" :delay-duration="0" :ignore-non-keyboard-focus="true">
+      <Tooltip v-if="hasCurrentGame" :delay-duration="0" :ignore-non-keyboard-focus="true">
         <TooltipTrigger as-child>
           <button
             :aria-label="$t('edit.statusBar.selectTemplate')"

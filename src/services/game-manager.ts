@@ -10,7 +10,6 @@ import {
   assertEngineEditorCompatible,
   engineManager,
   evaluateEngineEditorCompatibility,
-  isEngineEditorCompatible,
   isEngineUsable,
 } from '~/services/engine-manager'
 import { gameConfigPath, gameCoverPath, projectConfigPath } from '~/services/platform/app-paths'
@@ -46,10 +45,10 @@ import type {
   PrepareManagedImportResult,
 } from '~/types/managed-import'
 import type { EngineRef, ProjectConfig, TemplateBinding } from '~/types/project-config'
-import type { StaticSiteConfig } from '~/types/server'
+import type { PreviewSiteConfig, StaticSiteConfig } from '~/types/server'
 
 interface RegisterGameOptions {
-  engineId?: string
+  engineId: string
   metadata?: GameMetadata
   previewAssets?: GamePreviewAssets
   status?: Game['status']
@@ -156,7 +155,7 @@ async function resolvePhysicalGameIconPreviewPath(rootPath: AbsPath): Promise<Ga
 }
 
 async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePreviewLookupResult> {
-  const site = await resolveStaticAssetSiteForIconLookup(gamePath)
+  const site = await resolveStaticAssetSite({ path: gamePath })
 
   return buildGameIconLookupResult(await resolveProjectIconPreviewPath(
     gamePath,
@@ -164,16 +163,8 @@ async function resolveGameIconPreviewPath(gamePath: AbsPath): Promise<GamePrevie
   ))
 }
 
-async function resolveStaticAssetSiteForIconLookup(gamePath: AbsPath): Promise<StaticSiteConfig | undefined> {
-  try {
-    return await resolveStaticAssetSite({ path: gamePath })
-  } catch {
-    return undefined
-  }
-}
-
-async function gameIconPathExists(context: GameIconPathExistsContext, site: StaticSiteConfig | undefined): Promise<boolean> {
-  if (!site?.enginePath) {
+async function gameIconPathExists(context: GameIconPathExistsContext, site: StaticSiteConfig): Promise<boolean> {
+  if (!site.enginePath) {
     return exists(context.absolutePath)
   }
 
@@ -401,7 +392,7 @@ async function refreshRegisteredGameSnapshot(gamePath: AbsPath, options?: GamePr
 
 async function registerGame(
   gamePath: AbsPath,
-  options: RegisterGameOptions = {},
+  options: RegisterGameOptions,
 ): Promise<string> {
   const { engineId, status = 'created' } = options
   let { metadata, previewAssets } = options
@@ -445,80 +436,43 @@ async function readProjectConfigSafe(gamePath: AbsPath): Promise<ProjectConfig |
   }
 }
 
-// id 仅用于自愈绑定：探测性调用方（如图标解析、资源发现）只持有路径，不携带游戏记录 id
-type BoundGameRef = Pick<Game, 'engineId' | 'path'> & Partial<Pick<Game, 'id'>>
+/** 已登记的游戏记录：引擎层是内容读取与预览的唯一来源 */
+type BoundGame = Pick<Game, 'engineId' | 'path'>
 
-async function resolveBoundEngine(
-  game: BoundGameRef,
-): Promise<{ config?: ProjectConfig, engine?: Engine }> {
-  const config = await readProjectConfigSafe(game.path)
-
-  if (game.engineId) {
-    const engine = await db.engines.get(game.engineId)
-    if (engine) {
-      return { config, engine }
-    }
-
-    // 引擎记录重建后主键引用会悬空，回退到 project.wgcp 的引擎引用找回记录
-    const rebound = config?.engine
-      ? await engineManager.findEngineByRef(config.engine)
-      : undefined
-    if (rebound) {
-      await healStaleEngineBinding(game, rebound)
-    }
-    return { config, engine: rebound }
-  }
-
-  if (!config?.engine) {
-    return { config }
-  }
-
-  const engine = await engineManager.findEngineByRef(config.engine)
-  return { config, engine }
+/** 按路径探测的调用方（导入检查、未登记目录的图标解析）只持有路径，可能附带已知绑定 id */
+interface ProjectPathRef {
+  path: AbsPath
+  engineId?: string
 }
 
-async function healStaleEngineBinding(game: BoundGameRef, engine: Engine): Promise<void> {
-  if (!game.id) {
-    return
+/** 登记的游戏必定绑定引擎记录；绑定悬空即视为工程不可用，不回退到项目配置 */
+async function requireBoundEngine(game: BoundGame): Promise<Engine> {
+  const engine = await db.engines.get(game.engineId)
+  if (!engine) {
+    throw new AppError('IO_ERROR', '引擎不存在', {
+      details: { reason: 'ENGINE_NOT_FOUND' },
+    })
   }
 
-  try {
-    await db.games.update(game.id, { engineId: engine.id })
-    // 内存快照必须一起跟上：状态栏、模板标签与切换弹窗都读 currentGame.engineId，
-    // 只修 DB 会让它们在本次会话内继续停留在悬空旧值上
-    applyCurrentGamePatch(game.id, { engineId: engine.id })
-    logger.info(
-      `[引擎绑定修复] 游戏 ${game.path} 绑定的引擎记录已失效，`
-      + `已按项目配置重新绑定到 ${engine.name}@${engine.version ?? '未知'}(${engine.id})`,
-    )
-  } catch (error) {
-    logger.warn(`[引擎绑定修复] 更新绑定失败: 游戏ID=${game.id} - ${error}`)
-  }
+  return engine
 }
 
-function assertBoundEngineFound(isEngineBound: boolean, engine: Engine | undefined): void {
-  if (!isEngineBound || engine) {
-    return
-  }
-
-  throw new AppError('IO_ERROR', '引擎不存在', {
-    details: { reason: 'ENGINE_NOT_FOUND' },
-  })
+async function findEngineByProjectConfig(gamePath: AbsPath): Promise<Engine | undefined> {
+  const config = await readProjectConfigSafe(gamePath)
+  return config?.engine ? await engineManager.findEngineByRef(config.engine) : undefined
 }
 
-function assertBoundEngineEditorCompatible(isEngineBound: boolean, engine: Engine | undefined): void {
-  assertBoundEngineFound(isEngineBound, engine)
-  if (isEngineBound && engine) {
-    assertEngineEditorCompatible(engine)
-  }
+async function resolveUsableEngineForPath(ref: ProjectPathRef): Promise<Engine | undefined> {
+  const engine = ref.engineId
+    ? await db.engines.get(ref.engineId)
+    : await findEngineByProjectConfig(ref.path)
+
+  return engine && isEngineUsable(engine) ? engine : undefined
 }
 
-async function resolveBoundTemplatePath(config: ProjectConfig | undefined, engine: Engine | undefined): Promise<AbsPath | undefined> {
-  if (!config?.engine) {
-    return undefined
-  }
-
-  return await templateSwitch.resolveTemplatePath(config.template, engine)
+async function resolveBoundTemplatePath(gamePath: AbsPath, engine: Engine): Promise<AbsPath | undefined> {
+  const config = await readProjectConfigSafe(gamePath)
+  return await templateSwitch.resolveTemplatePath(config?.template, engine)
 }
 
 function buildImportDependencyContext(
@@ -693,33 +647,43 @@ async function inspectTemplateDependencyIssue(
   }
 }
 
-function buildConfiguredEngineIssue(
-  engineRef: EngineRef,
-  engine: Engine | undefined,
-): ImportDependencyResolutionContext['engine'] {
+interface ConfiguredEngineCheck {
+  /** 配置里的引擎引用可直接使用时返回记录 */
+  engine?: Engine
+  /** 需要用户重新选择引擎时返回原因 */
+  issue?: ImportDependencyResolutionContext['engine']
+}
+
+function checkConfiguredEngine(engineRef: EngineRef, engine: Engine | undefined): ConfiguredEngineCheck {
   if (!engine) {
     return {
-      current: engineRef,
-      reason: 'missing',
+      issue: {
+        current: engineRef,
+        reason: 'missing',
+      },
     }
   }
 
   const compatibility = evaluateEngineEditorCompatibility(engine)
   if (compatibility.compatible) {
-    return undefined
+    return { engine }
   }
 
   if (compatibility.issue === 'unavailable') {
     return {
-      current: engineRef,
-      reason: 'unavailable',
+      issue: {
+        current: engineRef,
+        reason: 'unavailable',
+      },
     }
   }
 
   return {
-    compatibilityIssue: compatibility.issue,
-    current: engineRef,
-    reason: 'incompatible',
+    issue: {
+      compatibilityIssue: compatibility.issue,
+      current: engineRef,
+      reason: 'incompatible',
+    },
   }
 }
 
@@ -763,20 +727,15 @@ async function importConfiguredGame(
     })
   }
 
-  let matchedEngine: Engine | undefined
   const context = buildImportDependencyContext('configured', inspection.metadata)
-
-  if (config.engine) {
-    matchedEngine = await engineManager.findEngineByRef(config.engine)
-    context.engine = buildConfiguredEngineIssue(config.engine, matchedEngine)
-    if (!context.engine && matchedEngine) {
-      context.resolvedEngineId = matchedEngine.id
-    }
-  } else {
+  const configured = config.engine
+    ? checkConfiguredEngine(config.engine, await engineManager.findEngineByRef(config.engine))
+    : { issue: { reason: 'missing' as const } }
+  context.engine = configured.issue
+  if (configured.engine) {
+    context.resolvedEngineId = configured.engine.id
+  } else if (!config.engine) {
     logger.warn(`engine 字段缺失，引导用户选择兼容引擎: ${gamePath}`)
-    context.engine = {
-      reason: 'missing',
-    }
   }
 
   if (config.template) {
@@ -784,28 +743,22 @@ async function importConfiguredGame(
   }
 
   const decision = await resolveImportDependencyDecision(context, options)
-  const finalEngine = context.engine
-    ? await resolveUsableEngine(decision.engineId)
-    : matchedEngine
-  const nextEngineRef = finalEngine ? buildProjectEngineRef(finalEngine) : undefined
+  const finalEngine = configured.engine ?? await resolveUsableEngine(decision.engineId)
   const templateDecision = context.template ? decision.template : undefined
-  if (templateDecision && finalEngine) {
+  if (templateDecision) {
     await assertTemplateDecisionUsable(templateDecision, finalEngine)
   }
 
-  let nextConfig = applyTemplateDecision(config, templateDecision)
-  if (nextEngineRef) {
-    nextConfig = {
-      ...nextConfig,
-      engine: nextEngineRef,
-    }
+  const nextConfig = {
+    ...applyTemplateDecision(config, templateDecision),
+    engine: buildProjectEngineRef(finalEngine),
   }
 
   if (context.engine || templateDecision) {
     await projectConfigCmds.writeProjectConfig(gamePath, nextConfig)
   }
 
-  return registerGame(gamePath, { ...inspection, engineId: finalEngine?.id })
+  return registerGame(gamePath, { ...inspection, engineId: finalEngine.id })
 }
 
 interface CreateGameOptions {
@@ -1059,24 +1012,11 @@ async function registerManagedRelink(
   return { ...game, ...patch }
 }
 
-async function getGameEnginePath(game: BoundGameRef): Promise<AbsPath | undefined> {
-  const { engine } = await resolveBoundEngine(game)
-  if (!engine || !isEngineUsable(engine)) {
-    return undefined
-  }
-
-  return engine.path
-}
-
-async function ensureConfigWritable(game: BoundGameRef): Promise<void> {
-  const enginePath = await getGameEnginePath(game)
-  if (!enginePath) {
-    return
-  }
-
+async function ensureConfigWritable(game: BoundGame): Promise<void> {
+  const engine = await requireBoundEngine(game)
   await vfsCmds.ensureWritable({
     projectPath: game.path,
-    enginePath,
+    enginePath: engine.path,
     relPath: RelPath.from('game/config.txt'),
   })
 }
@@ -1254,42 +1194,39 @@ async function importGame(gamePath: AbsPath, options: ImportGameOptions = {}): P
   return { id, alreadyRegistered: false }
 }
 
-async function resolvePreviewSite(game: BoundGameRef): Promise<StaticSiteConfig> {
-  const { config, engine } = await resolveBoundEngine(game)
-  const isEngineBound = !!game.engineId || !!config?.engine
-
-  assertBoundEngineEditorCompatible(isEngineBound, engine)
-
-  const templatePath = await resolveBoundTemplatePath(config, engine)
-
-  return {
-    projectPath: game.path,
-    enginePath: engine?.path,
-    templatePath,
-  }
-}
-
-async function resolveStaticAssetSite(game: BoundGameRef): Promise<StaticSiteConfig> {
-  const { config, engine } = await resolveBoundEngine(game)
-
-  if (!engine || !isEngineEditorCompatible(engine)) {
-    return {
-      projectPath: game.path,
-    }
-  }
+/** 预览站点：引擎记录必须存在且编辑器兼容，否则拒绝预览 */
+async function resolvePreviewSite(game: BoundGame): Promise<PreviewSiteConfig> {
+  const engine = await requireBoundEngine(game)
+  assertEngineEditorCompatible(engine)
 
   return {
     projectPath: game.path,
     enginePath: engine.path,
-    templatePath: await resolveBoundTemplatePath(config, engine),
+    templatePath: await resolveBoundTemplatePath(game.path, engine),
   }
 }
 
-async function ensureEditorRuntimeCompatible(game: BoundGameRef): Promise<void> {
-  const { config, engine } = await resolveBoundEngine(game)
-  const isEngineBound = !!game.engineId || !!config?.engine
+/**
+ * 封面/图标等静态资源站点：引擎目录可用就带上引擎层（引擎自带图标、模板内容都从 lower 取），
+ * 引擎记录缺失或不可用时退化为只服务项目自身内容。
+ */
+async function resolveStaticAssetSite(ref: ProjectPathRef): Promise<StaticSiteConfig> {
+  const engine = await resolveUsableEngineForPath(ref)
+  if (!engine) {
+    return {
+      projectPath: ref.path,
+    }
+  }
 
-  assertBoundEngineEditorCompatible(isEngineBound, engine)
+  return {
+    projectPath: ref.path,
+    enginePath: engine.path,
+    templatePath: await resolveBoundTemplatePath(ref.path, engine),
+  }
+}
+
+async function ensureEditorRuntimeCompatible(game: BoundGame): Promise<void> {
+  assertEngineEditorCompatible(await requireBoundEngine(game))
 }
 
 async function touchGameLastModified(gameId: string): Promise<void> {
@@ -1388,7 +1325,6 @@ export const gameManager = {
   registerManagedRelink,
   renameGame,
   importGame,
-  getGameEnginePath,
   resolvePreviewSite,
   resolveStaticAssetSite,
   ensureEditorRuntimeCompatible,

@@ -3,7 +3,7 @@ import { isEngineEditorCompatible } from '~/services/engine-manager'
 import type { Engine, Template } from '~/database/model'
 
 interface ResourceSwitchAvailability {
-  currentEngineId: string | undefined
+  currentEngineId: string
   engines: readonly Engine[]
   templates: readonly Template[]
 }
@@ -18,11 +18,6 @@ interface ResourceSwitchAvailability {
  */
 export function hasSwitchableResourceAlternative(input: ResourceSwitchAvailability): boolean {
   const { currentEngineId, engines, templates } = input
-
-  // 自带引擎项目既不渲染引擎入口，也无法切换模板
-  if (!currentEngineId) {
-    return false
-  }
 
   // 引擎有替代项时，模板入口至少也能换成该引擎内置的模板
   if (engines.some(engine => engine.id !== currentEngineId && isEngineEditorCompatible(engine))) {

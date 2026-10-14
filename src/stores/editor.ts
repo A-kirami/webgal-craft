@@ -104,9 +104,7 @@ function sameEngineRuntimeCapabilities(
 }
 
 async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {
-  const fileStore = useFileStore()
-  const physicalPath = fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
-  const bytes = await readFile(physicalPath)
+  const bytes = await readFile(await useFileStore().resolveFilePath(path))
   return decodeTextFile(bytes)
 }
 
@@ -658,10 +656,7 @@ export const useEditorStore = defineStore('editor', () => {
     },
     patchSceneSelection,
     readTextDocumentFile,
-    resolveFilePath: async (path: AbsPath) => {
-      const fileStore = useFileStore()
-      return fileStore.isVfs ? await fileStore.resolveFilePath(path) : path
-    },
+    resolveFilePath: async (path: AbsPath) => await useFileStore().resolveFilePath(path),
     scheduleAutoSave,
     setTabError: updateTabError,
     setTabLoading: updateTabLoading,

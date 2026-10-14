@@ -21,10 +21,7 @@ import type { GamePreviewInvalidation } from '~/services/game-manager'
 import type { PathMutationResult } from '~/services/path-mutation'
 
 async function resolveWritablePath(path: AbsPath): Promise<AbsPath> {
-  const fileStore = useFileStore()
-  return fileStore.isVfs
-    ? fileStore.ensureWritable(path)
-    : path
+  return await useFileStore().ensureWritable(path)
 }
 
 async function writeFile(path: AbsPath, content: string): Promise<void> {
@@ -47,11 +44,7 @@ async function writeDocumentFile(path: AbsPath, content: Uint8Array): Promise<vo
 }
 
 async function readDocumentFile(path: AbsPath): Promise<Uint8Array> {
-  const fileStore = useFileStore()
-  const readablePath = fileStore.isVfs
-    ? await fileStore.resolveFilePath(path)
-    : path
-  return await readFile(readablePath)
+  return await readFile(await useFileStore().resolveFilePath(path))
 }
 
 function isPathWithinOrEqual(path: AbsPath, root: AbsPath): boolean {
@@ -159,35 +152,16 @@ function toProjectRelative(projectPath: AbsPath, path: AbsPath): RelPath | undef
 }
 
 async function resolveTemplateOverlayPathContext(): Promise<TemplateOverlayPathContext> {
-  const workspaceStore = useWorkspaceStore()
-  const game = workspaceStore.currentGame
+  const game = useWorkspaceStore().currentGame
   if (!game) {
     throw new AppError('FS_ERROR', '当前项目模板覆盖层上下文不可用')
   }
 
-  try {
-    const site = await gameManager.resolvePreviewSite(game)
-    const { enginePath } = site
-    if (!enginePath) {
-      throw new AppError('FS_ERROR', '当前项目未绑定可用引擎，无法执行模板覆盖层路径操作')
-    }
-
-    return {
-      projectPath: game.path,
-      enginePath,
-      templatePath: site.templatePath,
-    }
-  } catch {
-    const enginePath = await gameManager.getGameEnginePath(game)
-    if (!enginePath) {
-      throw new AppError('FS_ERROR', '当前项目未绑定可用引擎，无法执行模板覆盖层路径操作')
-    }
-
-    return {
-      projectPath: game.path,
-      enginePath,
-      templatePath: undefined,
-    }
+  const site = await gameManager.resolvePreviewSite(game)
+  return {
+    projectPath: game.path,
+    enginePath: site.enginePath,
+    templatePath: site.templatePath,
   }
 }
 
@@ -267,13 +241,7 @@ async function renameFile(oldPath: AbsPath, newName: string): Promise<PathMutati
 
 async function deleteFile(path: AbsPath, permanent = false): Promise<void> {
   assertMutableSceneEntry(path)
-  const fileStore = useFileStore()
-  if (fileStore.isVfs && await fileStore.deleteEntry(path, permanent)) {
-    markPathChanged(path, { includeChildren: true })
-    return
-  }
-
-  await fsCmds.deleteFile(path, permanent)
+  await useFileStore().deleteEntry(path, permanent)
   markPathChanged(path, { includeChildren: true })
 }
 
@@ -293,13 +261,6 @@ async function resolveVfsCreatePath(
 }
 
 async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPath> {
-  const fileStore = useFileStore()
-  if (!fileStore.isVfs) {
-    const result = await fsCmds.createFile(targetPath, fileName)
-    markPathChanged(result)
-    return result
-  }
-
   const writablePath = await resolveVfsCreatePath(targetPath, fileName, false)
   await writeTextFile(writablePath, '')
   markPathChanged(writablePath)
@@ -307,13 +268,6 @@ async function createFile(targetPath: AbsPath, fileName: string): Promise<AbsPat
 }
 
 async function createFolder(targetPath: AbsPath, folderName: string): Promise<AbsPath> {
-  const fileStore = useFileStore()
-  if (!fileStore.isVfs) {
-    const result = await fsCmds.createFolder(targetPath, folderName)
-    gameManager.touchCurrentGameLastModified()
-    return result
-  }
-
   const writablePath = await resolveVfsCreatePath(targetPath, folderName, true)
   await mkdir(writablePath, { recursive: true })
   gameManager.touchCurrentGameLastModified()
@@ -321,26 +275,13 @@ async function createFolder(targetPath: AbsPath, folderName: string): Promise<Ab
 }
 
 async function copyFile(sourcePath: AbsPath, targetPath: AbsPath): Promise<AbsPath> {
-  const fileStore = useFileStore()
   const finishUpdateBlocker = useRuntimeTaskStore()
     .beginBlockingTask(`copy-file:${crypto.randomUUID()}`)
 
   try {
-    if (fileStore.isVfs) {
-      const copiedPath = await fileStore.copyEntry(sourcePath, targetPath)
-      if (copiedPath) {
-        markPathChanged(copiedPath)
-        return copiedPath
-      }
-    }
-
-    const resolvedSourcePath = fileStore.isVfs
-      ? await fileStore.resolveFilePath(sourcePath)
-      : sourcePath
-    const writableTargetPath = await resolveWritablePath(targetPath)
-    const result = await fsCmds.copyFile(resolvedSourcePath, writableTargetPath)
-    markPathChanged(result)
-    return result
+    const copiedPath = await useFileStore().copyEntry(sourcePath, targetPath)
+    markPathChanged(copiedPath)
+    return copiedPath
   } finally {
     finishUpdateBlocker()
   }

@@ -4,9 +4,9 @@ import { AbsPath, RelPath } from '~/domain/path'
 import { gameFs } from '~/services/game-fs'
 
 const {
-  getGameEnginePathMock,
   commitPendingFileWriteMock,
   copyEntryMock,
+  deleteEntryMock,
   createFileMock,
   createFolderMock,
   copyFileMock,
@@ -32,9 +32,9 @@ const {
   writeBinaryFileMock,
   writeTextFileMock,
 } = vi.hoisted(() => ({
-  getGameEnginePathMock: vi.fn(),
   commitPendingFileWriteMock: vi.fn(),
   copyEntryMock: vi.fn(),
+  deleteEntryMock: vi.fn(),
   createFileMock: vi.fn(),
   createFolderMock: vi.fn(),
   copyFileMock: vi.fn(),
@@ -73,7 +73,6 @@ vi.mock('~/services/game-manager', () => ({
   gameManager: {
     refreshCurrentGamePreviewAssets: refreshCurrentGamePreviewAssetsMock,
     touchCurrentGameLastModified: touchCurrentGameLastModifiedMock,
-    getGameEnginePath: getGameEnginePathMock,
     resolvePreviewSite: resolvePreviewSiteMock,
   },
 }))
@@ -125,7 +124,7 @@ describe('gameFs', () => {
     mkdirMock.mockReset()
     fsMoveFileMock.mockReset()
     vfsMovePathMock.mockReset()
-    getGameEnginePathMock.mockReset()
+    deleteEntryMock.mockReset()
     resolvePreviewSiteMock.mockReset()
     registerPendingFileWriteMock.mockReset()
     rollbackPendingFileWriteMock.mockReset()
@@ -141,6 +140,7 @@ describe('gameFs', () => {
     writeBinaryFileMock.mockReset()
     writeTextFileMock.mockReset()
 
+    deleteEntryMock.mockResolvedValue(undefined)
     registerPendingFileWriteMock.mockReturnValue({
       physicalPath: '/game/image.bin',
       id: 1,
@@ -165,13 +165,11 @@ describe('gameFs', () => {
       enginePath: '/engines/webgal',
       templatePath: '/templates/current',
     })
-    getGameEnginePathMock.mockResolvedValue('/engines/webgal')
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
-      isVfs: false,
       resolveFilePath: resolveFilePathMock,
     })
   })
@@ -179,10 +177,9 @@ describe('gameFs', () => {
   it('VFS 模式下写入文本和二进制文件前会通过 file store 解析可写路径', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
     ensureWritableMock
@@ -215,10 +212,9 @@ describe('gameFs', () => {
 
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
     ensureWritableMock.mockResolvedValueOnce('/game/.overlay/image.bin')
@@ -237,10 +233,9 @@ describe('gameFs', () => {
   it('VFS 模式下读取文档文件会先解析实际文件路径', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
     resolveFilePathMock.mockResolvedValueOnce('/game/.overlay/scene.txt')
@@ -251,37 +246,12 @@ describe('gameFs', () => {
     expect(readFileMock).toHaveBeenCalledWith('/game/.overlay/scene.txt')
   })
 
-  it('非 VFS 模式下会直接透传底层文件系统操作', async () => {
-    fsRenameFileMock.mockResolvedValue('/game/new.txt')
-    createFileMock.mockResolvedValue('/game/created.txt')
-    createFolderMock.mockResolvedValue('/game/folder')
-    copyFileMock.mockResolvedValue('/game/copied.txt')
-    fsMoveFileMock.mockResolvedValue('/game/moved.txt')
-
-    await expect(gameFs.renameFile(AbsPath.from('/game/old.txt'), 'new.txt')).resolves.toEqual({
-      echoMode: 'watcher',
-      newPath: '/game/new.txt',
-    })
-    await expect(gameFs.createFile(AbsPath.from('/game'), 'created.txt')).resolves.toBe('/game/created.txt')
-    await expect(gameFs.createFolder(AbsPath.from('/game'), 'folder')).resolves.toBe('/game/folder')
-    await expect(gameFs.copyFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toBe('/game/copied.txt')
-    await expect(gameFs.moveFile(AbsPath.from('/from.txt'), AbsPath.from('/game'))).resolves.toEqual({
-      echoMode: 'watcher',
-      newPath: '/game/moved.txt',
-    })
-    await gameFs.deleteFile(AbsPath.from('/game/deleted.txt'), true)
-
-    expect(deleteFileMock).toHaveBeenCalledWith('/game/deleted.txt', true)
-    expect(mkdirMock).not.toHaveBeenCalled()
-    expect(refreshCurrentGamePreviewAssetsMock).not.toHaveBeenCalled()
-    expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledTimes(4)
-  })
-
   it('创建当前图标文件时只刷新图标预览资源', async () => {
-    createFileMock.mockResolvedValue('/project/icons/favicon.ico')
+    ensureWritableMock.mockResolvedValueOnce('/project/icons/favicon.ico')
 
     await expect(gameFs.createFile(AbsPath.from('/project/icons'), 'favicon.ico')).resolves.toBe('/project/icons/favicon.ico')
 
+    expect(writeTextFileMock).toHaveBeenCalledWith('/project/icons/favicon.ico', '')
     expect(refreshCurrentGamePreviewAssetsMock).toHaveBeenCalledWith({ invalidate: 'icon' })
     expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
@@ -289,7 +259,7 @@ describe('gameFs', () => {
   it('删除当前封面文件时只刷新封面预览资源', async () => {
     await gameFs.deleteFile(AbsPath.from('/project/game/background/cover.png'), true)
 
-    expect(deleteFileMock).toHaveBeenCalledWith('/project/game/background/cover.png', true)
+    expect(deleteEntryMock).toHaveBeenCalledWith('/project/game/background/cover.png', true)
     expect(refreshCurrentGamePreviewAssetsMock).toHaveBeenCalledWith({ invalidate: 'cover' })
     expect(touchCurrentGameLastModifiedMock).not.toHaveBeenCalled()
   })
@@ -304,7 +274,7 @@ describe('gameFs', () => {
       AbsPath.from('/project/game/scene/chapter'),
     )).rejects.toMatchObject({ code: 'PATH_OPERATION' })
 
-    expect(deleteFileMock).not.toHaveBeenCalled()
+    expect(deleteEntryMock).not.toHaveBeenCalled()
     expect(fsRenameFileMock).not.toHaveBeenCalled()
     expect(fsMoveFileMock).not.toHaveBeenCalled()
   })
@@ -312,10 +282,9 @@ describe('gameFs', () => {
   it('VFS 项目中的普通路径 rename 或 move 仍走 native adapter', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
 
@@ -379,17 +348,6 @@ describe('gameFs', () => {
   })
 
   it('只有命中 game/template 路径时才走覆盖层 rename 或 move', async () => {
-    const deleteEntryMock = vi.fn()
-
-    useFileStoreMock.mockReturnValue({
-      copyEntry: copyEntryMock,
-      deleteEntry: deleteEntryMock,
-      ensureWritable: ensureWritableMock,
-      getFolderContents: getFolderContentsMock,
-      isVfs: true,
-      resolveFilePath: resolveFilePathMock,
-    })
-
     resolvePreviewSiteMock.mockResolvedValue({
       projectPath: '/project',
       enginePath: '/engines/webgal',
@@ -397,18 +355,11 @@ describe('gameFs', () => {
     })
     vfsRenamePathMock.mockResolvedValue(RelPath.from('game/template/new.txt'))
     vfsMovePathMock.mockResolvedValue(RelPath.from('game/template/folder/old (1).txt'))
-    copyEntryMock.mockResolvedValueOnce('/project/game/copied.txt')
-    createFileMock.mockResolvedValue('/project/game/created.txt')
-    createFolderMock.mockResolvedValue('/project/game/folder')
-    deleteEntryMock.mockResolvedValueOnce(true)
 
     await expect(gameFs.renameFile(AbsPath.from('/project/game/template/old.txt'), 'new.txt')).resolves.toEqual({
       echoMode: 'synthetic',
       newPath: '/project/game/template/new.txt',
     })
-    await expect(gameFs.createFile(AbsPath.from('/project/game'), 'created.txt')).resolves.toBe('/project/game/created.txt')
-    await expect(gameFs.createFolder(AbsPath.from('/project/game'), 'folder')).resolves.toBe('/project/game/folder')
-    await expect(gameFs.copyFile(AbsPath.from('/project/from.txt'), AbsPath.from('/project/game'))).resolves.toBe('/project/game/copied.txt')
     await expect(gameFs.moveFile(
       AbsPath.from('/project/game/template/old.txt'),
       AbsPath.from('/project/game/template/folder'),
@@ -417,7 +368,6 @@ describe('gameFs', () => {
       echoMode: 'synthetic',
       newPath: '/project/game/template/folder/old (1).txt',
     })
-    await gameFs.deleteFile(AbsPath.from('/project/game/deleted.txt'), true)
 
     expect(resolvePreviewSiteMock).toHaveBeenCalled()
     expect(vfsRenamePathMock).toHaveBeenCalledWith({
@@ -434,25 +384,11 @@ describe('gameFs', () => {
       relPath: 'game/template/old.txt',
       targetRelPath: 'game/template/folder/old (1).txt',
     })
-    expect(copyEntryMock).toHaveBeenNthCalledWith(1, '/project/from.txt', '/project/game')
-    expect(deleteEntryMock).toHaveBeenCalledOnce()
-    expect(deleteEntryMock).toHaveBeenCalledWith('/project/game/deleted.txt', true)
     expect(fsRenameFileMock).not.toHaveBeenCalledWith('/project/game/template/old.txt', 'new.txt')
     expect(fsMoveFileMock).not.toHaveBeenCalledWith('/project/game/template/old.txt', '/project/game/template/folder')
   })
 
-  it('VFS 模式下删除资源会把回收站意图透传给 file store', async () => {
-    const deleteEntryMock = vi.fn(async () => true)
-
-    useFileStoreMock.mockReturnValue({
-      copyEntry: copyEntryMock,
-      deleteEntry: deleteEntryMock,
-      ensureWritable: ensureWritableMock,
-      getFolderContents: getFolderContentsMock,
-      isVfs: true,
-      resolveFilePath: resolveFilePathMock,
-    })
-
+  it('删除资源会把回收站意图透传给 file store', async () => {
     await gameFs.deleteFile(AbsPath.from('/project/game/bgm/theme.ogg'))
     await gameFs.deleteFile(AbsPath.from('/project/game/bgm/theme.ogg'), true)
 
@@ -461,13 +397,12 @@ describe('gameFs', () => {
     expect(deleteFileMock).not.toHaveBeenCalled()
   })
 
-  it('VFS 模式下创建同名条目时会先按 overlay 视图生成唯一名称，再解析最终可写路径', async () => {
+  it('创建同名条目时会先按 overlay 视图生成唯一名称，再解析最终可写路径', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
 
@@ -492,11 +427,10 @@ describe('gameFs', () => {
   it('从外部导入时会按 overlay 可见内容避让同名项并写入 upper 路径', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       initialized: Promise.resolve(),
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
     getFolderContentsMock.mockResolvedValueOnce([{ name: 'hero.png' }])
@@ -520,7 +454,7 @@ describe('gameFs', () => {
     expect(touchCurrentGameLastModifiedMock).toHaveBeenCalledOnce()
   })
 
-  it('普通文件系统模式下会把物理目标目录传给外部导入命令', async () => {
+  it('外部导入会把解析后的可写目录传给导入命令', async () => {
     statMock.mockResolvedValueOnce({ isDirectory: false })
     importExternalEntryMock.mockResolvedValueOnce('hero.png')
 
@@ -541,11 +475,10 @@ describe('gameFs', () => {
   it('Rust 原子占名发现物理冲突时会采用命令返回的最终名称', async () => {
     useFileStoreMock.mockReturnValue({
       copyEntry: copyEntryMock,
-      deleteEntry: vi.fn(async () => false),
+      deleteEntry: deleteEntryMock,
       ensureWritable: ensureWritableMock,
       getFolderContents: getFolderContentsMock,
       initialized: Promise.resolve(),
-      isVfs: true,
       resolveFilePath: resolveFilePathMock,
     })
     getFolderContentsMock.mockResolvedValueOnce([{ name: 'hero.png' }])

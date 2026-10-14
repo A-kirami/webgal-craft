@@ -47,9 +47,7 @@ async function initOnOpen(): Promise<void> {
 
   // Use the game's current engine as both the initial selection and preferred group.
   try {
-    const currentEngine = props.game.engineId
-      ? await db.engines.get(props.game.engineId)
-      : undefined
+    const currentEngine = await db.engines.get(props.game.engineId)
     selectedEngineId = currentEngine?.id
     preferredGroupId = currentEngine?.engineId
 

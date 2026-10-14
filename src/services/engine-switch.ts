@@ -80,10 +80,6 @@ async function performSwitchEngine(
   newEngine: Engine,
   options: SwitchEngineOptions = {},
 ): Promise<void> {
-  if (!game.engineId) {
-    throw new AppError('IO_ERROR', '自带引擎项目不支持引擎切换')
-  }
-
   assertEngineEditorCompatible(newEngine)
 
   const oldEngine = await db.engines.get(game.engineId)

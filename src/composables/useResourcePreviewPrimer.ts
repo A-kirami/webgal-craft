@@ -26,7 +26,7 @@ function buildResourcePreviewPrimerSignature(
       .toSorted((left, right) => left.path.localeCompare(right.path)),
     games: games
       .map(game => ({
-        engineId: game.engineId ?? '',
+        engineId: game.engineId,
         path: game.path,
       }))
       .toSorted((left, right) => left.path.localeCompare(right.path)),

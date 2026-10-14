@@ -38,6 +38,7 @@ export function createTestGame(options: TestGameFactoryOptions = {}): Game {
     id: 'game-1',
     path: resolvedGamePath,
     pathLookupKey: pathLookupKey ?? normalizeImportPath(resolvedGamePath).lookupKey,
+    engineId: 'engine-1',
     createdAt: 0,
     lastModified: 0,
     status: 'created',

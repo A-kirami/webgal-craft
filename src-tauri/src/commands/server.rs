@@ -1317,6 +1317,12 @@ fn validate_dir_path(path: Option<String>) -> AppResult<Option<PathBuf>> {
     Ok(Some(path_buf))
 }
 
+/// 注册静态站点。
+///
+/// - `engine_path` 为 `Some`：游戏工程的 overlay 站点，upper 是工程目录，引擎与模板作为 lower
+///   提供运行时与模板内容。
+/// - `engine_path` 为 `None`：纯目录站点，只服务该目录自身的内容。用于引擎目录预览，以及
+///   还没有可用引擎时的工程封面/图标探测；游戏预览不会走到这里。
 #[tauri::command]
 pub async fn add_static_site(
     state: TauriState<'_, Mutex<ServerState>>,

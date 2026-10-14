@@ -158,7 +158,6 @@ vi.mock('~/stores/modal', () => ({
 
 vi.mock('~/stores/file', () => ({
   useFileStore: () => ({
-    isVfs: false,
     resolveFilePath: async (path: string) => path,
   }),
 }))

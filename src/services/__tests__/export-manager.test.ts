@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTestGame } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
 import { exportManager } from '~/services/export-manager'
+import { AppError } from '~/types/errors'
 
 import type { ExportProgress } from '~/services/export-manager'
 
@@ -239,13 +240,11 @@ describe('exportManager', () => {
     expect(unlistenMock).toHaveBeenCalledOnce()
   })
 
-  it('没有可用引擎时在注册监听和调用命令前失败', async () => {
-    resolvePreviewSiteMock.mockResolvedValue({
-      projectPath: AbsPath.from('/games/demo'),
-    })
+  it('站点解析失败时在注册监听和调用命令前失败', async () => {
+    resolvePreviewSiteMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎不可用'))
 
     await expect(exportManager.exportWeb({
-      game: createTestGame({ engineId: undefined }),
+      game: createTestGame(),
       gameName: 'Demo',
       outputRoot: AbsPath.from('/exports'),
     })).rejects.toMatchObject({ code: 'ENGINE_EDITOR_INCOMPATIBLE' })
