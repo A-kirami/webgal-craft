@@ -452,7 +452,8 @@ interface ProjectPathRef {
  * 逻辑引用解析不出引擎（未安装、版本不匹配）时才视为工程不可用，交由调用方要求用户重选运行时。
  */
 async function requireBoundEngine(game: BoundGame): Promise<Engine> {
-  const bound = game.engineId ? await db.engines.get(game.engineId) : undefined
+  const boundEngineId = game.engineId
+  const bound = boundEngineId ? await db.engines.get(boundEngineId) : undefined
   if (bound) {
     return bound
   }
@@ -464,19 +465,20 @@ async function requireBoundEngine(game: BoundGame): Promise<Engine> {
     })
   }
 
-  await healStaleEngineBinding(game.path, rebound)
+  await healStaleEngineBinding(game.path, boundEngineId, rebound)
   return rebound
 }
 
 /**
  * 回写悬空绑定。DB 记录与内存快照必须一起更新：状态栏、文件视图与预览站点都读
  * currentGame.engineId，只修 DB 会让它们在本次会话里继续停留在悬空旧值上。
+ * 只在绑定仍是本次观察到的悬空值时回写——解析期间用户显式切换过引擎，就以那次选择为准。
  * 回写失败不阻断解析——本次会话用解析结果即可，下次解析会再次尝试修复。
  */
-async function healStaleEngineBinding(gamePath: AbsPath, engine: Engine): Promise<void> {
+async function healStaleEngineBinding(gamePath: AbsPath, staleEngineId: string | undefined, engine: Engine): Promise<void> {
   try {
     const registered = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
-    if (!registered || registered.engineId === engine.id) {
+    if (!registered || registered.engineId !== staleEngineId) {
       return
     }
 

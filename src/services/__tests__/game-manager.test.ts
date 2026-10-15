@@ -1729,6 +1729,35 @@ describe('gameManager', () => {
     })
   })
 
+  it('解析期间绑定被显式改写时不回写，避免覆盖用户选择', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'default-publisher.default-engine',
+        version: '4.6.2',
+      },
+    })
+    // 解析期间用户显式切换到了别的引擎：登记记录已不是本次观察到的悬空值
+    dbGameWhereFirstMock.mockResolvedValue(createTestGame({
+      engineId: 'engine-user-choice',
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    }))
+    const game = createTestGame({
+      engineId: 'engine-stale',
+      id: 'game-1',
+      path: AbsPath.from('/games/demo'),
+    })
+    workspaceStoreState.currentGame = game
+
+    await expect(gameManager.ensureEditorRuntimeCompatible(game)).resolves.toBeUndefined()
+
+    expect(dbGameUpdateMock).not.toHaveBeenCalled()
+    expect(workspaceStoreState.currentGame?.engineId).toBe('engine-stale')
+  })
+
   it('ensureEditorRuntimeCompatible 在绑定修复写库失败时仍正常放行', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
     engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
