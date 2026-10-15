@@ -472,18 +472,27 @@ async function requireBoundEngine(game: BoundGame): Promise<Engine> {
 /**
  * 回写悬空绑定。DB 记录与内存快照必须一起更新：状态栏、文件视图与预览站点都读
  * currentGame.engineId，只修 DB 会让它们在本次会话里继续停留在悬空旧值上。
- * 只在绑定仍是本次观察到的悬空值时回写——解析期间用户显式切换过引擎，就以那次选择为准。
+ * 校验与回写放在同一个读写事务里，且只在绑定仍是本次观察到的悬空值时回写——
+ * 期间用户显式切换过引擎，就以那次选择为准。
  * 回写失败不阻断解析——本次会话用解析结果即可，下次解析会再次尝试修复。
  */
 async function healStaleEngineBinding(gamePath: AbsPath, staleEngineId: string | undefined, engine: Engine): Promise<void> {
   try {
-    const registered = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
-    if (!registered || registered.engineId !== staleEngineId) {
+    const repairedGameId = await db.transaction('rw', db.games, async () => {
+      const registered = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
+      if (!registered || registered.engineId !== staleEngineId) {
+        return
+      }
+
+      await db.games.update(registered.id, { engineId: engine.id })
+      return registered.id
+    })
+
+    if (!repairedGameId) {
       return
     }
 
-    await db.games.update(registered.id, { engineId: engine.id })
-    applyCurrentGamePatch(registered.id, { engineId: engine.id })
+    applyCurrentGamePatch(repairedGameId, { engineId: engine.id })
     logger.info(
       `[引擎绑定修复] 游戏 ${gamePath} 绑定的引擎记录已失效，`
       + `已按项目配置重新绑定到 ${engine.name}@${engine.version ?? '未知'}(${engine.id})`,
