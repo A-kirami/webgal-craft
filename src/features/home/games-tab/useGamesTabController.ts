@@ -1,11 +1,15 @@
 import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
-import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
+import {
+  isRuntimeRebindRequired,
+  requestGameRuntimeRebind,
+  resolveRuntimeRebindIssue,
+} from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { resourceReconcile } from '~/services/resource-reconcile'
-import { AppError } from '~/types/errors'
+import { handleError } from '~/utils/error-handler'
 
 import type { Engine, Game } from '~/database/model'
 import type { ResolveImportDependencies } from '~/types/import-dependency-resolution'
@@ -60,7 +64,8 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
     try {
       await gameManager.ensureEditorRuntimeCompatible(availableGame)
     } catch (error) {
-      if (error instanceof AppError && error.code === 'ENGINE_EDITOR_INCOMPATIBLE') {
+      // 引擎不可用/不兼容/绑定悬空都可以通过重选运行时修复，入口必须留给用户
+      if (isRuntimeRebindRequired(error)) {
         const rebound = await requestGameRuntimeRebind(availableGame, {
           ...resolveRuntimeRebindIssue(error.details?.issue),
           resolveDependencies,
@@ -70,7 +75,10 @@ export function useGamesTabController(options: UseGamesTabControllerOptions) {
         }
         return
       }
-      throw error
+
+      // 其余错误不能吞掉：点击工程却毫无反应会让用户以为应用坏了
+      handleError(error)
+      return
     }
 
     options.pushRoute(`/edit/${game.id}`)

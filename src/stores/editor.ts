@@ -803,6 +803,21 @@ export const useEditorStore = defineStore('editor', () => {
     syncActiveScenePreview(activePath)
   }, { immediate: true })
 
+  /**
+   * 重新加载当前标签页文档。
+   * 加载失败只会记在标签页错误态上，不会因为文件视图或运行时后来恢复而自动重试，
+   * 因此重绑引擎之后需要显式调用它把文档补上。
+   */
+  async function retryActiveDocument(): Promise<void> {
+    const path = tabsStore.activeTab?.path
+    if (!path || getSession(path)) {
+      return
+    }
+
+    await loadEditorStateAction(fileLifecycleContext, path)
+    syncActiveScenePreview(path)
+  }
+
   // 监听标签页关闭，清理编辑器状态
   useTabsWatcher((closedPath) => {
     cancelAutoSave(closedPath)
@@ -876,6 +891,7 @@ export const useEditorStore = defineStore('editor', () => {
   return $$({
     hasState,
     getState,
+    retryActiveDocument,
     getTextProjectionState,
     getVisualProjectionState,
     getPreviewMediaSession,

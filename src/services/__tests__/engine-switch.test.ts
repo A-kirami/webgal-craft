@@ -13,6 +13,7 @@ const {
   cleanTemplateUpperMock,
   dbEngineGetMock,
   dbGameUpdateMock,
+  engineFindByRefMock,
   evaluateTemplateStrategyMock,
   loggerInfoMock,
   notifyTemplateChangedMock,
@@ -28,6 +29,7 @@ const {
   cleanTemplateUpperMock: vi.fn(),
   dbEngineGetMock: vi.fn(),
   dbGameUpdateMock: vi.fn(),
+  engineFindByRefMock: vi.fn(),
   evaluateTemplateStrategyMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   notifyTemplateChangedMock: vi.fn(),
@@ -76,6 +78,18 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
+// 只替换依赖 DB 的按引用查找，保留真实的引擎兼容性判定
+vi.mock('~/services/engine-manager', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/services/engine-manager')>()
+  return {
+    ...actual,
+    engineManager: {
+      ...actual.engineManager,
+      findEngineByRef: engineFindByRefMock,
+    },
+  }
+})
+
 vi.mock('~/services/game-manager', () => ({
   gameManager: {
     refreshRegisteredGameSnapshot: refreshRegisteredGameSnapshotMock,
@@ -116,6 +130,7 @@ describe('engineSwitch.switchEngine', () => {
   beforeEach(() => {
     cleanTemplateUpperMock.mockReset()
     dbEngineGetMock.mockReset()
+    engineFindByRefMock.mockReset()
     dbGameUpdateMock.mockReset()
     evaluateTemplateStrategyMock.mockReset()
     loggerInfoMock.mockReset()
@@ -141,16 +156,60 @@ describe('engineSwitch.switchEngine', () => {
     dbGameUpdateMock.mockResolvedValue(undefined)
   })
 
-  it('在旧引擎记录缺失时直接拒绝，不产生任何副作用', async () => {
+  it('旧引擎记录缺失时仍按新引擎完成重绑，且不触碰模板决策', async () => {
     dbEngineGetMock.mockResolvedValue(undefined)
-    const game = createTestGame({ id: 'game-1', engineId: 'engine-old', path: AbsPath.from('/games/demo') })
+    evaluateTemplateStrategyMock.mockResolvedValue('dirty')
+    resolveTemplatePathMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce('/engines/new/game/template')
+
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-missing', path: AbsPath.from('/games/demo') })
+    const newEngine = createTestEngine({
+      id: 'engine-new',
+      path: AbsPath.from('/engines/new'),
+      engineId: 'open-webgal.webgal',
+      version: '4.6.0',
+    })
+
+    await engineSwitch.switchEngine(game, newEngine)
+
+    expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+      engine: { id: 'open-webgal.webgal', version: '4.6.0' },
+    }))
+    expect(dbGameUpdateMock).toHaveBeenCalledWith('game-1', { engineId: 'engine-new' })
+    expect(updateSiteEngineMock).toHaveBeenCalledWith('/games/demo', '/engines/new')
+    // 没有旧引擎就没有可保留的模板基线：既不固化旧引擎内建模板，也不清理模板 upper
+    expect(cleanTemplateUpperMock).not.toHaveBeenCalled()
+  })
+
+  it('旧引擎记录缺失时回滚按项目配置的逻辑引用恢复旧站点引擎路径', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-old', path: AbsPath.from('/engines/old') }))
+    updateSiteTemplateMock.mockRejectedValueOnce(new Error('template fail'))
+
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-missing', path: AbsPath.from('/games/demo') })
     const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
 
-    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrow(/当前引擎记录缺失/)
-    expect(readProjectConfigMock).not.toHaveBeenCalled()
-    expect(writeProjectConfigMock).not.toHaveBeenCalled()
-    expect(dbGameUpdateMock).not.toHaveBeenCalled()
-    expect(updateSiteEngineMock).not.toHaveBeenCalled()
+    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrow('template fail')
+
+    expect(updateSiteEngineMock).toHaveBeenNthCalledWith(1, '/games/demo', '/engines/new')
+    expect(updateSiteEngineMock).toHaveBeenNthCalledWith(2, '/games/demo', '/engines/old')
+    expect(writeProjectConfigMock).toHaveBeenLastCalledWith('/games/demo', OLD_CONFIG)
+  })
+
+  it('旧引擎记录缺失且逻辑引用也解析不出时，回滚跳过站点引擎路径', async () => {
+    dbEngineGetMock.mockResolvedValue(undefined)
+    engineFindByRefMock.mockResolvedValue(undefined)
+    updateSiteTemplateMock.mockRejectedValueOnce(new Error('template fail'))
+
+    const game = createTestGame({ id: 'game-1', engineId: 'engine-missing', path: AbsPath.from('/games/demo') })
+    const newEngine = createTestEngine({ id: 'engine-new', path: AbsPath.from('/engines/new') })
+
+    await expect(engineSwitch.switchEngine(game, newEngine)).rejects.toThrow('template fail')
+
+    expect(updateSiteEngineMock).toHaveBeenCalledTimes(1)
+    expect(dbGameUpdateMock).toHaveBeenLastCalledWith('game-1', { engineId: 'engine-missing' })
+    expect(writeProjectConfigMock).toHaveBeenLastCalledWith('/games/demo', OLD_CONFIG)
   })
 
   it('拒绝切换到不能作为编辑器运行时的目标引擎', async () => {

@@ -9,6 +9,7 @@ import { useGamesTabController } from '../useGamesTabController'
 
 const {
   ensureEditorRuntimeCompatibleMock,
+  handleErrorMock,
   importGameMock,
   toastErrorMock,
   toastInfoMock,
@@ -23,6 +24,7 @@ const {
   routerPushMock,
 } = vi.hoisted(() => ({
   ensureEditorRuntimeCompatibleMock: vi.fn(),
+  handleErrorMock: vi.fn(),
   importGameMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastInfoMock: vi.fn(),
@@ -71,9 +73,18 @@ vi.mock('~/features/modals/import-dependency-resolution/request-import-dependenc
   requestImportDependencyResolution: requestImportDependencyResolutionMock,
 }))
 
-vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', () => ({
-  requestGameRuntimeRebind: requestGameRuntimeRebindMock,
-  resolveRuntimeRebindIssue: resolveRuntimeRebindIssueMock,
+// 只替换重绑入口与原因映射，保留真实的"是否需要重绑"判定
+vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/features/modals/import-dependency-resolution/request-game-runtime-rebind')>()
+  return {
+    ...actual,
+    requestGameRuntimeRebind: requestGameRuntimeRebindMock,
+    resolveRuntimeRebindIssue: resolveRuntimeRebindIssueMock,
+  }
+})
+
+vi.mock('~/utils/error-handler', () => ({
+  handleError: handleErrorMock,
 }))
 
 describe('useGamesTabController', () => {
@@ -309,6 +320,44 @@ describe('useGamesTabController', () => {
       },
     )
     expect(routerPushMock).not.toHaveBeenCalled()
+  })
+
+  it('点击时绑定悬空且无法自动修复会请求依赖重选重绑引擎', async () => {
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('IO_ERROR', '引擎不存在', {
+      details: {
+        issue: 'missing',
+        reason: 'ENGINE_NOT_FOUND',
+      },
+    }))
+    resolveRuntimeRebindIssueMock.mockReturnValue({ reason: 'missing' })
+    requestGameRuntimeRebindMock.mockResolvedValue(true)
+
+    const controller = createController()
+    const game = createTestGame({ id: 'game-dangling', availability: 'available' })
+
+    await controller.handleGameClick(game)
+
+    expect(resolveRuntimeRebindIssueMock).toHaveBeenCalledWith('missing')
+    expect(requestGameRuntimeRebindMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'game-dangling' }),
+      expect.objectContaining({ reason: 'missing' }),
+    )
+    expect(handleErrorMock).not.toHaveBeenCalled()
+    expect(routerPushMock).toHaveBeenCalledWith('/edit/game-dangling')
+  })
+
+  it('点击时遇到无法重绑的错误会通知用户，而不是毫无反应', async () => {
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('IO_ERROR', '磁盘读取失败'))
+
+    const controller = createController()
+    const game = createTestGame({ id: 'game-broken', availability: 'available' })
+
+    await controller.handleGameClick(game)
+
+    expect(requestGameRuntimeRebindMock).not.toHaveBeenCalled()
+    expect(openRecoverGameModalMock).not.toHaveBeenCalled()
+    expect(routerPushMock).not.toHaveBeenCalled()
+    expect(handleErrorMock).toHaveBeenCalledWith(expect.objectContaining({ code: 'IO_ERROR' }))
   })
 
   it('选择目录导入已注册游戏时按 info 级提示已存在', async () => {

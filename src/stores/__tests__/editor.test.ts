@@ -371,6 +371,32 @@ describe('编辑器文本与文档流程', () => {
     expect(readFileMock).toHaveBeenCalledTimes(1)
   })
 
+  it('重绑运行时后可以重新加载此前加载失败的当前标签页', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/docs/retry-after-rebind.txt')
+    const editorStore = useEditorStore()
+
+    // 首次加载时文件视图还没就绪：加载被挂起，没有文档状态
+    const fileViewReady = createDeferred<void>()
+    fileStoreInitializedRef.current = fileViewReady.promise
+    tabsStore.openTab('retry-after-rebind.txt', path, { forceNormal: true })
+    await flushEditorWatchers()
+    expect(editorStore.hasState(path)).toBe(false)
+    expect(readFileMock).not.toHaveBeenCalled()
+
+    // 重绑完成后文件视图可用，显式重试当前标签页
+    fileStoreInitializedRef.current = Promise.resolve()
+    await editorStore.retryActiveDocument()
+    await waitForEditorFixture('retry active document', () => editorStore.hasState(path))
+
+    expect(editorStore.hasState(path)).toBe(true)
+    expect(readFileMock).toHaveBeenCalledTimes(1)
+
+    // 已经加载过的文档不重复读盘，避免重试把编辑状态重置掉
+    await editorStore.retryActiveDocument()
+    expect(readFileMock).toHaveBeenCalledTimes(1)
+  })
+
   it('加载纯文本文件后可应用补丁、保存并支持撤销重做', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/docs/example.txt')

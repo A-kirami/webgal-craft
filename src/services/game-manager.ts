@@ -445,16 +445,50 @@ interface ProjectPathRef {
   engineId?: string
 }
 
-/** 登记的游戏必定绑定引擎记录；绑定悬空即视为工程不可用，不回退到项目配置 */
+/**
+ * 登记的游戏必定绑定引擎记录。
+ * 主键引用悬空（引擎记录被重建/迁移，例如重装引擎）时，按 project.wgcp 里同一个逻辑引用
+ * （engineId + version）找回记录并回写绑定——这不是"换一个引擎跑"，而是重建索引；
+ * 逻辑引用解析不出引擎（未安装、版本不匹配）时才视为工程不可用，交由调用方要求用户重选运行时。
+ */
 async function requireBoundEngine(game: BoundGame): Promise<Engine> {
-  const engine = await db.engines.get(game.engineId)
-  if (!engine) {
+  const bound = game.engineId ? await db.engines.get(game.engineId) : undefined
+  if (bound) {
+    return bound
+  }
+
+  const rebound = await findEngineByProjectConfig(game.path)
+  if (!rebound) {
     throw new AppError('IO_ERROR', '引擎不存在', {
-      details: { reason: 'ENGINE_NOT_FOUND' },
+      details: { issue: 'missing', reason: 'ENGINE_NOT_FOUND' },
     })
   }
 
-  return engine
+  await healStaleEngineBinding(game.path, rebound)
+  return rebound
+}
+
+/**
+ * 回写悬空绑定。DB 记录与内存快照必须一起更新：状态栏、文件视图与预览站点都读
+ * currentGame.engineId，只修 DB 会让它们在本次会话里继续停留在悬空旧值上。
+ * 回写失败不阻断解析——本次会话用解析结果即可，下次解析会再次尝试修复。
+ */
+async function healStaleEngineBinding(gamePath: AbsPath, engine: Engine): Promise<void> {
+  try {
+    const registered = await db.games.where('pathLookupKey').equals(toLookupPathKey(gamePath)).first()
+    if (!registered || registered.engineId === engine.id) {
+      return
+    }
+
+    await db.games.update(registered.id, { engineId: engine.id })
+    applyCurrentGamePatch(registered.id, { engineId: engine.id })
+    logger.info(
+      `[引擎绑定修复] 游戏 ${gamePath} 绑定的引擎记录已失效，`
+      + `已按项目配置重新绑定到 ${engine.name}@${engine.version ?? '未知'}(${engine.id})`,
+    )
+  } catch (error) {
+    logger.warn(`[引擎绑定修复] 回写悬空绑定失败: 游戏路径=${gamePath} - ${error}`)
+  }
 }
 
 async function findEngineByProjectConfig(gamePath: AbsPath): Promise<Engine | undefined> {

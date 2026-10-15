@@ -5,12 +5,20 @@ import { AppError } from '~/types/errors'
 
 const {
   dbEngineGetMock,
+  readProjectConfigMock,
   requestImportDependencyResolutionMock,
   switchEngineMock,
 } = vi.hoisted(() => ({
   dbEngineGetMock: vi.fn(),
+  readProjectConfigMock: vi.fn(),
   requestImportDependencyResolutionMock: vi.fn(),
   switchEngineMock: vi.fn(),
+}))
+
+vi.mock('~/commands/project-config', () => ({
+  projectConfigCmds: {
+    readProjectConfig: readProjectConfigMock,
+  },
 }))
 
 vi.mock('~/database/db', () => ({
@@ -99,20 +107,60 @@ describe('requestGameRuntimeRebind', () => {
     expect(switchEngineMock).not.toHaveBeenCalled()
   })
 
-  it('当前引擎记录缺失时不会打开依赖重选', async () => {
+  it('当前引擎记录缺失时按项目配置的逻辑引用打开依赖重选并完成重绑', async () => {
+    const selectedEngine = createTestEngine({ id: 'engine-new' })
     const game = createTestGame({ engineId: 'engine-missing' })
     dbEngineGetMock.mockResolvedValue(undefined)
+    readProjectConfigMock.mockResolvedValue({
+      version: 1,
+      engine: {
+        id: 'open-webgal.webgal',
+        version: '4.5.0',
+      },
+    })
+    requestImportDependencyResolutionMock.mockImplementation(async () => {
+      // 重绑流程在用户选定后再取一次所选引擎记录
+      dbEngineGetMock.mockResolvedValue(selectedEngine)
+      return { engineId: 'engine-new' }
+    })
 
     const { requestGameRuntimeRebind } = await import('../request-game-runtime-rebind')
+    const rebound = await requestGameRuntimeRebind(game)
 
-    await expect(requestGameRuntimeRebind(game)).rejects.toMatchObject({
-      code: 'IO_ERROR',
-      details: {
-        reason: 'ENGINE_NOT_FOUND',
+    expect(rebound).toBe(true)
+    expect(requestImportDependencyResolutionMock).toHaveBeenCalledWith({
+      gameName: 'Demo Game',
+      purpose: 'runtimeRebind',
+      source: 'configured',
+      engine: {
+        current: {
+          id: 'open-webgal.webgal',
+          version: '4.5.0',
+        },
+        reason: 'missing',
       },
-    } satisfies Partial<AppError>)
-    expect(requestImportDependencyResolutionMock).not.toHaveBeenCalled()
-    expect(switchEngineMock).not.toHaveBeenCalled()
+    })
+    expect(switchEngineMock).toHaveBeenCalledWith(game, selectedEngine, { templateDecision: 'keep' })
+  })
+
+  it('项目配置也读不出引擎引用时仍打开依赖重选，只是不展示当前引擎', async () => {
+    const game = createTestGame({ engineId: 'engine-missing' })
+    dbEngineGetMock.mockResolvedValue(undefined)
+    readProjectConfigMock.mockRejectedValue(new Error('项目配置损坏'))
+    requestImportDependencyResolutionMock.mockResolvedValue(undefined)
+
+    const { requestGameRuntimeRebind } = await import('../request-game-runtime-rebind')
+    const rebound = await requestGameRuntimeRebind(game)
+
+    expect(rebound).toBe(false)
+    expect(requestImportDependencyResolutionMock).toHaveBeenCalledWith({
+      gameName: 'Demo Game',
+      purpose: 'runtimeRebind',
+      source: 'configured',
+      engine: {
+        reason: 'missing',
+      },
+    })
   })
 
   it('会把运行时错误 issue 映射为依赖重选原因', async () => {
@@ -125,6 +173,20 @@ describe('requestGameRuntimeRebind', () => {
     expect(resolveRuntimeRebindIssue('unavailable')).toEqual({
       reason: 'unavailable',
     })
+    expect(resolveRuntimeRebindIssue('missing')).toEqual({
+      reason: 'missing',
+    })
+  })
+
+  it('只有可以靠重选运行时修复的错误才进入重绑流程', async () => {
+    const { isRuntimeRebindRequired } = await import('../request-game-runtime-rebind')
+
+    expect(isRuntimeRebindRequired(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎不可用'))).toBe(true)
+    expect(isRuntimeRebindRequired(new AppError('IO_ERROR', '引擎不存在', {
+      details: { issue: 'missing', reason: 'ENGINE_NOT_FOUND' },
+    }))).toBe(true)
+    expect(isRuntimeRebindRequired(new AppError('IO_ERROR', '磁盘满了'))).toBe(false)
+    expect(isRuntimeRebindRequired(new Error('boom'))).toBe(false)
   })
 
   it('所选引擎记录消失时返回结构化错误', async () => {

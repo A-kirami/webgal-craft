@@ -9,7 +9,11 @@ import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContex
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 import { useTransformOverlayBridge } from '~/features/editor/transform-overlay/useTransformOverlayBridge'
-import { requestGameRuntimeRebind, resolveRuntimeRebindIssue } from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
+import {
+  isRuntimeRebindRequired,
+  requestGameRuntimeRebind,
+  resolveRuntimeRebindIssue,
+} from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
 import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
 import { useEditorTour } from '~/features/onboarding/useEditorTour'
 import { useEditorWorkspaceTour } from '~/features/onboarding/useEditorWorkspaceTour'
@@ -23,7 +27,7 @@ import { useFileStore } from '~/stores/file'
 import { useModalStore } from '~/stores/modal'
 import { usePreferenceStore } from '~/stores/preference'
 import { useWorkspaceStore } from '~/stores/workspace'
-import { AppError } from '~/types/errors'
+import { handleError } from '~/utils/error-handler'
 
 interface EditorPanelHandle {
   expandCommandPanel?: () => void
@@ -95,7 +99,7 @@ watch(() => workspaceStore.currentGame?.id, async (gameId) => {
     if (workspaceStore.currentGame?.id !== gameId) {
       return
     }
-    if (error instanceof AppError && error.code === 'ENGINE_EDITOR_INCOMPATIBLE') {
+    if (isRuntimeRebindRequired(error)) {
       let rebound = false
       try {
         rebound = await requestGameRuntimeRebind(currentGame, {
@@ -125,10 +129,14 @@ watch(() => workspaceStore.currentGame?.id, async (gameId) => {
         } catch (refreshError) {
           void logger.warn(`[编辑器入口] 运行时重绑后刷新游戏快照失败: ${String(refreshError)}`)
         }
+        // 重绑前文档加载失败只会留下标签页错误态，不会自动重试，这里把它补上
+        await editorStore.retryActiveDocument()
       }
       return
     }
-    throw error
+
+    // 其余错误不能吞掉：编辑页会停在空文件树上，用户无从判断发生了什么
+    handleError(error)
   }
 }, { immediate: true })
 
