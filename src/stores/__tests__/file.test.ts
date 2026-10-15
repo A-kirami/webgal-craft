@@ -1393,4 +1393,44 @@ describe('useFileStore', () => {
     expect(watchFsMock).toHaveBeenCalledTimes(1)
     expect(watchFsMock).toHaveBeenCalledWith('/workspace-b/game', expect.any(Function), { recursive: true, delayMs: 150 })
   })
+
+  it('挂载监听期间切换工作区会立刻停掉旧监听，不顶掉新工作区的监听', async () => {
+    const staleWatch = createDeferred<() => void>()
+    const staleStop = vi.fn()
+    const currentStop = vi.fn()
+    watchFsMock
+      .mockImplementationOnce(() => staleWatch.promise)
+      .mockImplementationOnce(async (_path: string, handler: typeof watchHandler) => {
+        watchHandler = handler
+        return currentStop
+      })
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+
+    // 旧工作区的监听还挂在半途时切到新工作区，新工作区正常完成初始化
+    workspaceStoreState.currentGame = { path: '/workspace-b' }
+    workspaceStoreState.CWD = '/workspace-b'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(2)
+    })
+    await store.initialized
+
+    // 旧监听迟到返回：必须立刻停掉，且不能顶掉新工作区的监听
+    staleWatch.resolve(staleStop)
+    await flushPendingTasks()
+
+    expect(staleStop).toHaveBeenCalledTimes(1)
+    expect(currentStop).not.toHaveBeenCalled()
+
+    // 离开工作区时停掉的应当是新工作区的监听
+    workspaceStoreState.currentGame = undefined
+    workspaceStoreState.CWD = undefined
+    await flushPendingTasks()
+
+    expect(currentStop).toHaveBeenCalledTimes(1)
+    expect(staleStop).toHaveBeenCalledTimes(1)
+  })
 })

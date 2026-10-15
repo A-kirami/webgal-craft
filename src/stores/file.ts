@@ -945,11 +945,18 @@ export const useFileStore = defineStore('file', () => {
   async function startWatchingProjectTree(rootPath: AbsPath, handle: InitializationHandle): Promise<void> {
     await getFolderContents(rootPath)
     if (!isCurrentInitialization(handle)) {
-      // 迟到的树不再挂监听：否则会覆盖新工作区的 unwatch，留下停不掉的旧监听
+      // 迟到的树不再挂监听
       return
     }
 
-    unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
+    const stopWatching = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
+    if (!isCurrentInitialization(handle)) {
+      // 挂载期间工作区已切换：立刻停掉，既不能留在后台继续发事件，也不能写进 unwatch 覆盖新工作区的监听
+      stopWatching()
+      return
+    }
+
+    unwatch = stopWatching
   }
 
   async function initialize(cwd: AbsPath, handle: InitializationHandle): Promise<void> {
