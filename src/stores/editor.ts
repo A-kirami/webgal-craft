@@ -103,8 +103,19 @@ function sameEngineRuntimeCapabilities(
     && current.transformFrom === next.transformFrom
 }
 
+/**
+ * 解析工程内文件的物理路径。
+ * 文件视图的 VFS 上下文随工作区切换异步建立，进入工程时的首批文档读写会先于它完成，
+ * 因此必须先等待当前工作区的文件视图就绪，直接调用 resolveFilePath 会以无可用的引擎失败。
+ */
+async function resolveProjectFilePath(path: AbsPath): Promise<AbsPath> {
+  const fileStore = useFileStore()
+  await fileStore.initialized
+  return await fileStore.resolveFilePath(path)
+}
+
 async function readTextDocumentFile(path: AbsPath): Promise<ReadTextDocumentResult> {
-  const bytes = await readFile(await useFileStore().resolveFilePath(path))
+  const bytes = await readFile(await resolveProjectFilePath(path))
   return decodeTextFile(bytes)
 }
 
@@ -656,7 +667,7 @@ export const useEditorStore = defineStore('editor', () => {
     },
     patchSceneSelection,
     readTextDocumentFile,
-    resolveFilePath: async (path: AbsPath) => await useFileStore().resolveFilePath(path),
+    resolveFilePath: resolveProjectFilePath,
     scheduleAutoSave,
     setTabError: updateTabError,
     setTabLoading: updateTabLoading,

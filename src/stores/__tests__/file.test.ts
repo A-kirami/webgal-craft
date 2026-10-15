@@ -133,6 +133,23 @@ vi.mock('~/commands/vfs', () => ({
   },
 }))
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, reject, resolve }
+}
+
+/** 让所有已排队的微任务与定时器回调跑完，用于断言"迟到的异步结果不会落地" */
+async function flushPendingTasks(): Promise<void> {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0)
+  })
+}
+
 function createVfsEntry(name: string, isDir: boolean, metadata: Partial<VfsDirEntry> = {}): VfsDirEntry {
   return {
     name,
@@ -1281,5 +1298,99 @@ describe('useFileStore', () => {
       path: '/workspace/game',
     })
     expect(store.getItemByPath(AbsPath.from('/workspace/game'))).toBeDefined()
+  })
+
+  it('切换工作区后 initialized 立即指向新一代，同一轮更新里的消费者不会读到上一代已兑现的状态', async () => {
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+    await store.initialized
+
+    // 新工作区的站点解析挂起，模拟进入工程时引擎解析尚未完成的窗口
+    const site = createDeferred<{ enginePath: string, projectPath: string }>()
+    resolvePreviewSiteMock.mockImplementation(() => site.promise)
+
+    workspaceStoreState.currentGame = { path: '/workspace-2' }
+    workspaceStoreState.CWD = '/workspace-2'
+
+    let isReady = false
+    void store.initialized.then(() => {
+      isReady = true
+    })
+
+    // 与工作区切换同一轮响应式更新里读取 initialized 的消费者（如编辑器标签页加载）
+    // 必须等到新工作区初始化完成，而不是复用上一个工作区已兑现的 Promise
+    await Promise.resolve()
+    expect(isReady).toBe(false)
+
+    site.resolve({ enginePath: '/engines/webgal', projectPath: '/workspace-2' })
+    await store.initialized
+    expect(isReady).toBe(true)
+  })
+
+  it('旧工作区迟到的初始化不会兑现新工作区的 initialized，也不会挂上旧工作区的监听', async () => {
+    const siteA = createDeferred<{ enginePath: string, projectPath: string }>()
+    const siteB = createDeferred<{ enginePath: string, projectPath: string }>()
+    resolvePreviewSiteMock
+      .mockReturnValueOnce(siteA.promise)
+      .mockReturnValueOnce(siteB.promise)
+    vfsResolvePathMock.mockImplementation(async ({ relPath }: { relPath: string }) => `/physical/${relPath}`)
+
+    const store = useFileStore()
+    await Promise.resolve()
+
+    // 切到新工作区：它的站点解析同样挂起
+    workspaceStoreState.currentGame = { path: '/workspace-b' }
+    workspaceStoreState.CWD = '/workspace-b'
+
+    let isReady = false
+    void store.initialized.then(() => {
+      isReady = true
+    })
+    await Promise.resolve()
+    expect(isReady).toBe(false)
+
+    // 旧工作区迟到完成：既不能兑现新工作区的 initialized，也不能写状态或挂监听
+    siteA.resolve({ enginePath: '/engines/a', projectPath: '/workspace' })
+    await flushPendingTasks()
+    expect(isReady).toBe(false)
+    expect(watchFsMock).not.toHaveBeenCalled()
+
+    siteB.resolve({ enginePath: '/engines/b', projectPath: '/workspace-b' })
+    await vi.waitFor(() => {
+      expect(isReady).toBe(true)
+    })
+
+    expect(watchFsMock).toHaveBeenCalledTimes(1)
+    expect(watchFsMock).toHaveBeenCalledWith('/workspace-b/game', expect.any(Function), { recursive: true, delayMs: 150 })
+    await expect(store.resolveFilePath(AbsPath.from('/workspace-b/game/x.txt')))
+      .resolves.toBe('/physical/game/x.txt')
+  })
+
+  it('切换工作区后迟到的目录列举结果会被丢弃', async () => {
+    const staleList = createDeferred<VfsDirEntry[]>()
+    vfsListDirMock.mockImplementationOnce(() => staleList.promise)
+
+    const store = useFileStore()
+    await vi.waitFor(() => {
+      expect(vfsListDirMock).toHaveBeenCalledTimes(1)
+    })
+
+    // 切到新工作区并完成初始化
+    workspaceStoreState.currentGame = { path: '/workspace-b' }
+    workspaceStoreState.CWD = '/workspace-b'
+    await vi.waitFor(() => {
+      expect(watchFsMock).toHaveBeenCalledTimes(1)
+    })
+    await store.initialized
+
+    // 旧工作区的列举迟到完成：不得写回文件树，也不得再挂旧监听
+    staleList.resolve([createVfsEntry('stale.txt', false)])
+    await flushPendingTasks()
+
+    expect(store.getItemByPath(AbsPath.from('/workspace/game/stale.txt'))).toBeUndefined()
+    expect(watchFsMock).toHaveBeenCalledTimes(1)
+    expect(watchFsMock).toHaveBeenCalledWith('/workspace-b/game', expect.any(Function), { recursive: true, delayMs: 150 })
   })
 })
