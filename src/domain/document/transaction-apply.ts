@@ -28,7 +28,7 @@ export function applyTransactionToModel(
         ? applySceneTransaction(model, transaction)
         : undefined
     }
-    case 'animation:update-frame':
+    case 'animation:replace-frame':
     case 'animation:insert-frame':
     case 'animation:delete-frame':
     case 'animation:reorder-frame':
@@ -175,17 +175,13 @@ export function applyAnimationTransaction(
   transaction: AnimationTransaction,
 ): AnimationDocumentModel {
   switch (transaction.type) {
-    case 'animation:update-frame': {
+    case 'animation:replace-frame': {
       const nextFrames = [...model.frames]
-      const currentFrame = nextFrames[transaction.index]
-      if (!currentFrame) {
+      if (!nextFrames[transaction.index]) {
         return model
       }
 
-      nextFrames[transaction.index] = markRaw({
-        ...currentFrame,
-        ...transaction.frame,
-      })
+      nextFrames[transaction.index] = markRaw(cloneAnimationFrame(transaction.frame))
       return {
         ...model,
         frames: nextFrames,

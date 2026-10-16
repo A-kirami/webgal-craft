@@ -299,15 +299,26 @@ export function applySceneStatementReorder(
   })
 }
 
+/** 帧补丁是界面侧的增量描述：进入文档前合成整帧，历史才能按值原样还原 */
 export function applyAnimationFrameUpdate(
   context: DocumentStateAccessor & SceneSelectionStateAccessor & DocumentStateSyncActions,
   path: AbsPath,
   index: number,
-  frame: Partial<AnimationFrame>,
+  patch: Partial<AnimationFrame>,
 ): void {
+  const docEntry = context.getDocumentState(path)
+  const currentFrame = docEntry?.model.kind === 'animation' ? docEntry.model.frames[index] : undefined
+  if (!currentFrame) {
+    return
+  }
+
   applyDocumentTransaction(context, path, {
     source: 'visual',
-    transaction: { type: 'animation:update-frame', index, frame: cloneAnimationFrame(frame) },
+    transaction: {
+      type: 'animation:replace-frame',
+      index,
+      frame: { ...currentFrame, ...cloneAnimationFrame(patch) },
+    },
   })
 }
 

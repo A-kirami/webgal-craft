@@ -127,7 +127,7 @@ describe('可视化投影', () => {
     const updatedModel = applyAnimationTransaction(createAnimationModel([{ duration: 100 }]), {
       type: 'animation:batch',
       operations: [
-        { type: 'animation:update-frame', index: 0, frame: { ease: 'linear' } },
+        { type: 'animation:replace-frame', index: 0, frame: { duration: 100, ease: 'linear' } },
         { type: 'animation:insert-frame', afterIndex: 0, frame: { duration: 200 } },
         { type: 'animation:reorder-frame', fromIndex: 1, toIndex: 0 },
       ],

@@ -43,12 +43,13 @@ interface StatementBatchTx { type: 'statement:batch', operations: SceneTransacti
 export type SceneTransaction = SceneTransactionOperation | StatementBatchTx
 
 // 动画文档事务
-interface AnimationUpdateFrameTx { type: 'animation:update-frame', index: number, frame: Partial<AnimationFrame> }
+/** 整帧替换：帧是值，事务必须能表达「字段不存在」，否则撤销不了首次设置的可选字段 */
+interface AnimationReplaceFrameTx { type: 'animation:replace-frame', index: number, frame: AnimationFrame }
 interface AnimationInsertFrameTx { type: 'animation:insert-frame', afterIndex?: number, frame: AnimationFrame }
 interface AnimationDeleteFrameTx { type: 'animation:delete-frame', index: number }
 interface AnimationReorderFrameTx { type: 'animation:reorder-frame', fromIndex: number, toIndex: number }
 export type AnimationTransactionOperation =
-  | AnimationUpdateFrameTx
+  | AnimationReplaceFrameTx
   | AnimationInsertFrameTx
   | AnimationDeleteFrameTx
   | AnimationReorderFrameTx
@@ -167,8 +168,8 @@ export class EditHistory {
         && last.source === source
         && now - last.timestamp < MERGE_WINDOW_MS
         && canMerge(last.forward, tx)) {
-        // 合并：保留原始 inverse（undo 时回到合并前的状态），更新 forward
-        last.forward = mergeTransactionForward(last.forward, tx)
+        // 合并：保留原始 inverse（undo 时回到合并前的状态），正向取最后一次事务——每个事务本身就是完整快照
+        last.forward = tx
         last.timestamp = now
         last.editorMetadata = mergeEditorHistoryMetadata(last.editorMetadata, editorMetadata)
         last.stateId = stateId
@@ -234,7 +235,12 @@ export class EditHistory {
 // 合并判定
 // ============================================================
 
-/** 判断两个事务是否可以合并（同类型、同目标） */
+/**
+ * 判断两个事务是否可以合并（同类型、同目标）。
+ *
+ * 合并只发生在窗口内的连续同类事务：后一个事务描述的是前一个生效后的完整状态，
+ * 因此合并结果直接取后者，无需字段级合并。
+ */
 function canMerge(a: Transaction, b: Transaction): boolean {
   if (a.type !== b.type) {
     return false
@@ -251,41 +257,11 @@ function canMerge(a: Transaction, b: Transaction): boolean {
     case 'replace-all': {
       return true
     }
-    case 'animation:update-frame': {
-      return (b as AnimationUpdateFrameTx).index === a.index
+    case 'animation:replace-frame': {
+      return (b as AnimationReplaceFrameTx).index === a.index
     }
     default: {
       return false
-    }
-  }
-}
-
-function mergeTransactionForward(current: Transaction, incoming: Transaction): Transaction {
-  if (current.type !== incoming.type) {
-    return incoming
-  }
-
-  switch (current.type) {
-    case 'text:set-content': {
-      const nextPatch = incoming as TextSetContentTx
-      return {
-        type: 'text:set-content',
-        resultContent: nextPatch.resultContent,
-      }
-    }
-    case 'animation:update-frame': {
-      const nextFrameUpdate = incoming as AnimationUpdateFrameTx
-      return {
-        type: 'animation:update-frame',
-        index: current.index,
-        frame: {
-          ...current.frame,
-          ...nextFrameUpdate.frame,
-        },
-      }
-    }
-    default: {
-      return incoming
     }
   }
 }
