@@ -14,6 +14,7 @@ import { useTabsStore } from '../tabs'
 type WriteDocumentFile = typeof import('~/services/game-fs').gameFs.writeDocumentFile
 
 const {
+  fileStoreInitializedRef,
   handleErrorMock,
   isBinaryFileMock,
   loggerDebugMock,
@@ -24,11 +25,14 @@ const {
   modalOpenMock,
   readFileMock,
   refetchTemplatesMock,
+  resolveProjectFilePathMock,
   statMock,
   syncSceneMock,
   tabsWatcherCloseHandlerRef,
   writeDocumentFileMock,
 } = vi.hoisted(() => ({
+  // 文件视图的就绪状态可被单个用例替换，用于复现「进入工程时文档读取早于文件视图初始化」的时序
+  fileStoreInitializedRef: { current: Promise.resolve() as Promise<void> },
   handleErrorMock: vi.fn(),
   isBinaryFileMock: vi.fn(async () => false),
   loggerDebugMock: vi.fn(),
@@ -44,6 +48,7 @@ const {
   tabsWatcherCloseHandlerRef: {
     current: undefined as ((path: string) => void) | undefined,
   },
+  resolveProjectFilePathMock: vi.fn(async (path: string) => path),
   writeDocumentFileMock: vi.fn<WriteDocumentFile>(async () => undefined),
 }))
 
@@ -158,7 +163,10 @@ vi.mock('~/stores/modal', () => ({
 
 vi.mock('~/stores/file', () => ({
   useFileStore: () => ({
-    resolveFilePath: async (path: string) => path,
+    get initialized() {
+      return fileStoreInitializedRef.current
+    },
+    resolveFilePath: resolveProjectFilePathMock,
   }),
 }))
 
@@ -330,6 +338,8 @@ describe('编辑器文本与文档流程', () => {
       }
     })
 
+    fileStoreInitializedRef.current = Promise.resolve()
+    resolveProjectFilePathMock.mockClear()
     tabsStore.projectTabsMap = {}
     tabsStore.runtimeTabStateMap = {}
     tabsStore.shouldFocusEditor = false
@@ -338,6 +348,53 @@ describe('编辑器文本与文档流程', () => {
     workspaceStoreMock.cwd = '/game'
     resourceStoreMock.currentEngineRuntimeCapabilities = LEGACY_ENGINE_RUNTIME_CAPABILITIES
     previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
+  })
+
+  it('文件视图尚未就绪时打开标签页会等其初始化完成再解析物理路径', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/docs/pending-file-view.txt')
+    const editorStore = useEditorStore()
+
+    const fileViewReady = createDeferred<void>()
+    fileStoreInitializedRef.current = fileViewReady.promise
+
+    tabsStore.openTab('pending-file-view.txt', path, { forceNormal: true })
+    await flushEditorWatchers()
+
+    expect(resolveProjectFilePathMock).not.toHaveBeenCalled()
+    expect(editorStore.hasState(path)).toBe(false)
+
+    fileViewReady.resolve()
+    await waitForEditorFixture('load document after file view ready', () => editorStore.hasState(path))
+
+    expect(resolveProjectFilePathMock).toHaveBeenCalledWith(path)
+    expect(readFileMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('重绑运行时后可以重新加载此前加载失败的当前标签页', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/docs/retry-after-rebind.txt')
+    const editorStore = useEditorStore()
+
+    // 首次加载时文件视图还没就绪：加载被挂起，没有文档状态
+    const fileViewReady = createDeferred<void>()
+    fileStoreInitializedRef.current = fileViewReady.promise
+    tabsStore.openTab('retry-after-rebind.txt', path, { forceNormal: true })
+    await flushEditorWatchers()
+    expect(editorStore.hasState(path)).toBe(false)
+    expect(readFileMock).not.toHaveBeenCalled()
+
+    // 重绑完成后文件视图可用，显式重试当前标签页
+    fileStoreInitializedRef.current = Promise.resolve()
+    await editorStore.retryActiveDocument()
+    await waitForEditorFixture('retry active document', () => editorStore.hasState(path))
+
+    expect(editorStore.hasState(path)).toBe(true)
+    expect(readFileMock).toHaveBeenCalledTimes(1)
+
+    // 已经加载过的文档不重复读盘，避免重试把编辑状态重置掉
+    await editorStore.retryActiveDocument()
+    expect(readFileMock).toHaveBeenCalledTimes(1)
   })
 
   it('加载纯文本文件后可应用补丁、保存并支持撤销重做', async () => {

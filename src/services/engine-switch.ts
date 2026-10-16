@@ -2,7 +2,7 @@ import { projectConfigCmds } from '~/commands/project-config'
 import { serverCmds } from '~/commands/server'
 import { vfsCmds } from '~/commands/vfs'
 import { db } from '~/database/db'
-import { assertEngineEditorCompatible } from '~/services/engine-manager'
+import { assertEngineEditorCompatible, engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { runExclusiveGameSwitch } from '~/services/game-switch-guard'
 import { templateSwitch } from '~/services/template-switch'
@@ -45,6 +45,16 @@ function buildNewConfig(
   }
 }
 
+/** 绑定悬空时的回滚基线：按 project.wgcp 的逻辑引用找回当时的引擎路径 */
+async function resolveConfiguredEnginePath(oldConfig: ProjectConfig): Promise<string | undefined> {
+  if (!oldConfig.engine) {
+    return
+  }
+
+  const engine = await engineManager.findEngineByRef(oldConfig.engine)
+  return engine?.path
+}
+
 /** 站点未注册时为非致命情形（项目尚未打开预览），吞掉错误并 warn */
 async function applySiteUpdate(updater: () => Promise<void>, label: string): Promise<void> {
   try {
@@ -82,15 +92,16 @@ async function performSwitchEngine(
 ): Promise<void> {
   assertEngineEditorCompatible(newEngine)
 
-  const oldEngine = await db.engines.get(game.engineId)
-  if (!oldEngine) {
-    throw new AppError('IO_ERROR', '当前引擎记录缺失，无法安全切换')
-  }
+  // 旧引擎记录可能已被重建（绑定悬空）：这时没有可保留的旧模板基线与旧站点路径，
+  // 但切换本身仍要允许——重选引擎正是修复悬空绑定的唯一入口。
+  const oldEngine = game.engineId ? await db.engines.get(game.engineId) : undefined
 
   const oldConfig = await projectConfigCmds.readProjectConfig(game.path)
   const strategy = await templateSwitch.evaluateTemplateStrategy(game.path, oldConfig)
 
-  if (strategy === 'dirty' && !options.templateDecision) {
+  // 没有旧引擎时模板决策无从谈起：既不把模板固化为旧引擎内建，也不清理模板 upper，
+  // 用户已有的模板上层内容原样保留为覆盖层。
+  if (oldEngine && strategy === 'dirty' && !options.templateDecision) {
     throw new AppError('IO_ERROR', '模板已修改，需要用户选择处理方式', {
       details: { reason: 'TEMPLATE_DIRTY_NEEDS_DECISION' },
     })
@@ -98,12 +109,16 @@ async function performSwitchEngine(
 
   logger.info(`[引擎切换] ${game.path}: 开始切换到引擎 ${newEngine.name}@${newEngine.version ?? '未知'}`)
 
-  // 仅在模板脏状态时才需要用户决策
-  const templateDecision = strategy === 'dirty' ? options.templateDecision : undefined
+  // 仅在模板脏状态且存在旧引擎时才需要用户决策
+  const templateDecision = oldEngine && strategy === 'dirty' ? options.templateDecision : undefined
   const newConfig = buildNewConfig(oldConfig, newEngine, templateDecision, oldEngine)
 
   // 缓存切换前的有效模板路径，用于回滚 site template_path
   const oldTemplatePath = await templateSwitch.resolveTemplatePath(oldConfig.template, oldEngine)
+  // 回滚用的旧站点引擎路径：旧引擎记录缺失时按项目配置的同一个逻辑引用找回
+  const oldSiteEnginePath = oldEngine
+    ? oldEngine.path
+    : await resolveConfiguredEnginePath(oldConfig)
   // 计算切换后期望的模板路径：
   // - 显式绑定（explicit）：保持原绑定解析结果
   // - keep 分支：newConfig.template 已固化为旧引擎 engineBuiltin
@@ -176,7 +191,7 @@ async function performSwitchEngine(
       throw error
     }
     logger.warn(`[引擎切换] ${game.path}: 步骤 ${step} 失败，开始回滚`)
-    await rollback(game, oldConfig, oldEngine, { step, oldTemplatePath })
+    await rollback(game, oldConfig, { oldEnginePath: oldSiteEnginePath, oldTemplatePath, step })
     throw error
   }
 }
@@ -190,14 +205,15 @@ async function runFinalizer(action: () => Promise<unknown>, label: string): Prom
 }
 
 interface RollbackContext {
-  step: number
+  /** 旧站点引擎路径：旧引擎记录缺失且逻辑引用也解析不出时为空，该步跳过 */
+  oldEnginePath: string | undefined
   oldTemplatePath: string | undefined
+  step: number
 }
 
 async function rollback(
   game: Game,
   oldConfig: ProjectConfig,
-  oldEngine: Engine,
   context: RollbackContext,
 ): Promise<void> {
   if (context.step >= 4) {
@@ -207,9 +223,10 @@ async function rollback(
     ).catch(logRollbackError)
   }
 
-  if (context.step >= 3) {
+  const oldEnginePath = context.oldEnginePath
+  if (context.step >= 3 && oldEnginePath) {
     await applySiteUpdate(
-      () => serverCmds.updateSiteEngine(game.path, oldEngine.path),
+      () => serverCmds.updateSiteEngine(game.path, oldEnginePath),
       'rollback updateSiteEngine',
     ).catch(logRollbackError)
   }

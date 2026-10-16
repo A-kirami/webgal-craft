@@ -129,11 +129,45 @@ export const useFileStore = defineStore('file', () => {
   let templatePath = $ref<AbsPath>()
   let projectPath = $ref<AbsPath>()
 
-  // 外部可 await 此 Promise 以等待初始化完成
-  let resolveInitialized: () => void
-  let initialized = $ref<Promise<void>>(new Promise((r) => {
-    resolveInitialized = r
-  }))
+  /**
+   * 文件视图的初始化代次。工作区每变一次就作废上一代：迟到的引擎解析、目录列举与 watcher 挂载
+   * 都属于上一代，既不能再写状态、挂监听，也不能兑现新一代的 initialized——否则消费者会拿着
+   * 上一个工作区（或尚未就绪）的结果当成就绪。
+   */
+  interface InitializationHandle {
+    generation: number
+    promise: Promise<void>
+    resolve: () => void
+  }
+
+  let initializationGeneration = 0
+
+  function createInitialization(generation: number): InitializationHandle {
+    let resolve!: () => void
+    const promise = new Promise<void>((r) => {
+      resolve = r
+    })
+    return { generation, promise, resolve }
+  }
+
+  let currentInitialization = createInitialization(0)
+  // 外部可 await 此 Promise 以等待当前工作区的初始化完成
+  let initialized = $ref<Promise<void>>(currentInitialization.promise)
+
+  /** 开启新一代初始化：上一代立即兑现，避免持有旧 Promise 的消费者永久挂起 */
+  function startInitialization(): InitializationHandle {
+    const previous = currentInitialization
+    initializationGeneration += 1
+    currentInitialization = createInitialization(initializationGeneration)
+    initialized = currentInitialization.promise
+    previous.resolve()
+    return currentInitialization
+  }
+
+  /** 当前代次是否仍是调用方启动时那一代 */
+  function isCurrentInitialization(handle: InitializationHandle): boolean {
+    return handle.generation === initializationGeneration
+  }
 
   interface VfsContext {
     projectPath: AbsPath
@@ -190,9 +224,16 @@ export const useFileStore = defineStore('file', () => {
       return
     }
 
+    const handle = currentInitialization
+
     if (options.nextEnginePath === undefined) {
       // 引擎未变：按当前游戏快照重新解析（切换流程的快照可能落后，由调用方显式传入）
       const site = await gameManager.resolvePreviewSite(game)
+      if (!isCurrentInitialization(handle)) {
+        // 解析期间工作区已切换：这次刷新属于上一个工程，不能再写文件视图状态
+        return
+      }
+
       enginePath = site.enginePath
       templatePath = options.nextTemplatePath === undefined
         ? site.templatePath
@@ -206,7 +247,7 @@ export const useFileStore = defineStore('file', () => {
     // 引擎不可用时不会建立文件树；切换到可用引擎后在这里补建，并通知订阅者重读
     if (!unwatch) {
       const rootPath = projectGameRoot(projectPath)
-      await startWatchingProjectTree(rootPath)
+      await startWatchingProjectTree(rootPath, handle)
       fileSystemEvents.emit({ type: 'directory:modified', path: rootPath })
       return
     }
@@ -418,6 +459,7 @@ export const useFileStore = defineStore('file', () => {
     }
 
     const { loadRevision } = parent
+    const loadGeneration = initializationGeneration
     parent.loadingRevision = loadRevision
     const loadPromise = (async () => {
       try {
@@ -428,11 +470,14 @@ export const useFileStore = defineStore('file', () => {
           relPath: requireProjectRelativePath(path),
           templatePath: context.templatePath,
         })
-        const resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
 
-        if (parent.loadRevision !== loadRevision) {
+        // 结果只在启动它的那一代工作区里落地：工作区切换或父目录重载后，
+        // 迟到的列举结果不得写回文件树（否则会往已清空的视图里塞上一个工程的条目）
+        if (parent.loadRevision !== loadRevision || loadGeneration !== initializationGeneration) {
           return
         }
+
+        const resolvedItems = entries.map(entry => createFileSystemItemFromVfsEntry(entry, path, parentId))
 
         for (const item of resolvedItems) {
           items.set(item.id, item)
@@ -441,7 +486,7 @@ export const useFileStore = defineStore('file', () => {
         parent.childIds = resolvedItems.map(item => item.id)
         parent.isLoaded = true
       } catch (error) {
-        if (parent.loadRevision !== loadRevision) {
+        if (parent.loadRevision !== loadRevision || loadGeneration !== initializationGeneration) {
           return
         }
 
@@ -858,24 +903,23 @@ export const useFileStore = defineStore('file', () => {
 
   // ==================== 生命周期 ====================
 
-  function clear(): void {
+  function clear(): InitializationHandle {
     items.clear()
     pathToId.clear()
     clearDirectoryItemsCache()
     enginePath = undefined
     templatePath = undefined
     projectPath = undefined
-    initialized = new Promise((r) => {
-      resolveInitialized = r
-    })
+    const handle = startInitialization()
     if (unwatch) {
       unwatch()
       unwatch = undefined
     }
+    return handle
   }
 
   /** 解析当前游戏的 VFS 上下文；引擎不可用时保持无上下文，由 requireVfsContext 拒绝后续操作 */
-  async function applyVfsContext(): Promise<void> {
+  async function applyVfsContext(handle: InitializationHandle): Promise<void> {
     const game = workspaceStore.currentGame
     projectPath = game?.path
     if (!game) {
@@ -885,6 +929,10 @@ export const useFileStore = defineStore('file', () => {
     }
 
     const site = await gameManager.resolvePreviewSite(game)
+    if (!isCurrentInitialization(handle)) {
+      return
+    }
+
     enginePath = site.enginePath
     templatePath = site.templatePath
   }
@@ -894,23 +942,38 @@ export const useFileStore = defineStore('file', () => {
   }
 
   /** 建立项目文件树：加载 `game/` 根目录并挂上磁盘监听 */
-  async function startWatchingProjectTree(rootPath: AbsPath): Promise<void> {
+  async function startWatchingProjectTree(rootPath: AbsPath, handle: InitializationHandle): Promise<void> {
     await getFolderContents(rootPath)
-    unwatch = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
-  }
-
-  async function initialize(): Promise<void> {
-    const cwd = workspaceStore.CWD
-    if (!cwd || unwatch) {
+    if (!isCurrentInitialization(handle)) {
+      // 迟到的树不再挂监听
       return
     }
 
+    const stopWatching = await watchFs(rootPath, handleWatchEvent, { recursive: true, delayMs: WATCH_DELAY_MS })
+    if (!isCurrentInitialization(handle)) {
+      // 挂载期间工作区已切换：立刻停掉，既不能留在后台继续发事件，也不能写进 unwatch 覆盖新工作区的监听
+      stopWatching()
+      return
+    }
+
+    unwatch = stopWatching
+  }
+
+  async function initialize(cwd: AbsPath, handle: InitializationHandle): Promise<void> {
     try {
-      await applyVfsContext()
-      await startWatchingProjectTree(projectGameRoot(cwd))
-      resolveInitialized()
+      await applyVfsContext(handle)
+      if (!isCurrentInitialization(handle)) {
+        return
+      }
+
+      await startWatchingProjectTree(projectGameRoot(cwd), handle)
+      handle.resolve()
     } catch (error) {
-      resolveInitialized()
+      handle.resolve()
+      if (!isCurrentInitialization(handle)) {
+        return
+      }
+
       const msg = error instanceof Error ? error.message : String(error)
       void logger.error(`[FileStore] 初始化工作目录 ${cwd} 文件系统失败: ${msg}`)
       throw new AppError('FS_ERROR', `初始化工作目录 ${cwd} 文件系统失败: ${msg}`)
@@ -918,18 +981,21 @@ export const useFileStore = defineStore('file', () => {
   }
 
   // 监听工作区变化
+  // 必须同步执行：进入工程时同一次状态变更会同时唤醒编辑器的标签页 watcher，
+  // 若 clear()/initialize() 排在 flush 里更晚的位置，先跑到的消费者会读到上一轮
+  // 已兑现的 initialized，误以为文件视图已就绪。
   watch(() => workspaceStore.CWD, async (newPath) => {
-    clear()
+    const handle = clear()
     if (newPath) {
-      await initialize().catch(() => {
+      await initialize(newPath, handle).catch(() => {
         // initialize 已记录详细错误；这里避免 immediate watcher 产生未处理 Promise，
         // 保持 store 可继续创建，后续工作区切换仍可重新触发初始化。
       })
     } else {
       // 无工作区时不会触发 initialize，立即兑现 initialized，避免外部 await 永久挂起
-      resolveInitialized()
+      handle.resolve()
     }
-  }, { immediate: true })
+  }, { immediate: true, flush: 'sync' })
 
   return $$({
     deleteEntry: async (path: AbsPath, permanent: boolean): Promise<void> => {

@@ -11,8 +11,10 @@ import { AppError } from '~/types/errors'
 const {
   createEditorShortcutDefinitionsMock,
   ensureEditorRuntimeCompatibleMock,
+  handleErrorMock,
   modalOpenMock,
   querySentenceResourceReferencesMock,
+  retryActiveDocumentMock,
   requestGameRuntimeRebindMock,
   routerReplaceMock,
   useAnimationTableSyncBootstrapMock,
@@ -28,9 +30,11 @@ const {
 } = vi.hoisted(() => ({
   createEditorShortcutDefinitionsMock: vi.fn(() => []),
   ensureEditorRuntimeCompatibleMock: vi.fn(),
+  handleErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
   querySentenceResourceReferencesMock: vi.fn(() => []),
   requestGameRuntimeRebindMock: vi.fn(),
+  retryActiveDocumentMock: vi.fn(),
   routerReplaceMock: vi.fn(),
   useAnimationTableSyncBootstrapMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
@@ -160,13 +164,22 @@ vi.mock('@tauri-apps/plugin-log', () => ({
   warn: vi.fn(),
 }))
 
-vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', () => ({
-  requestGameRuntimeRebind: requestGameRuntimeRebindMock,
-  resolveRuntimeRebindIssue: () => ({
-    compatibilityIssue: 'versionTooOld',
-    reason: 'incompatible',
-  }),
+vi.mock('~/utils/error-handler', () => ({
+  handleError: handleErrorMock,
 }))
+
+// 只替换重绑入口与原因映射，保留真实的"是否需要重绑"判定
+vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/features/modals/import-dependency-resolution/request-game-runtime-rebind')>()
+  return {
+    ...actual,
+    requestGameRuntimeRebind: requestGameRuntimeRebindMock,
+    resolveRuntimeRebindIssue: () => ({
+      compatibilityIssue: 'versionTooOld',
+      reason: 'incompatible',
+    }),
+  }
+})
 
 vi.mock('vue-router', () => ({
   useRouter: () => ({
@@ -223,6 +236,9 @@ describe('edit/[gameId]', () => {
     ensureEditorRuntimeCompatibleMock.mockResolvedValue(undefined)
     modalOpenMock.mockReset()
     requestGameRuntimeRebindMock.mockResolvedValue(false)
+    retryActiveDocumentMock.mockReset()
+    retryActiveDocumentMock.mockResolvedValue(undefined)
+    handleErrorMock.mockReset()
     routerReplaceMock.mockReset()
     routerReplaceMock.mockResolvedValue(undefined)
 
@@ -231,6 +247,7 @@ describe('edit/[gameId]', () => {
       currentState: undefined,
       currentVisualProjection: undefined,
       isCurrentSceneFile: false,
+      retryActiveDocument: retryActiveDocumentMock,
       saveFile: vi.fn(),
       switchEditorMode: vi.fn(),
     }))
@@ -257,6 +274,7 @@ describe('edit/[gameId]', () => {
     useWorkspaceStoreMock.mockReturnValue(reactive({
       currentGame: undefined,
       ensureCurrentGameAvailable: vi.fn(async () => true),
+      refreshCurrentGameSnapshot: vi.fn(async () => undefined),
     }))
   })
 
@@ -361,5 +379,48 @@ describe('edit/[gameId]', () => {
     await vi.waitFor(() => {
       expect(routerReplaceMock).toHaveBeenCalledWith('/')
     })
+  })
+
+  it('重绑成功后会刷新游戏快照并重新加载当前文档', async () => {
+    const currentGame = createTestGame({ id: 'game-old-engine', engineId: 'engine-old' })
+    const refreshCurrentGameSnapshotMock = vi.fn(async () => undefined)
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('ENGINE_EDITOR_INCOMPATIBLE', '引擎版本过低', {
+      details: {
+        issue: 'versionTooOld',
+        reason: 'ENGINE_EDITOR_INCOMPATIBLE',
+      },
+    }))
+    requestGameRuntimeRebindMock.mockResolvedValue(true)
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame,
+      ensureCurrentGameAvailable: vi.fn(async () => true),
+      refreshCurrentGameSnapshot: refreshCurrentGameSnapshotMock,
+    }))
+
+    await renderEditView()
+
+    await vi.waitFor(() => {
+      expect(retryActiveDocumentMock).toHaveBeenCalledTimes(1)
+    })
+    expect(refreshCurrentGameSnapshotMock).toHaveBeenCalledTimes(1)
+    expect(routerReplaceMock).not.toHaveBeenCalled()
+  })
+
+  it('遇到无法重绑的错误会交给错误处理器，而不是静默停在编辑页', async () => {
+    const currentGame = createTestGame({ id: 'game-broken', engineId: 'engine-broken' })
+    ensureEditorRuntimeCompatibleMock.mockRejectedValue(new AppError('IO_ERROR', '磁盘读取失败'))
+    useWorkspaceStoreMock.mockReturnValue(reactive({
+      currentGame,
+      ensureCurrentGameAvailable: vi.fn(async () => true),
+      refreshCurrentGameSnapshot: vi.fn(async () => undefined),
+    }))
+
+    await renderEditView()
+
+    await vi.waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(expect.objectContaining({ code: 'IO_ERROR' }))
+    })
+    expect(requestGameRuntimeRebindMock).not.toHaveBeenCalled()
+    expect(routerReplaceMock).not.toHaveBeenCalled()
   })
 })
