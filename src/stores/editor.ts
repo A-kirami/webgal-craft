@@ -33,8 +33,6 @@ import { createEditorDocumentSaveSnapshot, saveEditorDocument } from './internal
 import {
   createLoadedDocumentState,
   DocumentState,
-  getDocumentTextContent,
-  isDocumentDirty,
   markDocumentClean,
   resolveSceneCursor,
 } from './internal/editor-document-state'
@@ -47,10 +45,11 @@ import {
 import { createSceneSelectionActions } from './internal/editor-scene-selection'
 import {
   applyLoadedDocumentState,
+  getTextProjectionPersistedContent,
   isEditableEditor,
   isSceneVisualProjection,
   isTextProjectionDirty,
-  normalizeAnimationTextProjection,
+  syncAnimationTextProjection,
   syncProjectionStateFromDocument,
 } from './internal/editor-session'
 
@@ -157,13 +156,19 @@ export const useEditorStore = defineStore('editor', () => {
     return getEditableSession(path)?.document
   }
 
-  /** 若文档已打开且有未保存改动，返回当前 buffer 文本；否则返回 undefined。 */
+  /**
+   * 若文档已打开且有未保存改动，返回当前 buffer 文本；否则返回 undefined。
+   *
+   * 脏判定必须走文本投影：动画文档在文本模式下编辑成非法 JSON 时只更新草稿、不产生文档事务，
+   * 引擎序号没变，只看 isDocumentDirty 会把这份草稿判成干净并整段丢弃。
+   */
   function getDirtyBufferContent(path: AbsPath): string | undefined {
-    const document = getDocumentState(path)
-    if (!document || !isDocumentDirty(document)) {
+    const session = getEditableSession(path)
+    if (!session || !isTextProjectionDirty(session.document, session.textState)) {
       return undefined
     }
-    return getDocumentTextContent(document)
+
+    return getTextProjectionPersistedContent(session.document, session.textState)
   }
 
   function peekSceneBuffer(path: AbsPath): { content: string, metadata: TextMetadata, revision: string } | undefined {
@@ -690,6 +695,11 @@ export const useEditorStore = defineStore('editor', () => {
     }
 
     if (state.projection === projection) {
+      // 已经是可视投影时也要对齐动画文本快照：文本模式里改过动画 JSON 再切回来时，
+      // 草稿只有在这里跟上文档模型，后续保存写的才是可视编辑结果，而不是那份旧 JSON。
+      if (projection === 'visual') {
+        syncAnimationTextProjection(session.textState, session.document)
+      }
       return true
     }
 
@@ -724,9 +734,8 @@ export const useEditorStore = defineStore('editor', () => {
       }
       session.activeProjection = 'text'
     } else {
-      const docEntry = session.document
-      if (docEntry.model.kind === 'animation' && textState?.syncError === undefined) {
-        normalizeAnimationTextProjection(session.textState, docEntry)
+      if (textState) {
+        syncAnimationTextProjection(session.textState, session.document)
       }
       reconcileSceneSelection(path)
       session.activeProjection = 'visual'

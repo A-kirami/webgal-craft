@@ -1419,6 +1419,142 @@ describe('编辑器文本与文档流程', () => {
     expect(visualProjection.frames[0]).toMatchObject({ duration: 200, ease: 'easeInOut' })
   })
 
+  it('文本模式修好非法动画 JSON 再切回可视投影后，保存写的是可视编辑结果', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/repair-then-visual.json')
+
+    preferenceStoreMock.editorMode = 'text'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('{'))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'repair-then-visual.json',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load broken animation',
+    )
+
+    // 带着非法 JSON 切到可视投影：草稿必须原样保留
+    editorStore.switchEditorMode('visual', path)
+    expect(editorStore.currentTextProjection?.textContent).toBe('{')
+    expect(editorStore.currentTextProjection?.textSource).toBe('draft')
+    expect(editorStore.currentTextProjection?.syncError).toBe('invalid-animation-json')
+
+    // 回到文本投影把 JSON 修好
+    editorStore.setActiveProjection('text', path)
+    editorStore.replaceTextDocumentContent(path, '[{"duration":100}]', { preserveDraftText: true })
+    expect(editorStore.currentTextProjection?.textSource).toBe('draft')
+
+    editorStore.setActiveProjection('visual', path)
+    expect(editorStore.currentTextProjection?.textSource).toBe('projection')
+
+    editorStore.applyAnimationFrameUpdate(path, 0, { duration: 9999 })
+    expect(editorStore.getDirtyBufferContent(path)).toContain('9999')
+
+    await editorStore.saveFile(AbsPath.from(path))
+
+    const lastWrite = writeDocumentFileMock.mock.calls.at(-1)
+    assertWriteCall(lastWrite)
+    expect(lastWrite[0]).toBe(path)
+    expect(JSON.parse(new TextDecoder().decode(lastWrite[1]))).toEqual([{ duration: 9999 }])
+  })
+
+  it('重新激活可视投影时会把文本快照对齐到动画模型', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/reactivate-visual.json')
+
+    preferenceStoreMock.editorMode = 'visual'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'reactivate-visual.json',
+      path,
+      () => editorStore.currentVisualProjection !== undefined,
+      'load animation visual projection',
+    )
+
+    // 模拟文本投影里留下的旧草稿：内容与文档模型不一致
+    editorStore.setTextProjectionDraft(path, '[{"duration":1}]')
+    editorStore.applyAnimationFrameUpdate(path, 0, { duration: 777 })
+
+    editorStore.setActiveProjection('visual', path)
+
+    expect(editorStore.currentTextProjection?.textSource).toBe('projection')
+    expect(editorStore.getDirtyBufferContent(path)).toContain('777')
+  })
+
+  it('可视投影下动画文件被外部替换后，文本快照跟随新模型', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/external-reload.json')
+
+    preferenceStoreMock.editorMode = 'visual'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'external-reload.json',
+      path,
+      () => editorStore.currentVisualProjection !== undefined,
+      'load animation visual projection',
+    )
+
+    expect(editorStore.currentTextProjection?.textSource).toBe('projection')
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":400}]'))
+    await emitFileModifiedEvent(path)
+
+    expect(editorStore.currentTextProjection?.textContent).toContain('400')
+    expect(editorStore.currentTextProjection?.textSource).toBe('projection')
+  })
+
+  it('非法动画 JSON 草稿算作未保存改动，保存并返回时会落盘', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/dotFilm.json')
+    const brokenContent = '[\n    "dotFilm": 1,\n    "duration": 0\n  }\n]'
+
+    preferenceStoreMock.editorMode = 'text'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"dotFilm":1,"duration":0}]'))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'dotFilm.json',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load animation text projection',
+    )
+
+    // 文本编辑器里删掉一个括号：草稿非法，只更新文本投影，不产生文档事务
+    editorStore.setTextProjectionDraft(path, brokenContent, 'invalid-animation-json')
+
+    expect(editorStore.hasUnsavedDocumentsUnder('/game')).toBe(true)
+    expect(editorStore.getDirtyBufferContent(path)).toBe(brokenContent)
+
+    // EditHeader.saveDirtyDocumentsUnder 的等价流程
+    const dirtyPaths = editorStore.collectDocumentPathsUnder('/game')
+      .filter(candidate => editorStore.getDirtyBufferContent(candidate) !== undefined)
+    expect(dirtyPaths).toEqual([path])
+
+    await Promise.all(dirtyPaths.map(candidate => editorStore.saveFile(candidate)))
+
+    const lastWrite = writeDocumentFileMock.mock.calls.at(-1)
+    assertWriteCall(lastWrite)
+    expect(lastWrite[0]).toBe(path)
+    expect(new TextDecoder().decode(lastWrite[1])).toBe(brokenContent)
+  })
+
   it('保存期间收到新编辑时保持文档脏状态', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/docs/save-race.txt')

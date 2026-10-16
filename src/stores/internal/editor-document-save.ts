@@ -5,7 +5,7 @@ import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
 
 import { markDocumentClean } from './editor-document-state'
-import { getTextProjectionPersistedContent, normalizeAnimationTextProjection } from './editor-session'
+import { getTextProjectionPersistedContent, syncAnimationTextProjection } from './editor-session'
 
 import type { EditorDocumentActionContext } from './editor-document-actions'
 import type { DocumentState } from './editor-document-state'
@@ -78,8 +78,8 @@ function finalizeSavedDocument(
 
   const textState = context.getTextProjectionState(path)
   if (textState) {
-    if (docEntry.model.kind === 'animation' && state.projection === 'visual' && textState.syncError === undefined) {
-      normalizeAnimationTextProjection(textState, docEntry)
+    if (state.projection === 'visual') {
+      syncAnimationTextProjection(textState, docEntry)
     }
     textState.lastSavedTime = savedAt
   }
