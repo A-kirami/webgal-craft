@@ -1729,9 +1729,18 @@ describe('gameManager', () => {
     })
   })
 
-  it('解析期间绑定被显式改写时不回写，避免覆盖用户选择', async () => {
-    dbEngineGetMock.mockResolvedValue(undefined)
-    engineFindByRefMock.mockResolvedValue(createTestEngine({ id: 'engine-reinstalled' }))
+  it('解析期间绑定被显式改写时以当前绑定为准，不覆盖也不沿用旧解析结果', async () => {
+    const explicitEngine = createTestEngine({
+      id: 'engine-user-choice',
+      path: AbsPath.from('/engines/user-choice'),
+    })
+    dbEngineGetMock.mockImplementation(async (engineId: string) => (
+      engineId === explicitEngine.id ? explicitEngine : undefined
+    ))
+    engineFindByRefMock.mockResolvedValue(createTestEngine({
+      id: 'engine-reinstalled',
+      path: AbsPath.from('/engines/WebGAL/4.6.2'),
+    }))
     readProjectConfigMock.mockResolvedValue({
       version: 1,
       engine: {
@@ -1741,7 +1750,7 @@ describe('gameManager', () => {
     })
     // 解析期间用户显式切换到了别的引擎：登记记录已不是本次观察到的悬空值
     dbGameWhereFirstMock.mockResolvedValue(createTestGame({
-      engineId: 'engine-user-choice',
+      engineId: explicitEngine.id,
       id: 'game-1',
       path: AbsPath.from('/games/demo'),
     }))
@@ -1752,10 +1761,13 @@ describe('gameManager', () => {
     })
     workspaceStoreState.currentGame = game
 
-    await expect(gameManager.ensureEditorRuntimeCompatible(game)).resolves.toBeUndefined()
+    // 预览站点按用户选择解析，而不是按本次读到的配置解析结果
+    await expect(gameManager.resolvePreviewSite(game)).resolves.toMatchObject({
+      enginePath: '/engines/user-choice',
+    })
 
     expect(dbGameUpdateMock).not.toHaveBeenCalled()
-    expect(workspaceStoreState.currentGame?.engineId).toBe('engine-stale')
+    expect(workspaceStoreState.currentGame?.engineId).toBe(explicitEngine.id)
   })
 
   it('ensureEditorRuntimeCompatible 在绑定修复写库失败时仍正常放行', async () => {
