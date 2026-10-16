@@ -1542,6 +1542,12 @@ describe('编辑器文本与文档流程', () => {
     expect(editorStore.hasUnsavedDocumentsUnder('/game')).toBe(true)
     expect(editorStore.getDirtyBufferContent(path)).toBe(brokenContent)
 
+    // 切到可视投影后草稿仍在文本投影里，目录脏状态必须继续认它，否则返回主页不会弹保存确认
+    editorStore.setActiveProjection('visual', path)
+    expect(toRaw(editorStore.currentState)).toBe(toRaw(editorStore.currentVisualProjection))
+    expect(editorStore.hasUnsavedDocumentsUnder('/game')).toBe(true)
+    editorStore.setActiveProjection('text', path)
+
     // EditHeader.saveDirtyDocumentsUnder 的等价流程
     const dirtyPaths = editorStore.collectDocumentPathsUnder('/game')
       .filter(candidate => editorStore.getDirtyBufferContent(candidate) !== undefined)

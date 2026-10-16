@@ -171,6 +171,11 @@ export const useEditorStore = defineStore('editor', () => {
     return getTextProjectionPersistedContent(session.document, session.textState)
   }
 
+  /** 文档是否有待写入磁盘的内容。判脏与保存集合共用它，避免两条链路各有一套脏语义。 */
+  function hasUnsavedDocumentAt(path: AbsPath): boolean {
+    return getDirtyBufferContent(path) !== undefined
+  }
+
   function peekSceneBuffer(path: AbsPath): { content: string, metadata: TextMetadata, revision: string } | undefined {
     const session = getEditableSession(path)
     if (!session || session.document.model.kind !== 'scene') {
@@ -860,7 +865,7 @@ export const useEditorStore = defineStore('editor', () => {
     currentState !== undefined && isEditableEditor(currentState) && currentState.kind === 'animation',
   )
   const hasUnsavedDocuments = $computed(() =>
-    [...sessions.keys()].some(path => !!getEditableState(path)?.isDirty),
+    [...sessions.keys()].some(path => hasUnsavedDocumentAt(path)),
   )
 
   function isDocumentPathWithinDirectory(path: AbsPath, directory: string): boolean {
@@ -880,7 +885,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   function hasUnsavedDocumentsUnder(directory: string): boolean {
     for (const [path] of sessions) {
-      if (isDocumentPathWithinDirectory(path, directory) && getEditableState(path)?.isDirty) {
+      if (isDocumentPathWithinDirectory(path, directory) && hasUnsavedDocumentAt(path)) {
         return true
       }
     }
