@@ -2216,4 +2216,71 @@ describe('编辑器文本与文档流程', () => {
     editorStore.replaceTextDocumentContent(path, originalContent, { preserveDraftText: true })
     expect(editorStore.currentTextProjection?.isDirty).toBe(false)
   })
+
+  it('撤回后再输入字符仍保持未保存状态', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/scene/undo-then-input.txt')
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('say:hello;'))
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'undo-then-input.txt',
+      path,
+      () => editorStore.hasState(path),
+      'load scene document',
+    )
+
+    editorStore.applyTextDocumentContent(path, '1234567')
+    await editorStore.saveFile(path)
+
+    const textProjection = editorStore.getTextProjectionState(path)
+    expect(textProjection?.isDirty).toBe(false)
+
+    editorStore.undoDocument(path)
+    expect(textProjection?.isDirty).toBe(true)
+
+    editorStore.applyTextDocumentContent(path, '1234568')
+    expect(textProjection?.isDirty).toBe(true)
+    expect(editorStore.getDirtyBufferContent(path)).toBe('1234568')
+  })
+
+  it('写盘期间的新编辑被撤销后与磁盘内容不一致时仍保持未保存状态', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/scene/save-race-undo.txt')
+    const writeDeferred = createDeferred<void>()
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('hello'))
+    writeDocumentFileMock.mockImplementationOnce(async () => {
+      await writeDeferred.promise
+    })
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'save-race-undo.txt',
+      path,
+      () => editorStore.hasState(path),
+      'load save race document',
+    )
+
+    editorStore.applyTextDocumentContent(path, 'hello!')
+    const savePromise = editorStore.saveFile(path)
+    editorStore.applyTextDocumentContent(path, 'hello!?')
+
+    writeDeferred.resolve()
+    await savePromise
+
+    // 磁盘上落盘的是 hello!，撤回全部编辑后缓冲区回到 hello
+    let undoResult = editorStore.undoDocument(path)
+    while (undoResult.applied) {
+      undoResult = editorStore.undoDocument(path)
+    }
+
+    expect(editorStore.getTextProjectionState(path)?.textContent).toBe('hello')
+    expect(editorStore.getTextProjectionState(path)?.isDirty).toBe(true)
+  })
 })

@@ -142,7 +142,7 @@ describe('编辑器会话与已加载文档状态', () => {
     })
   })
 
-  it('无需额外包装类也能根据已保存序号跟踪脏状态', () => {
+  it('无需额外包装类也能根据已保存的内容状态身份跟踪脏状态', () => {
     const document = createDocumentState(createLoadedDocumentState('plaintext', 'alpha').model)
 
     document.engine.commit(

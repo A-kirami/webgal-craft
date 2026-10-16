@@ -192,7 +192,7 @@ describe('编辑器文档动作回滚', () => {
     const result = undoDocument(context, DOC_PATH)
 
     expect(result.applied).toBe(false)
-    expect(document.engine.sequenceNumber).toBe(1)
+    expect(document.engine.stateId).toBe(1)
     expect(document.engine.canUndo).toBe(true)
     expect(document.engine.canRedo).toBe(false)
     expect(syncStateFromDocument).not.toHaveBeenCalled()
@@ -211,7 +211,7 @@ describe('编辑器文档动作回滚', () => {
     const result = redoDocument(context, DOC_PATH)
 
     expect(result.applied).toBe(false)
-    expect(document.engine.sequenceNumber).toBe(0)
+    expect(document.engine.stateId).toBe(0)
     expect(document.engine.canUndo).toBe(false)
     expect(document.engine.canRedo).toBe(true)
     expect(syncStateFromDocument).not.toHaveBeenCalled()
@@ -228,7 +228,7 @@ describe('编辑器文档动作回滚', () => {
     }
     expect(document.model.frames[0]).toMatchObject({ duration: 100 })
     expect(document.cachedTextContent).toBe('[\n  {\n    "duration": 100\n  }\n]')
-    expect(document.engine.sequenceNumber).toBe(0)
+    expect(document.engine.stateId).toBe(0)
     expect(syncStateFromDocument).not.toHaveBeenCalled()
     expect(textState.textContent).toBe('[{"duration":100}]')
     expect(loggerWarnMock).toHaveBeenCalledWith(`事务应用失败 (${animationPath}): text:set-content`)
@@ -283,7 +283,7 @@ describe('编辑器文档动作回滚', () => {
     const result = undoDocument(context, animationPath)
 
     expect(result.applied).toBe(false)
-    expect(document.engine.sequenceNumber).toBe(1)
+    expect(document.engine.stateId).toBe(1)
     expect(document.engine.canUndo).toBe(true)
     expect(document.engine.canRedo).toBe(false)
     expect(syncStateFromDocument).not.toHaveBeenCalled()

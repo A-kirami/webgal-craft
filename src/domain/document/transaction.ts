@@ -75,6 +75,8 @@ export interface HistoryEntry {
   timestamp: number
   source: TransactionSource
   editorMetadata?: EditorHistoryMetadata
+  /** 该条目产生的内容状态身份，见 EditHistory.stateId */
+  stateId: number
 }
 
 // ============================================================
@@ -89,8 +91,8 @@ const MAX_HISTORY = 100
 export interface HistoryCommitResult {
   /** 事务是否成功应用 */
   applied: boolean
-  /** 当前事务序号（单调递增） */
-  sequenceNumber: number
+  /** 提交后的内容状态身份 */
+  stateId: number
 }
 
 /**
@@ -99,7 +101,8 @@ export interface HistoryCommitResult {
 export class EditHistory {
   private _undoStack: HistoryEntry[] = []
   private _redoStack: HistoryEntry[] = []
-  private _sequenceNumber = 0
+  /** 内容状态身份发号器：只增不减，撤销不会让已经用过的身份重新可用 */
+  private _nextStateId = 0
   private _revisionNumber = 0
   private _mergeBarrier = false
 
@@ -111,8 +114,15 @@ export class EditHistory {
     return this._redoStack
   }
 
-  get sequenceNumber(): number {
-    return this._sequenceNumber
+  /**
+   * 当前内容状态的身份，取自栈顶条目：撤销回到上一份内容时身份随之回退，重做时恢复；空历史为 0。
+   *
+   * 身份回答「当前是哪一份内容」，而不是「编辑了多少次」。脏判定拿保存时的身份与之比较，
+   * 若把它换成可回退的编辑次数（撤销减一、提交加一），撤销后再编辑会重新落回保存时的数值，
+   * 已改动的内容就会被判成干净。
+   */
+  get stateId(): number {
+    return this._undoStack.at(-1)?.stateId ?? 0
   }
 
   get revisionNumber(): number {
@@ -145,6 +155,8 @@ export class EditHistory {
 
     if (!skipHistory) {
       const now = Date.now()
+      // 合并与新增都会把内容变成新的一份，因此都要占用一个新的身份
+      const stateId = ++this._nextStateId
       const last = this._undoStack.at(-1)
 
       // 合并窗口：300ms 内的连续同类事务合并
@@ -157,9 +169,9 @@ export class EditHistory {
         last.forward = mergeTransactionForward(last.forward, tx)
         last.timestamp = now
         last.editorMetadata = mergeEditorHistoryMetadata(last.editorMetadata, editorMetadata)
+        last.stateId = stateId
       } else {
-        this._undoStack.push({ forward: tx, inverse, timestamp: now, source, editorMetadata })
-        this._sequenceNumber++
+        this._undoStack.push({ forward: tx, inverse, timestamp: now, source, editorMetadata, stateId })
         // 超出容量时丢弃最早的条目
         if (this._undoStack.length > MAX_HISTORY) {
           this._undoStack.shift()
@@ -172,7 +184,7 @@ export class EditHistory {
 
     this._mergeBarrier = false
 
-    return { applied: true, sequenceNumber: this._sequenceNumber }
+    return { applied: true, stateId: this.stateId }
   }
 
   /**
@@ -183,7 +195,6 @@ export class EditHistory {
     const entry = this._undoStack.pop()
     if (entry) {
       this._redoStack.push(entry)
-      this._sequenceNumber = Math.max(0, this._sequenceNumber - 1)
       this._revisionNumber++
       this._mergeBarrier = true
     }
@@ -197,7 +208,6 @@ export class EditHistory {
     const entry = this._redoStack.pop()
     if (entry) {
       this._undoStack.push(entry)
-      this._sequenceNumber++
       this._revisionNumber++
       this._mergeBarrier = true
     }
@@ -208,11 +218,10 @@ export class EditHistory {
     this._mergeBarrier = true
   }
 
-  /** 清空所有历史 */
+  /** 清空所有历史：栈空后 stateId 回到 0，发号器不回退以免复用旧身份 */
   reset(): void {
     this._undoStack = []
     this._redoStack = []
-    this._sequenceNumber = 0
     this._revisionNumber = 0
     this._mergeBarrier = false
   }
