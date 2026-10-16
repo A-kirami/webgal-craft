@@ -47,8 +47,8 @@ export function computeTransactionInverse(
     case 'statement:batch': {
       return computeSceneBatchInverse(docEntry, tx.operations)
     }
-    case 'animation:update-frame': {
-      return computeAnimationUpdateInverse(docEntry, tx.index)
+    case 'animation:replace-frame': {
+      return computeAnimationReplaceFrameInverse(docEntry, tx.index)
     }
     case 'animation:insert-frame': {
       const insertIndex = tx.afterIndex === undefined
@@ -107,7 +107,7 @@ function computeStatementDeleteInverse(docEntry: DocumentState, statementId: num
   }
 }
 
-function computeAnimationUpdateInverse(docEntry: DocumentState, index: number): Transaction {
+function computeAnimationReplaceFrameInverse(docEntry: DocumentState, index: number): Transaction {
   if (docEntry.model.kind !== 'animation') {
     return createFallbackInverse(docEntry)
   }
@@ -118,7 +118,7 @@ function computeAnimationUpdateInverse(docEntry: DocumentState, index: number): 
   }
 
   return {
-    type: 'animation:update-frame',
+    type: 'animation:replace-frame',
     index,
     frame: cloneAnimationFrame(frame),
   }

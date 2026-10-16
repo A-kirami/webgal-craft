@@ -294,25 +294,26 @@ describe('EditHistory', () => {
       expect(engine.stateId).toBe(2)
     })
 
-    it('animation:update-frame 在窗口内合并 partial frame', () => {
+    it('animation:replace-frame 在窗口内合并为最后一次整帧替换，并保留最初的逆操作', () => {
       const engine = new EditHistory()
       engine.commit(
-        { type: 'animation:update-frame', index: 0, frame: { duration: 100 } },
-        { type: 'replace-all', content: '' },
+        { type: 'animation:replace-frame', index: 0, frame: { duration: 100 } },
+        { type: 'replace-all', content: 'before' },
         'visual',
       )
       engine.commit(
-        { type: 'animation:update-frame', index: 0, frame: { ease: 'linear' } },
-        { type: 'replace-all', content: '' },
+        { type: 'animation:replace-frame', index: 0, frame: { duration: 100, ease: 'linear' } },
+        { type: 'replace-all', content: 'between' },
         'visual',
       )
 
       expect(engine.undoStack).toHaveLength(1)
       expect(engine.undoStack[0].forward).toEqual({
-        type: 'animation:update-frame',
+        type: 'animation:replace-frame',
         index: 0,
         frame: { duration: 100, ease: 'linear' },
       })
+      expect(engine.undoStack[0].inverse).toEqual({ type: 'replace-all', content: 'before' })
     })
   })
 

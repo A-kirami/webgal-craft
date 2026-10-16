@@ -13,7 +13,7 @@ import {
   redoDocument,
   undoDocument,
 } from '../editor-document-actions'
-import { createDocumentState } from '../editor-document-state'
+import { createDocumentState, getDocumentTextContent } from '../editor-document-state'
 
 import type { EditorDocumentActionContext } from '../editor-document-actions'
 import type { DocumentState } from '../editor-document-state'
@@ -303,6 +303,34 @@ describe('编辑器文档动作回滚', () => {
       throw new TypeError('expected animation document model')
     }
     expect(document.model.frames[0]).toMatchObject({ duration: 100, ease: 'linear' })
+  })
+
+  it.each([
+    {
+      label: '缓动字段',
+      patch: { ease: 'linear' },
+    },
+    {
+      label: '变换字段',
+      patch: { position: { x: 16, y: 32 } },
+    },
+  ])('撤销帧补丁会还原改动前不存在的 $label', ({ patch }) => {
+    const { animationPath, context, document } = createAnimationActionHarness()
+    const contentBeforeEdit = getDocumentTextContent(document)
+
+    applyAnimationFrameUpdate(context, animationPath, 0, patch)
+    const contentAfterEdit = getDocumentTextContent(document)
+    expect(contentAfterEdit).not.toBe(contentBeforeEdit)
+
+    expect(undoDocument(context, animationPath).applied).toBe(true)
+    expect(getDocumentTextContent(document)).toBe(contentBeforeEdit)
+    if (document.model.kind !== 'animation') {
+      throw new TypeError('expected animation document model')
+    }
+    expect(document.model.frames[0]).toStrictEqual({ duration: 100 })
+
+    expect(redoDocument(context, animationPath).applied).toBe(true)
+    expect(getDocumentTextContent(document)).toBe(contentAfterEdit)
   })
 
   it('在插入事务中接受响应式动画帧', () => {
