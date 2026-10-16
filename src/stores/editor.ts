@@ -160,7 +160,7 @@ export const useEditorStore = defineStore('editor', () => {
    * 若文档已打开且有未保存改动，返回当前 buffer 文本；否则返回 undefined。
    *
    * 脏判定必须走文本投影：动画文档在文本模式下编辑成非法 JSON 时只更新草稿、不产生文档事务，
-   * 引擎序号没变，只看 isDocumentDirty 会把这份草稿判成干净并整段丢弃。
+   * 内容状态身份没变，只看 isDocumentDirty 会把这份草稿判成干净并整段丢弃。
    */
   function getDirtyBufferContent(path: AbsPath): string | undefined {
     const session = getEditableSession(path)

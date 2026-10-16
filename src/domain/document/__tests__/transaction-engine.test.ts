@@ -13,18 +13,18 @@ function makeInverse(id = 0): Transaction {
 }
 
 describe('EditHistory', () => {
-  it('初始状态：sequenceNumber 为 0，不可 undo/redo', () => {
+  it('初始状态：内容状态身份为 0，不可 undo/redo', () => {
     const engine = new EditHistory()
-    expect(engine.sequenceNumber).toBe(0)
+    expect(engine.stateId).toBe(0)
     expect(engine.canUndo).toBe(false)
     expect(engine.canRedo).toBe(false)
   })
 
-  it('apply 后 sequenceNumber 递增，canUndo 为 true', () => {
+  it('提交后内容状态身份前进，canUndo 为 true', () => {
     const engine = new EditHistory()
     const result = engine.commit(makeTx('statement:update'), makeInverse(), 'visual')
     expect(result.applied).toBe(true)
-    expect(result.sequenceNumber).toBe(1)
+    expect(result.stateId).toBe(1)
     expect(engine.canUndo).toBe(true)
     expect(engine.canRedo).toBe(false)
   })
@@ -39,7 +39,7 @@ describe('EditHistory', () => {
     expect(entry).toBeDefined()
     expect(entry!.forward).toBe(tx)
     expect(entry!.inverse).toBe(inv)
-    expect(engine.sequenceNumber).toBe(0)
+    expect(engine.stateId).toBe(0)
     expect(engine.canUndo).toBe(false)
     expect(engine.canRedo).toBe(true)
   })
@@ -51,7 +51,7 @@ describe('EditHistory', () => {
 
     const entry = engine.redo()
     expect(entry).toBeDefined()
-    expect(engine.sequenceNumber).toBe(1)
+    expect(engine.stateId).toBe(1)
     expect(engine.canUndo).toBe(true)
     expect(engine.canRedo).toBe(false)
   })
@@ -76,11 +76,11 @@ describe('EditHistory', () => {
     expect(engine.redo()).toBeUndefined()
   })
 
-  it('reset 清空所有历史和序号', () => {
+  it('reset 清空所有历史和内容状态身份', () => {
     const engine = new EditHistory()
     engine.commit(makeTx('statement:update'), makeInverse(), 'visual')
     engine.reset()
-    expect(engine.sequenceNumber).toBe(0)
+    expect(engine.stateId).toBe(0)
     expect(engine.canUndo).toBe(false)
     expect(engine.canRedo).toBe(false)
   })
@@ -88,7 +88,7 @@ describe('EditHistory', () => {
   it('skipHistory 不记录到 undo 栈', () => {
     const engine = new EditHistory()
     engine.commit(makeTx('statement:update'), makeInverse(), 'visual', true)
-    expect(engine.sequenceNumber).toBe(0)
+    expect(engine.stateId).toBe(0)
     expect(engine.canUndo).toBe(false)
   })
 
@@ -102,6 +102,28 @@ describe('EditHistory', () => {
       )
     }
     expect(engine.undoStack.length).toBe(100)
+  })
+
+  it('丢弃最早条目后，撤销到栈底仍指向该条目的内容状态身份', () => {
+    const engine = new EditHistory()
+    engine.commit(makeTx('statement:update', 0), makeInverse(0), 'visual')
+    // 这一条会被容量上限丢弃，但它的改动仍在文档里
+    const truncatedBaseStateId = engine.stateId
+
+    for (let i = 1; i <= 100; i++) {
+      engine.commit(
+        { type: 'statement:insert', id: i, afterId: i - 1, rawText: `s${i}` } as Transaction,
+        { type: 'statement:delete', id: i } as Transaction,
+        'visual',
+      )
+    }
+
+    expect(engine.undoStack).toHaveLength(100)
+    while (engine.canUndo) {
+      engine.undo()
+    }
+
+    expect(engine.stateId).toBe(truncatedBaseStateId)
   })
 
   describe('合并窗口', () => {
@@ -120,7 +142,6 @@ describe('EditHistory', () => {
         'visual',
       )
       expect(engine.undoStack.length).toBe(1)
-      expect(engine.sequenceNumber).toBe(1)
       // 合并后 forward 是最新的，inverse 保留原始的
       expect((engine.undoStack[0].forward as { rawText: string }).rawText).toBe('ab')
       expect(engine.undoStack[0].inverse).toBe(inv1)
@@ -184,7 +205,6 @@ describe('EditHistory', () => {
       )
 
       expect(engine.undoStack.length).toBe(1)
-      expect(engine.sequenceNumber).toBe(1)
       expect(engine.undoStack[0].forward).toEqual({ type: 'replace-all', content: 'ab' })
       expect(engine.undoStack[0].inverse).toEqual({ type: 'replace-all', content: '' })
     })
@@ -271,7 +291,7 @@ describe('EditHistory', () => {
       engine.commit(patch2, { type: 'text:set-content', resultContent: '' } as Transaction, 'text')
 
       expect(engine.undoStack.length).toBe(2)
-      expect(engine.sequenceNumber).toBe(2)
+      expect(engine.stateId).toBe(2)
     })
 
     it('animation:update-frame 在窗口内合并 partial frame', () => {
@@ -318,5 +338,29 @@ describe('EditHistory', () => {
     }
     expect(engine.canUndo).toBe(true)
     expect(engine.canRedo).toBe(false)
+  })
+
+  describe('内容状态身份', () => {
+    it('合并进上一条目也会占用新的身份', () => {
+      const engine = new EditHistory()
+      engine.commit(makeTx('statement:update', 1), makeInverse(1), 'visual')
+      const firstStateId = engine.stateId
+
+      engine.commit(makeTx('statement:update', 1), makeInverse(1), 'visual')
+
+      expect(engine.undoStack).toHaveLength(1)
+      expect(engine.stateId).not.toBe(firstStateId)
+    })
+
+    it('撤销后重新提交不会复用撤销前的身份', () => {
+      const engine = new EditHistory()
+      engine.commit(makeTx('statement:update', 1), makeInverse(1), 'visual')
+      const savedStateId = engine.stateId
+
+      engine.undo()
+      engine.commit(makeTx('statement:update', 2), makeInverse(2), 'visual')
+
+      expect(engine.stateId).not.toBe(savedStateId)
+    })
   })
 })

@@ -23,8 +23,8 @@ export interface EditorDocumentSaveSnapshot {
   state: EditableEditorState
   docEntry: DocumentState
   content: string
-  savedSequenceNumber: number
-  savedRevisionNumber: number
+  /** 发起保存时的内容状态身份：写盘的是这份内容，因此它是写盘后的保存点 */
+  savedStateId: number
 }
 
 export function createEditorDocumentSaveSnapshot(
@@ -49,8 +49,7 @@ export function createEditorDocumentSaveSnapshot(
     content: textState
       ? getTextProjectionPersistedContent(docEntry, textState)
       : docEntry.savedTextContent,
-    savedSequenceNumber: docEntry.engine.sequenceNumber,
-    savedRevisionNumber: docEntry.engine.revisionNumber,
+    savedStateId: docEntry.engine.stateId,
   }
 }
 
@@ -64,14 +63,12 @@ function finalizeSavedDocument(
   const {
     state,
     docEntry,
-    savedSequenceNumber,
-    savedRevisionNumber,
+    savedStateId,
   } = saveContext
 
   state.lastSavedTime = savedAt
-  if (docEntry.engine.revisionNumber === savedRevisionNumber) {
-    markDocumentClean(docEntry, savedSequenceNumber)
-  }
+  // 保存点取发起保存时的身份：写盘期间的新编辑会让当前身份前进，脏状态自然保留
+  markDocumentClean(docEntry, savedStateId)
   docEntry.savedTextContent = savedContent
   docEntry.engine.markBoundary()
   context.syncStateFromDocument(path)

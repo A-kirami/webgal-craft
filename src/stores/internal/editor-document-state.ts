@@ -12,7 +12,8 @@ export interface DocumentState {
   canRedo: boolean
   canUndo: boolean
   historyRevision: number
-  savedSequenceNumber: number
+  /** 保存时的内容状态身份，与当前身份比较得出脏状态 */
+  savedStateId: number
   savedTextContent: string
   /** 缓存的文本内容，model 变更后置为 undefined，按需重新序列化 */
   cachedTextContent: string | undefined
@@ -94,7 +95,7 @@ export function createDocumentState(model: DocumentModel, savedTextContent: stri
     canRedo: engine.canRedo,
     canUndo: engine.canUndo,
     historyRevision: engine.revisionNumber,
-    savedSequenceNumber: 0,
+    savedStateId: engine.stateId,
     savedTextContent,
     cachedTextContent: undefined,
     contentVersion: 0,
@@ -124,14 +125,15 @@ export function invalidateDocumentTextCache(doc: DocumentState): void {
 }
 
 export function isDocumentDirty(document: DocumentState): boolean {
-  return document.engine.sequenceNumber !== document.savedSequenceNumber
+  return document.engine.stateId !== document.savedStateId
 }
 
+/** 把文档记为已保存；传入保存开始时的身份可避免保存期间的编辑被并入本次保存 */
 export function markDocumentClean(
   document: DocumentState,
-  sequenceNumber: number = document.engine.sequenceNumber,
+  stateId: number = document.engine.stateId,
 ): void {
-  document.savedSequenceNumber = sequenceNumber
+  document.savedStateId = stateId
 }
 
 export function resolveSceneCursor(

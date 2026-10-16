@@ -23,8 +23,8 @@ export function createSceneContentChangeToken(session: EditableEditorSession): s
   return [
     document.contentVersion,
     document.historyRevision,
-    document.engine.sequenceNumber,
-    document.savedSequenceNumber,
+    document.engine.stateId,
+    document.savedStateId,
     textState.textSource,
     textState.syncError ?? '',
     textState.textContent.length,
@@ -40,8 +40,8 @@ export function createSceneBufferRevision(session: EditableEditorSession): strin
   const { document, textState } = session
   return [
     document.historyRevision,
-    document.engine.sequenceNumber,
-    document.savedSequenceNumber,
+    document.engine.stateId,
+    document.savedStateId,
     textState.textSource,
     content.length,
     hashDocumentContent(content),
