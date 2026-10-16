@@ -180,8 +180,9 @@ export function applyLoadedDocumentState(
     loadedState.model,
     resolveLoadedTextProjectionSnapshot(loadedState, activeProjection),
   )
-  // 外部重载会替换整个文档基线，投影不应继承旧会话中的脏状态。
+  // 外部重载替换了整个文档基线：投影不继承旧会话的脏状态，文本快照也必须重新对齐新模型。
   session.textState.isDirty = false
+  syncAnimationTextProjection(session.textState, session.document)
   if (session.visualState) {
     session.visualState.isDirty = false
     if (session.visualState.kind === 'scene' && loadedState.model.kind === 'scene') {
@@ -190,17 +191,21 @@ export function applyLoadedDocumentState(
   }
 }
 
-export function normalizeAnimationTextProjection(
+/**
+ * 动画文档的写入源：可视投影激活时以文档模型为准，文本投影只是同一份内容的快照。
+ * 快照没跟上模型时保存会把旧 JSON 当成「用户文本改动」写回磁盘，覆盖可视编辑的结果，
+ * 因此每次进入可视投影都要调用它。
+ *
+ * 非法 JSON 的草稿（syncError）是用户唯一的修复入口，必须原样保留。
+ */
+export function syncAnimationTextProjection(
   textState: TextProjectionState,
   document: DocumentState,
 ): void {
-  if (document.model.kind !== 'animation') {
-    return
+  if (document.model.kind === 'animation' && textState.syncError === undefined) {
+    textState.textContent = getDocumentTextContent(document)
+    textState.textSource = 'projection'
   }
-
-  textState.textContent = getDocumentTextContent(document)
-  textState.textSource = 'projection'
-  textState.syncError = undefined
 }
 
 export function syncProjectionStateFromDocument(
