@@ -103,6 +103,8 @@ export class EditHistory {
   private _redoStack: HistoryEntry[] = []
   /** 内容状态身份发号器：只增不减，撤销不会让已经用过的身份重新可用 */
   private _nextStateId = 0
+  /** 栈底基准身份：历史被截断后栈空不再等于初始内容，而是停在最后一条被丢弃条目产生的那份内容上 */
+  private _baseStateId = 0
   private _revisionNumber = 0
   private _mergeBarrier = false
 
@@ -115,14 +117,14 @@ export class EditHistory {
   }
 
   /**
-   * 当前内容状态的身份，取自栈顶条目：撤销回到上一份内容时身份随之回退，重做时恢复；空历史为 0。
+   * 当前内容状态的身份，取自栈顶条目：撤销回到上一份内容时身份随之回退，重做时恢复；栈空时取栈底基准身份。
    *
    * 身份回答「当前是哪一份内容」，而不是「编辑了多少次」。脏判定拿保存时的身份与之比较，
    * 若把它换成可回退的编辑次数（撤销减一、提交加一），撤销后再编辑会重新落回保存时的数值，
    * 已改动的内容就会被判成干净。
    */
   get stateId(): number {
-    return this._undoStack.at(-1)?.stateId ?? 0
+    return this._undoStack.at(-1)?.stateId ?? this._baseStateId
   }
 
   get revisionNumber(): number {
@@ -172,9 +174,9 @@ export class EditHistory {
         last.stateId = stateId
       } else {
         this._undoStack.push({ forward: tx, inverse, timestamp: now, source, editorMetadata, stateId })
-        // 超出容量时丢弃最早的条目
+        // 超出容量时丢弃最早的条目：它的内容仍在文档里，身份成为新的栈底基准
         if (this._undoStack.length > MAX_HISTORY) {
-          this._undoStack.shift()
+          this._baseStateId = this._undoStack.shift()!.stateId
         }
       }
 
@@ -218,10 +220,11 @@ export class EditHistory {
     this._mergeBarrier = true
   }
 
-  /** 清空所有历史：栈空后 stateId 回到 0，发号器不回退以免复用旧身份 */
+  /** 清空所有历史：栈底基准身份一并归零，发号器不回退以免复用旧身份 */
   reset(): void {
     this._undoStack = []
     this._redoStack = []
+    this._baseStateId = 0
     this._revisionNumber = 0
     this._mergeBarrier = false
   }

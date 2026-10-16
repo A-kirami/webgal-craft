@@ -104,6 +104,28 @@ describe('EditHistory', () => {
     expect(engine.undoStack.length).toBe(100)
   })
 
+  it('丢弃最早条目后，撤销到栈底仍指向该条目的内容状态身份', () => {
+    const engine = new EditHistory()
+    engine.commit(makeTx('statement:update', 0), makeInverse(0), 'visual')
+    // 这一条会被容量上限丢弃，但它的改动仍在文档里
+    const truncatedBaseStateId = engine.stateId
+
+    for (let i = 1; i <= 100; i++) {
+      engine.commit(
+        { type: 'statement:insert', id: i, afterId: i - 1, rawText: `s${i}` } as Transaction,
+        { type: 'statement:delete', id: i } as Transaction,
+        'visual',
+      )
+    }
+
+    expect(engine.undoStack).toHaveLength(100)
+    while (engine.canUndo) {
+      engine.undo()
+    }
+
+    expect(engine.stateId).toBe(truncatedBaseStateId)
+  })
+
   describe('合并窗口', () => {
     it('300ms 内同 id 的 statement:update 合并为一个 undo 条目', () => {
       const engine = new EditHistory()
