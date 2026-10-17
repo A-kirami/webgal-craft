@@ -112,6 +112,46 @@ describe('命令节点编解码', () => {
     expect(serialized.commandRaw).toBe(SAY_CONTINUATION_RAW)
   })
 
+  it('续写内容自带冒号时回退显式 say 头，避免冒号前的文本被当成说话人', () => {
+    const node = parseCommandNode(mustParse('say:你好:世界;'))
+    expect(node.type).toBe(commandType.say)
+    if (node.type !== commandType.say) {
+      return
+    }
+
+    const serialized = serializeCommandNode(node)
+    expect(serialized.commandRaw).toBe('say')
+
+    // 省略命令头的续写简写会把冒号前的文本读成说话人，只有显式 say 头能原样往返
+    const reparsed = parseCommandNode(serialized)
+    expect(reparsed.type).toBe(commandType.say)
+    if (reparsed.type !== commandType.say) {
+      return
+    }
+    expect(reparsed.speaker).toBe('')
+    expect(reparsed.text).toBe('你好:世界')
+  })
+
+  it('旁白内容自带冒号时仍使用旁白简写并保留 clear', () => {
+    const node = parseCommandNode(mustParse(':你好:世界;'))
+    expect(node.type).toBe(commandType.say)
+    if (node.type !== commandType.say) {
+      return
+    }
+
+    // 旁白的冒号分隔符在句首，内容里的冒号不会移动切分点，不需要回退标准形式
+    const serialized = serializeCommandNode(node)
+    expect(serialized.commandRaw).toBe('')
+
+    const reparsed = parseCommandNode(serialized)
+    expect(reparsed.type).toBe(commandType.say)
+    if (reparsed.type !== commandType.say) {
+      return
+    }
+    expect(reparsed.clear).toBe(true)
+    expect(reparsed.text).toBe('你好:世界')
+  })
+
   it('空内容且无参数的 say 不应序列化为续写哨兵值', () => {
     const sentence = mustParse('say:;')
     const node = parseCommandNode(sentence)
