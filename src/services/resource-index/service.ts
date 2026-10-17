@@ -1,6 +1,5 @@
 import { useFileSystemEvents } from '~/composables/useFileSystemEvents'
 import { AbsPath } from '~/domain/path'
-import { gameConfigPath, gameSceneDir } from '~/services/platform/app-paths'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import {
@@ -21,10 +20,12 @@ import {
   findMissingAssetReferences,
   getReferencesFromSource,
   getReferencesToAsset,
+  isReferenceSourcePath,
   logReferenceSourceFailures,
   rebuildReferenceSource,
   removeReferenceSource,
   renameReferenceSource,
+  replaceReferenceRecords,
 } from './references'
 
 import type { AssetCatalogSnapshot } from './catalog'
@@ -41,7 +42,6 @@ interface ResourceIndexState {
   gamePath?: AbsPath
   catalog: AssetCatalogSnapshot
   references: AssetReferenceIndexSnapshot
-  dirty: boolean
 }
 
 const resourceIndexState = shallowRef<ResourceIndexState>({
@@ -49,24 +49,25 @@ const resourceIndexState = shallowRef<ResourceIndexState>({
   gamePath: undefined,
   catalog: createEmptyAssetCatalogSnapshot(),
   references: createEmptyAssetReferenceIndexSnapshot(),
-  dirty: false,
 })
 const resourceIndexRevision = shallowRef(0)
 
 let buildVersion = 0
+// 构建期间的文件事件版本：完成后仍需再同步一次，避免快照漏掉增量更新。
+let fileEventVersion = 0
 let bootstrapConsumerCount = 0
 let bootstrapScope: ReturnType<typeof effectScope> | undefined
 let pendingDirectoryRebuildTimer: ReturnType<typeof setTimeout> | undefined
 let referenceSourceUpdateVersion = 0
 const referenceSourceUpdateVersions = new Map<AbsPath, number>()
 
-interface RebuildResourceIndexOptions {
-  completionLogLevel?: 'debug' | 'info'
-}
-
 function setResourceIndexState(nextState: ResourceIndexState): void {
   resourceIndexState.value = nextState
   resourceIndexRevision.value += 1
+}
+
+function markFileEvent(): void {
+  fileEventVersion += 1
 }
 
 function clearPendingDirectoryRebuild(): void {
@@ -83,46 +84,34 @@ function scheduleDirectoryRebuild(gamePath: AbsPath, querySentenceResourceRefere
     if (resourceIndexState.value.gamePath !== gamePath) {
       return
     }
-    void rebuildResourceIndex(gamePath, querySentenceResourceReferences, { completionLogLevel: 'debug' })
+    void rebuildResourceIndex(gamePath, querySentenceResourceReferences)
   }, DIRECTORY_REBUILD_DEBOUNCE_MS)
-}
-
-function clearResourceIndexState(): void {
-  buildVersion += 1
-  referenceSourceUpdateVersions.clear()
-  clearReferenceSourceFailureLogCache()
-  clearPendingDirectoryRebuild()
-  setResourceIndexState({
-    status: 'idle',
-    gamePath: undefined,
-    catalog: createEmptyAssetCatalogSnapshot(),
-    references: createEmptyAssetReferenceIndexSnapshot(),
-    dirty: false,
-  })
 }
 
 async function rebuildResourceIndex(
   gamePath: AbsPath,
   querySentenceResourceReferences: SentenceResourceReferenceQuery,
-  options: RebuildResourceIndexOptions = {},
 ): Promise<void> {
   const currentBuildVersion = ++buildVersion
+  const eventVersionAtStart = fileEventVersion
   const startedAt = Date.now()
-  const previousGamePath = resourceIndexState.value.gamePath
-  const completionLogLevel = options.completionLogLevel ?? 'info'
+  const previousState = resourceIndexState.value
+  const preserveReadyState = previousState.gamePath === gamePath && previousState.status === 'ready'
+  const completionLogLevel = preserveReadyState ? 'debug' : 'info'
   referenceSourceUpdateVersions.clear()
-  if (previousGamePath !== gamePath) {
+  if (previousState.gamePath !== gamePath) {
     clearReferenceSourceFailureLogCache()
   }
 
   logger.debug(`资源索引开始构建: ${gamePath}`)
-  setResourceIndexState({
-    status: 'building',
-    gamePath,
-    catalog: createEmptyAssetCatalogSnapshot(),
-    references: createEmptyAssetReferenceIndexSnapshot(),
-    dirty: false,
-  })
+  if (!preserveReadyState) {
+    setResourceIndexState({
+      status: 'building',
+      gamePath,
+      catalog: createEmptyAssetCatalogSnapshot(),
+      references: createEmptyAssetReferenceIndexSnapshot(),
+    })
+  }
 
   try {
     const catalog = await buildAssetCatalog(gamePath)
@@ -131,27 +120,28 @@ async function rebuildResourceIndex(
       return
     }
 
-    const needsFollowUpRebuild = resourceIndexState.value.gamePath === gamePath && resourceIndexState.value.dirty
-
     setResourceIndexState({
       status: 'ready',
       gamePath,
       catalog,
       references,
-      dirty: false,
     })
     const completionMessage = `资源索引构建完成: ${gamePath}, `
       + `资源 ${catalog.entries.size} 个, 引用 ${references.records.length} 条, `
       + `耗时 ${Date.now() - startedAt}ms`
     logger[completionLogLevel](completionMessage)
 
-    if (needsFollowUpRebuild) {
+    if (fileEventVersion !== eventVersionAtStart && !pendingDirectoryRebuildTimer) {
       logger.debug(`资源索引构建期间收到变更，安排跟进重建: ${gamePath}`)
-      void rebuildResourceIndex(gamePath, querySentenceResourceReferences, { completionLogLevel })
+      void rebuildResourceIndex(gamePath, querySentenceResourceReferences)
     }
   } catch (error) {
     logger.warn(`资源索引构建失败: ${gamePath}, 耗时 ${Date.now() - startedAt}ms - ${error}`)
     if (currentBuildVersion !== buildVersion) {
+      return
+    }
+    if (preserveReadyState) {
+      // 后台刷新失败时保留现有可用索引，避免把已经能用的编辑器清空。
       return
     }
 
@@ -160,44 +150,19 @@ async function rebuildResourceIndex(
       gamePath,
       catalog: createEmptyAssetCatalogSnapshot(),
       references: createEmptyAssetReferenceIndexSnapshot(),
-      dirty: false,
     })
   }
 }
 
-function markBuildingStateDirty(state: ResourceIndexState): void {
-  if (resourceIndexState.value !== state || state.status !== 'building' || state.dirty) {
-    return
-  }
-
-  setResourceIndexState({
-    ...state,
-    dirty: true,
-  })
-}
-
 function shouldDeferPathUpdate(state: ResourceIndexState, gamePath: AbsPath): boolean {
-  if (state.gamePath !== gamePath) {
-    return true
-  }
-  if (state.status === 'building') {
-    markBuildingStateDirty(state)
-    return true
-  }
-  return state.status !== 'ready'
+  return state.gamePath !== gamePath || state.status !== 'ready'
 }
 
 function applyReadyResourceIndexState(
   updater: (state: ResourceIndexState) => Pick<ResourceIndexState, 'catalog' | 'references'>,
 ): void {
   const currentState = resourceIndexState.value
-  if (!currentState.gamePath) {
-    return
-  }
-  if (currentState.status !== 'ready') {
-    if (currentState.status === 'building') {
-      markBuildingStateDirty(currentState)
-    }
+  if (!currentState.gamePath || currentState.status !== 'ready') {
     return
   }
 
@@ -207,7 +172,6 @@ function applyReadyResourceIndexState(
     gamePath: currentState.gamePath,
     catalog,
     references,
-    dirty: currentState.dirty,
   })
 }
 
@@ -217,10 +181,12 @@ async function rebuildReferenceForPath(
   querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<void> {
   const currentState = resourceIndexState.value
-  if (shouldDeferPathUpdate(currentState, gamePath)) {
+  if (currentState.gamePath !== gamePath || !isReferenceSourcePath(gamePath, path)) {
     return
   }
-  if (path !== gameConfigPath(gamePath) && !(path.startsWith(`${gameSceneDir(gamePath)}/`) && path.endsWith('.txt'))) {
+
+  markFileEvent()
+  if (shouldDeferPathUpdate(currentState, gamePath)) {
     return
   }
 
@@ -254,21 +220,6 @@ function cancelReferenceSourceUpdates(sourcePaths: AbsPath[]): void {
   for (const sourcePath of sourcePaths) {
     referenceSourceUpdateVersions.set(sourcePath, cancellationVersion)
     referenceSourceUpdateVersions.delete(sourcePath)
-  }
-}
-
-function replaceReferenceRecords(
-  snapshot: AssetReferenceIndexSnapshot,
-  removedSourcePaths: AbsPath[],
-  sourcePath: AbsPath,
-  records: AssetReferenceRecord[],
-): AssetReferenceIndexSnapshot {
-  const removedSourcePathSet = new Set<AbsPath>(removedSourcePaths)
-  return {
-    records: [
-      ...snapshot.records.filter(record => !removedSourcePathSet.has(record.sourcePath)),
-      ...records.filter(record => record.sourcePath === sourcePath),
-    ],
   }
 }
 
@@ -340,7 +291,8 @@ function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceRes
       () => workspaceStore.CWD,
       (gamePath) => {
         if (!gamePath) {
-          clearResourceIndexState()
+          // 离开编辑器时保留索引供下次复用，只重置失败日志的去重状态。
+          clearReferenceSourceFailureLogCache()
           return
         }
         void rebuildResourceIndex(AbsPath.from(gamePath), querySentenceResourceReferences)
@@ -354,6 +306,7 @@ function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceRes
         return
       }
 
+      markFileEvent()
       applyReadyResourceIndexState(state => ({
         catalog: addAssetPathToCatalog(state.catalog, gamePath, event.path),
         references: state.references,
@@ -367,6 +320,7 @@ function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceRes
         return
       }
 
+      markFileEvent()
       applyReadyResourceIndexState(state => ({
         catalog: removeAssetPathFromCatalog(state.catalog, gamePath, event.path),
         references: removeReferenceSource(state.references, event.path),
@@ -384,6 +338,7 @@ function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceRes
         return
       }
 
+      markFileEvent()
       applyReadyResourceIndexState(state => ({
         catalog: renameAssetPathInCatalog(
           state.catalog,
@@ -417,6 +372,7 @@ function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceRes
       if (!isPathWithinGameRoot(gamePath, path)) {
         return
       }
+      markFileEvent()
       scheduleDirectoryRebuild(gamePath, querySentenceResourceReferences)
     }
 
@@ -431,6 +387,7 @@ function bindResourceIndexBootstrap(querySentenceResourceReferences: SentenceRes
       if (!isPathWithinGameRoot(gamePath, event.oldPath) && !isPathWithinGameRoot(gamePath, event.newPath)) {
         return
       }
+      markFileEvent()
       scheduleDirectoryRebuild(gamePath, querySentenceResourceReferences)
     })
   })

@@ -1,5 +1,4 @@
-import { readDir } from '@tauri-apps/plugin-fs'
-
+import { gameAssetsCmds } from '~/commands/game-assets'
 import { AbsPath, RelPath } from '~/domain/path'
 import { gameAssetDir, gameRootDir } from '~/services/platform/app-paths'
 
@@ -17,17 +16,21 @@ export interface AssetCatalogEntry {
 }
 
 export interface AssetCatalogSnapshot {
+  // 用于把绝对路径还原成 key，避免为 80k 条目再维护一份路径索引。
+  gamePath?: AbsPath
   entries: Map<string, AssetCatalogEntry>
 }
 
 export function createEmptyAssetCatalogSnapshot(): AssetCatalogSnapshot {
   return {
+    gamePath: undefined,
     entries: new Map<string, AssetCatalogEntry>(),
   }
 }
 
 function cloneAssetCatalogSnapshot(snapshot: AssetCatalogSnapshot): AssetCatalogSnapshot {
   return {
+    gamePath: snapshot.gamePath,
     entries: new Map(snapshot.entries),
   }
 }
@@ -50,11 +53,19 @@ export function resolveAssetByAbsolutePath(
   snapshot: AssetCatalogSnapshot,
   absolutePath: AbsPath,
 ): AssetCatalogEntry | undefined {
-  for (const entry of snapshot.entries.values()) {
-    if (entry.absolutePath === absolutePath) {
-      return entry
-    }
+  if (!snapshot.gamePath) {
+    return
   }
+
+  const resolved = resolveCatalogPath(snapshot.gamePath, absolutePath)
+  if (!resolved) {
+    return
+  }
+
+  return getAssetFromCatalog(
+    snapshot,
+    createAssetKeyForType(resolved.assetType, resolved.relativePath),
+  )
 }
 
 export function listAssetsByAssetType(
@@ -66,20 +77,33 @@ export function listAssetsByAssetType(
 }
 
 export async function buildAssetCatalog(gamePath: AbsPath): Promise<AssetCatalogSnapshot> {
-  const gameRootPath = gameRootDir(gamePath)
-  const rootEntries = await readDir(gameRootPath)
-  const assetDirectories = rootEntries.filter(entry => entry.isDirectory && !!entry.name)
-  const assetEntries = await Promise.all(assetDirectories.map(async (entry) => {
-    const assetType = entry.name!
-    const rootPath = gameAssetDir(gamePath, assetType)
-    const files = [...await collectAssetFiles(rootPath, RelPath.empty())]
-      .filter(relativePath => shouldCatalogAsset(assetType, relativePath))
-    return [...files].map(relativePath => createCatalogEntry(assetType, rootPath, relativePath))
-  }))
+  const startedAt = Date.now()
+  const files = await gameAssetsCmds.scan(gamePath)
+  const assetRootPaths = new Map<string, AbsPath>()
+  const entries = new Map<string, AssetCatalogEntry>()
 
-  const entries = assetEntries.flat()
+  for (const file of files) {
+    if (!shouldCatalogAsset(file.assetType, file.relativePath)) {
+      continue
+    }
+
+    let assetRootPath = assetRootPaths.get(file.assetType)
+    if (!assetRootPath) {
+      assetRootPath = gameAssetDir(gamePath, file.assetType)
+      assetRootPaths.set(file.assetType, assetRootPath)
+    }
+
+    const entry = createCatalogEntry(file.assetType, assetRootPath, file.relativePath)
+    entries.set(stringifyAssetKey(entry.key), entry)
+  }
+
+  logger.debug(
+    `资源清单扫描完成: ${files.length} 个文件, ${entries.size} 个资源, `
+    + `耗时 ${Date.now() - startedAt}ms`,
+  )
   return {
-    entries: new Map(entries.map(entry => [stringifyAssetKey(entry.key), entry])),
+    gamePath,
+    entries,
   }
 }
 
@@ -108,12 +132,13 @@ export function removeAssetPathFromCatalog(
     return snapshot
   }
 
-  if (!snapshot.entries.has(stringifyAssetKey(entry.key))) {
+  const key = stringifyAssetKey(entry.key)
+  if (!snapshot.entries.has(key)) {
     return snapshot
   }
 
   const nextSnapshot = cloneAssetCatalogSnapshot(snapshot)
-  nextSnapshot.entries.delete(stringifyAssetKey(entry.key))
+  nextSnapshot.entries.delete(key)
   return nextSnapshot
 }
 
@@ -123,35 +148,25 @@ export function renameAssetPathInCatalog(
   oldPath: AbsPath,
   newPath: AbsPath,
 ): AssetCatalogSnapshot {
-  const withoutOldPath = removeAssetPathFromCatalog(snapshot, gamePath, oldPath)
-  return addAssetPathToCatalog(withoutOldPath, gamePath, newPath)
+  const sourceEntry = resolveCatalogEntry(gamePath, oldPath)
+  const targetEntry = resolveCatalogEntry(gamePath, newPath)
+  if (!sourceEntry && !targetEntry) {
+    return snapshot
+  }
+
+  const nextSnapshot = cloneAssetCatalogSnapshot(snapshot)
+  if (sourceEntry) {
+    nextSnapshot.entries.delete(stringifyAssetKey(sourceEntry.key))
+  }
+  if (targetEntry) {
+    nextSnapshot.entries.set(stringifyAssetKey(targetEntry.key), targetEntry)
+  }
+  return nextSnapshot
 }
 
 export function isPathWithinGameRoot(gamePath: AbsPath, path: AbsPath): boolean {
   const gameRootPath = gameRootDir(gamePath)
   return path === gameRootPath || path.startsWith(`${gameRootPath}/`)
-}
-
-async function collectAssetFiles(
-  directoryPath: AbsPath,
-  relativePrefix: RelPath,
-): Promise<Set<RelPath>> {
-  const entries = await readDir(directoryPath)
-  const nestedFiles = await Promise.all(entries.flatMap((entry) => {
-    if (!entry.name) {
-      return []
-    }
-
-    const relativePath = RelPath.append(relativePrefix, entry.name)
-
-    if (entry.isDirectory) {
-      return [collectAssetFiles(AbsPath.append(directoryPath, entry.name), relativePath)]
-    }
-
-    return [Promise.resolve(new Set([relativePath]))]
-  }))
-
-  return new Set(nestedFiles.flatMap(files => [...files]))
 }
 
 function resolveCatalogPath(gamePath: AbsPath, absolutePath: AbsPath): {
