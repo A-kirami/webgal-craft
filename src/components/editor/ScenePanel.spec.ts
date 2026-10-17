@@ -98,6 +98,13 @@ interface TestTab {
   path: string
 }
 
+interface TestWorkspaceStore {
+  currentGame?: {
+    id: string
+    path: string
+  }
+}
+
 function createRect(rect: Partial<DOMRect>): DOMRect {
   return {
     bottom: rect.bottom ?? 0,
@@ -507,5 +514,99 @@ describe('ScenePanel', () => {
     await vi.waitFor(() => {
       expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('离开工作区时不会再用旧场景路径读取目录', async () => {
+    const fileStoreFixture = createFileStore()
+    const fileStore = reactive({
+      initialized: Promise.resolve(),
+      getFolderContents: fileStoreFixture.getFolderContents,
+    })
+    const workspaceStore = reactive<TestWorkspaceStore>({
+      currentGame: {
+        id: 'game-1',
+        path: '/games/demo',
+      },
+    })
+    useFileStoreMock.mockReturnValue(fileStore)
+    useWorkspaceStoreMock.mockReturnValue(workspaceStore)
+
+    await renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('start.txt')).toBeVisible()
+    const callsBeforeLeave = fileStoreFixture.getFolderContents.mock.calls.length
+
+    // FileStore 在 CWD 清空时同步清掉 VFS 上下文并换代 initialized
+    workspaceStore.currentGame = undefined
+    fileStore.initialized = Promise.resolve()
+
+    // 等重算和旧读取的续体执行完
+    await nextTick()
+    await Promise.resolve()
+    await nextTick()
+
+    expect(fileStoreFixture.getFolderContents.mock.calls.length).toBe(callsBeforeLeave)
+  })
+
+  it('初始化完成前离开工作区不会继续读取旧目录', async () => {
+    let resolveInitialized!: () => void
+    const initialized = new Promise<void>((resolve) => {
+      resolveInitialized = resolve
+    })
+    const getFolderContents = vi.fn(async () => [])
+    const workspaceStore = reactive<TestWorkspaceStore>({
+      currentGame: {
+        id: 'game-1',
+        path: '/games/demo',
+      },
+    })
+    useFileStoreMock.mockReturnValue({
+      initialized,
+      getFolderContents,
+    })
+    useWorkspaceStoreMock.mockReturnValue(workspaceStore)
+
+    await renderInBrowser(ScenePanel, {
+      browser: {
+        i18nMode: 'localized',
+        messages: {
+          'zh-Hans': {
+            edit: {},
+          },
+        },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    // 等待场景树进入等待 FileStore 初始化的状态
+    await vi.waitFor(() => {
+      expect(document.querySelector<HTMLButtonElement>('[data-testid="scene-panel-refresh"]')?.disabled).toBe(true)
+    })
+    expect(getFolderContents).not.toHaveBeenCalled()
+
+    // FileStore 清空工作区时会兑现上一代 initialized，放行仍在等待的旧读取
+    workspaceStore.currentGame = undefined
+    resolveInitialized()
+
+    // 等重算和旧读取的续体执行完
+    await nextTick()
+    await Promise.resolve()
+    await nextTick()
+
+    expect(getFolderContents).not.toHaveBeenCalled()
   })
 })

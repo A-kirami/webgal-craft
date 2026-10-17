@@ -27,7 +27,8 @@ const tabsStore = useTabsStore()
 const fileSystemEvents = useFileSystemEvents()
 const externalDropZoneRef = useTemplateRef<HTMLElement>('externalDropZoneRef')
 
-const scenePath = computedAsync(async () => {
+// 必须同步更新：工作区清空时 items 会在同一轮读取 scenePath，异步结果会拿到上一个工程的路径
+const scenePath = computed(() => {
   const gamePath = workspaceStore.currentGame?.path
   return gamePath ? gameSceneDir(AbsPath.from(gamePath)) : ''
 })
@@ -47,7 +48,7 @@ const items = computedAsync(async () => {
     isLoading = true
   }
   // computedAsync 仅在首个 await 之前同步收集依赖，所以 refreshTrigger、scenePath、initialized
-  // 这三处响应式访问必须放在任何 await 之前，否则手动刷新与文件系统事件无法触发重算
+  // 必须先在 await 之前访问一次，否则手动刷新与文件系统事件无法触发重算
   const path = scenePath.value
   const initialized = fileStore.initialized
   try {
@@ -56,6 +57,10 @@ const items = computedAsync(async () => {
     }
     // 等待 FileStore 初始化完成，避免在 enginePath 未就绪时加载
     await initialized
+    // 等待期间工作区可能已切换或清空，旧路径的读取必须作废
+    if (scenePath.value !== path) {
+      return []
+    }
     return await loadScenePanelTreeNodes(path, currentPath => fileStore.getFolderContents(AbsPath.from(currentPath)))
   } catch (error) {
     logger.error(`[ScenePanel] 获取场景文件夹内容失败: ${error instanceof Error ? error.message : error}`)
