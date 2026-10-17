@@ -255,11 +255,14 @@ function serializeSayNode(node: SayCommandNode): ISentence {
     .flag('concat', node.concat)
     .flag('notend', node.notend)
     .build(node.extraArgs)
-  // 续写形式没有命令头，内容就是命令头；文本为空时整句只剩参数段或裸 ';'，
-  // 两种写法都不再是独立语句：' -fontSize=small' 以空格 + '-' 开头，会被支持多行语句的引擎
-  // 当成上一条语句的续行吞掉；裸 ';' 会被 webgal-parser 识别成 comment。
-  // 因此文本为空时回退到显式 say 头，参数段随命令头一起保留下来。
-  const shouldFallbackToExplicitSay = isContinuation && node.text === ''
+  // 续写形式省略命令头，内容本身就是整行开头，以下两种情况省略它会改变语义：
+  // - 文本为空：整句只剩参数段或裸 ';'，' -fontSize=small' 以空格 + '-' 开头，会被支持多行语句的
+  //   引擎当成上一条语句的续行吞掉；裸 ';' 会被 webgal-parser 识别成 comment。
+  // - 文本自带冒号：webgal-parser 按第一个英文冒号切分命令头与内容，'你好:世界;' 会被读成
+  //   说话人「你好」+ 文本「世界」。显式 say 头不带 speaker 参数时与续写简写语义相同，
+  //   都沿用上一次的说话者，因此回退到 say 头不改变引擎行为。
+  // 角色前缀与旁白前缀各自带一个分隔符，内容里的冒号不会移动切分点，不受影响。
+  const shouldFallbackToExplicitSay = isContinuation && (node.text === '' || node.text.includes(':'))
 
   return {
     ...toSentenceBase(node),

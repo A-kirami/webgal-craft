@@ -462,6 +462,17 @@ describe('useStatementEditor', () => {
       expect(latest.rawText).toBe(':你好;')
     })
 
+    it('内容自带冒号时编辑内容保留 say 命令头，冒号前文本不会变成说话人', () => {
+      const { editor, updates } = createReactiveHarness('say:世界，你好！: 又见面了;')
+
+      editor.content.handleChange('世界，你好！: 又见面了！')
+
+      const latest = updates.at(-1)!
+      expect(latest.rawText).toBe('say:世界，你好！: 又见面了！;')
+      expect(latest.parsed.content).toBe('世界，你好！: 又见面了！')
+      expect(editor.say.effectiveSpeaker.value).toBe('')
+    })
+
     it('旁白模式退出后转为续写简写', () => {
       const { editor, updates } = createHarness('say:这是一个旁白。 -clear;')
 
