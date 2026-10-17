@@ -42,10 +42,19 @@ vi.mock('~/services/config-manager', () => ({
   },
 }))
 
+vi.mock('~/commands/game-assets', async () => {
+  const { scanGameAssetsFromReadDir } = await import('~/__tests__/mocks/game-assets')
+  return {
+    gameAssetsCmds: {
+      scan: scanGameAssetsFromReadDir,
+    },
+  }
+})
+
 const readDirMock = vi.mocked(readDir)
 const readTextFileMock = vi.mocked(readTextFile)
 
-function createDirEntry(name: string, isDirectory: boolean) {
+function createDirEntry(name: string, isDirectory = false) {
   return {
     name,
     isDirectory,
@@ -241,6 +250,7 @@ describe('useResourceIndex', () => {
         case '/project/game/scene': {
           return [
             createDirEntry('intro.txt', false),
+            createDirEntry('video.mp4', false),
             createDirEntry('chapter1', true),
           ]
         }
@@ -344,6 +354,7 @@ describe('useResourceIndex', () => {
           fieldKey: 'Game_Logo',
         },
       ])
+      expect(readTextFileMock).not.toHaveBeenCalledWith('/project/game/scene/video.mp4')
       expect(resourceIndex.getReferencesFrom(AbsPath.from('/project/game/scene/intro.txt'))).toHaveLength(4)
       expect(resourceIndex.getReferencesFrom(AbsPath.from('/project/game/config.txt'))).toHaveLength(4)
       expect(resourceIndex.getReferencesTo(branchSceneKey)).toMatchObject([
@@ -369,6 +380,126 @@ describe('useResourceIndex', () => {
       ])
     } finally {
       scope.stop()
+    }
+  })
+
+  it('重新进入编辑页时复用已就绪索引并在后台刷新', async () => {
+    const secondBackgroundRead = createDeferred<ReturnType<typeof createDirEntry>[]>()
+    let backgroundReadCount = 0
+
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          return [createDirEntry('background', true)]
+        }
+        case '/project/game/background': {
+          backgroundReadCount += 1
+          if (backgroundReadCount === 1) {
+            return [createDirEntry('before.png')]
+          }
+          return secondBackgroundRead.promise
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
+    const beforeKey = createAssetKey('asset', 'background', RelPath.from('before.png'))
+    const afterKey = createAssetKey('asset', 'background', RelPath.from('after.png'))
+
+    const firstScope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    firstScope.run(() => {
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+      expect(resourceIndex.hasAssetKey(beforeKey)).toBe(true)
+    } finally {
+      firstScope.stop()
+    }
+
+    const secondScope = effectScope()
+    secondScope.run(() => {
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
+    })
+
+    try {
+      await waitFor(() => backgroundReadCount === 2)
+
+      expect(resourceIndex.status.value).toBe('ready')
+      expect(resourceIndex.hasAssetKey(beforeKey)).toBe(true)
+      expect(resourceIndex.hasAssetKey(afterKey)).toBe(false)
+
+      secondBackgroundRead.resolve([
+        createDirEntry('before.png'),
+        createDirEntry('after.png'),
+      ])
+
+      await waitFor(() =>
+        resourceIndex.status.value === 'ready' && resourceIndex.hasAssetKey(afterKey),
+      )
+      expect(resourceIndex.hasAssetKey(beforeKey)).toBe(true)
+    } finally {
+      secondScope.stop()
+    }
+  })
+
+  it('后台刷新失败时保留当前可用索引', async () => {
+    let rootReadCount = 0
+    readDirMock.mockImplementation(async (path: string | URL) => {
+      switch (String(path)) {
+        case '/project/game': {
+          rootReadCount += 1
+          if (rootReadCount === 1) {
+            return [createDirEntry('background', true)]
+          }
+          throw new Error('scan failed')
+        }
+        case '/project/game/background': {
+          return [createDirEntry('before.png')]
+        }
+        default: {
+          throw new TypeError(`unexpected readDir path: ${String(path)}`)
+        }
+      }
+    })
+
+    const { useResourceIndex, useResourceIndexBootstrap: useResourceIndexBootstrapImpl } = await import('../service')
+    const beforeKey = createAssetKey('asset', 'background', RelPath.from('before.png'))
+
+    const firstScope = effectScope()
+    let resourceIndex!: ReturnType<typeof useResourceIndex>
+    firstScope.run(() => {
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
+      resourceIndex = useResourceIndex()
+    })
+
+    try {
+      await waitFor(() => resourceIndex.status.value === 'ready')
+      expect(resourceIndex.hasAssetKey(beforeKey)).toBe(true)
+    } finally {
+      firstScope.stop()
+    }
+
+    loggerWarnMock.mockClear()
+    const secondScope = effectScope()
+    secondScope.run(() => {
+      useResourceIndexBootstrapImpl(querySentenceResourceReferences)
+    })
+
+    try {
+      await waitFor(() => loggerWarnMock.mock.calls.some(([message]) =>
+        String(message).includes('资源索引构建失败'),
+      ))
+      expect(resourceIndex.status.value).toBe('ready')
+      expect(resourceIndex.hasAssetKey(beforeKey)).toBe(true)
+    } finally {
+      secondScope.stop()
     }
   })
 
@@ -516,7 +647,7 @@ describe('useResourceIndex', () => {
     }
   })
 
-  it('清空工作目录后重新打开同一路径时会重新记录解析失败', async () => {
+  it('离开并重新进入同一路径时会复用索引并重新记录解析失败', async () => {
     readDirMock.mockImplementation(async (path: string | URL) => {
       switch (String(path)) {
         case '/project/game': {
@@ -552,11 +683,13 @@ describe('useResourceIndex', () => {
       )).toHaveLength(1)
 
       loggerWarnMock.mockClear()
+      const readyRevision = resourceIndex.revision.value
       workspaceStoreState.CWD = undefined
-      await waitFor(() => resourceIndex.status.value === 'idle')
+      await flushMicrotasks()
+      expect(resourceIndex.status.value).toBe('ready')
 
       workspaceStoreState.CWD = '/project'
-      await waitFor(() => resourceIndex.status.value === 'ready')
+      await waitFor(() => resourceIndex.revision.value > readyRevision)
 
       expect(loggerWarnMock.mock.calls.filter(([message]) =>
         String(message).startsWith('资源索引跳过'),

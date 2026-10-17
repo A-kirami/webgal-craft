@@ -837,6 +837,35 @@ export async function installMockTauri(page: Page, options: InstallMockTauriOpti
               const gamePath = requireGamePath(invokeArgs.gamePath)
               return getGameConfig(gamePath)
             }
+            case 'scan_game_assets': {
+              const gamePath = requireGamePath(invokeArgs.gamePath)
+              const gameRoot = normalizePath(joinPaths([gamePath, 'game']))
+              const gameRootPrefix = `${gameRoot}/`
+              const files: { assetType: string, relativePath: string }[] = []
+
+              for (const [entryPath, entry] of fileSystem.entries()) {
+                if (entry.isDirectory || !entryPath.startsWith(gameRootPrefix)) {
+                  continue
+                }
+
+                const [assetType, ...relativeSegments] = entryPath
+                  .slice(gameRootPrefix.length)
+                  .split('/')
+                if (!assetType || relativeSegments.length === 0) {
+                  continue
+                }
+
+                files.push({
+                  assetType,
+                  relativePath: relativeSegments.join('/'),
+                })
+              }
+
+              return files.toSorted((left, right) =>
+                left.assetType.localeCompare(right.assetType)
+                || left.relativePath.localeCompare(right.relativePath),
+              )
+            }
             case 'get_thumbnail': {
               return new Uint8Array([])
             }
