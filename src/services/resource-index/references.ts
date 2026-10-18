@@ -34,8 +34,11 @@ export interface AssetReferenceDiagnostic {
   references: AssetReferenceRecord[]
 }
 
+/** records 是权威列表，两个 Map 是由它派生的查询索引。 */
 export interface AssetReferenceIndexSnapshot {
   records: AssetReferenceRecord[]
+  byAssetKey: Map<string, AssetReferenceRecord[]>
+  bySourcePath: Map<AbsPath, AssetReferenceRecord[]>
 }
 
 export interface AssetReferenceSourceFailure {
@@ -43,7 +46,8 @@ export interface AssetReferenceSourceFailure {
   error: unknown
 }
 
-interface AssetReferenceSlice extends AssetReferenceIndexSnapshot {
+interface AssetReferenceSlice {
+  records: AssetReferenceRecord[]
   failures: AssetReferenceSourceFailure[]
 }
 
@@ -61,10 +65,38 @@ const REFERENCE_SOURCE_FAILURE_RELOG_INTERVAL_MS = 5 * 60 * 1000
 
 const loggedReferenceSourceFailures = new Map<AbsPath, LoggedReferenceSourceFailure>()
 
-export function createEmptyAssetReferenceIndexSnapshot(): AssetReferenceIndexSnapshot {
-  return {
-    records: [],
+function createAssetReferenceIndexSnapshot(
+  records: AssetReferenceRecord[],
+): AssetReferenceIndexSnapshot {
+  const byAssetKey = new Map<string, AssetReferenceRecord[]>()
+  const bySourcePath = new Map<AbsPath, AssetReferenceRecord[]>()
+
+  for (const record of records) {
+    const assetKey = stringifyAssetKey(record.assetKey)
+    const assetRecords = byAssetKey.get(assetKey)
+    if (assetRecords) {
+      assetRecords.push(record)
+    } else {
+      byAssetKey.set(assetKey, [record])
+    }
+
+    const sourceRecords = bySourcePath.get(record.sourcePath)
+    if (sourceRecords) {
+      sourceRecords.push(record)
+    } else {
+      bySourcePath.set(record.sourcePath, [record])
+    }
   }
+
+  return {
+    records,
+    byAssetKey,
+    bySourcePath,
+  }
+}
+
+export function createEmptyAssetReferenceIndexSnapshot(): AssetReferenceIndexSnapshot {
+  return createAssetReferenceIndexSnapshot([])
 }
 
 export function clearReferenceSourceFailureLogCache(): void {
@@ -76,15 +108,20 @@ export async function buildAssetReferenceIndex(
   catalog: AssetCatalogSnapshot,
   querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<AssetReferenceIndexSnapshot> {
+  // scene 目录下可能混有视频/音频等非脚本文件，只有 .txt 才是可解析的场景。
+  const sceneEntries = listAssetsByAssetType(catalog, 'scene')
+    .filter(entry => isSceneScriptPath(entry.fileName))
   const sourceSlices = await Promise.all([
-    ...listAssetsByAssetType(catalog, 'scene').map(entry => buildSceneReferenceSlice(entry.absolutePath, querySentenceResourceReferences)),
+    ...sceneEntries.map(entry => buildSceneReferenceSlice(entry.absolutePath, querySentenceResourceReferences)),
     buildGameConfigReferenceSlice(gamePath),
   ])
   logReferenceSourceFailures(sourceSlices.flatMap(slice => slice.failures))
 
-  return {
-    records: sourceSlices.flatMap(slice => slice.records),
-  }
+  return createAssetReferenceIndexSnapshot(sourceSlices.flatMap(slice => slice.records))
+}
+
+export function isReferenceSourcePath(gamePath: AbsPath, path: AbsPath): boolean {
+  return isGameConfigPath(gamePath, path) || isScenePath(gamePath, path)
 }
 
 export async function rebuildReferenceSource(
@@ -93,6 +130,13 @@ export async function rebuildReferenceSource(
   sourcePath: AbsPath,
   querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<AssetReferenceSourceUpdate> {
+  if (!isReferenceSourcePath(gamePath, sourcePath)) {
+    return {
+      snapshot,
+      failures: [],
+    }
+  }
+
   if (isGameConfigPath(gamePath, sourcePath)) {
     const slice = await buildGameConfigReferenceSlice(gamePath)
     return {
@@ -101,17 +145,10 @@ export async function rebuildReferenceSource(
     }
   }
 
-  if (isScenePath(gamePath, sourcePath)) {
-    const slice = await buildSceneReferenceSlice(sourcePath, querySentenceResourceReferences)
-    return {
-      snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
-      failures: slice.failures,
-    }
-  }
-
+  const slice = await buildSceneReferenceSlice(sourcePath, querySentenceResourceReferences)
   return {
-    snapshot,
-    failures: [],
+    snapshot: replaceReferenceSource(snapshot, sourcePath, slice),
+    failures: slice.failures,
   }
 }
 
@@ -120,9 +157,23 @@ export function removeReferenceSource(
   sourcePath: AbsPath,
 ): AssetReferenceIndexSnapshot {
   clearReferenceSourceFailure(sourcePath)
-  return {
-    records: snapshot.records.filter(record => record.sourcePath !== sourcePath),
-  }
+  const records = snapshot.records.filter(record => record.sourcePath !== sourcePath)
+  return records.length === snapshot.records.length
+    ? snapshot
+    : createAssetReferenceIndexSnapshot(records)
+}
+
+export function replaceReferenceRecords(
+  snapshot: AssetReferenceIndexSnapshot,
+  removedSourcePaths: AbsPath[],
+  sourcePath: AbsPath,
+  records: AssetReferenceRecord[],
+): AssetReferenceIndexSnapshot {
+  const removedSourcePathSet = new Set<AbsPath>(removedSourcePaths)
+  return createAssetReferenceIndexSnapshot([
+    ...snapshot.records.filter(record => !removedSourcePathSet.has(record.sourcePath)),
+    ...records.filter(record => record.sourcePath === sourcePath),
+  ])
 }
 
 export async function renameReferenceSource(
@@ -132,7 +183,7 @@ export async function renameReferenceSource(
   newPath: AbsPath,
   querySentenceResourceReferences: SentenceResourceReferenceQuery,
 ): Promise<AssetReferenceSourceUpdate> {
-  if (!isGameConfigPath(gamePath, newPath) && !isScenePath(gamePath, newPath)) {
+  if (!isReferenceSourcePath(gamePath, newPath)) {
     return {
       snapshot: removeReferenceSource(snapshot, oldPath),
       failures: [],
@@ -146,15 +197,14 @@ export function getReferencesToAsset(
   snapshot: AssetReferenceIndexSnapshot,
   key: AssetKey,
 ): AssetReferenceRecord[] {
-  const lookupKey = stringifyAssetKey(key)
-  return snapshot.records.filter(record => stringifyAssetKey(record.assetKey) === lookupKey)
+  return snapshot.byAssetKey.get(stringifyAssetKey(key)) ?? []
 }
 
 export function getReferencesFromSource(
   snapshot: AssetReferenceIndexSnapshot,
   sourcePath: AbsPath,
 ): AssetReferenceRecord[] {
-  return snapshot.records.filter(record => record.sourcePath === sourcePath)
+  return snapshot.bySourcePath.get(sourcePath) ?? []
 }
 
 export function findMissingAssetReferences(
@@ -184,14 +234,12 @@ export function findMissingAssetReferences(
 function replaceReferenceSource(
   snapshot: AssetReferenceIndexSnapshot,
   sourcePath: AbsPath,
-  slice: AssetReferenceIndexSnapshot,
+  slice: AssetReferenceSlice,
 ): AssetReferenceIndexSnapshot {
-  return {
-    records: [
-      ...snapshot.records.filter(record => record.sourcePath !== sourcePath),
-      ...slice.records,
-    ],
-  }
+  return createAssetReferenceIndexSnapshot([
+    ...snapshot.records.filter(record => record.sourcePath !== sourcePath),
+    ...slice.records,
+  ])
 }
 
 function createEmptyAssetReferenceSlice(failures: AssetReferenceSourceFailure[] = []): AssetReferenceSlice {
@@ -371,5 +419,9 @@ function isGameConfigPath(gamePath: AbsPath, path: AbsPath): boolean {
 
 function isScenePath(gamePath: AbsPath, path: AbsPath): boolean {
   const sceneRootPath = gameSceneDir(gamePath)
-  return path.startsWith(`${sceneRootPath}/`) && path.endsWith('.txt')
+  return path.startsWith(`${sceneRootPath}/`) && isSceneScriptPath(path)
+}
+
+function isSceneScriptPath(path: string): boolean {
+  return path.toLowerCase().endsWith('.txt')
 }

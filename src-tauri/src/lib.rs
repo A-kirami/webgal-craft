@@ -100,6 +100,7 @@ pub fn run() {
             // game
             commands::game::get_game_config,
             commands::game::set_game_config,
+            commands::game_assets::scan_game_assets,
             // engine
             commands::engine::read_engine_manifest,
             commands::engine::get_latest_official_engine_release,
