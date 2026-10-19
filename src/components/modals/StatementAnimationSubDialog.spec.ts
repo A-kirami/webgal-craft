@@ -33,6 +33,7 @@ function createAnimationDialogMock(): ReturnType<typeof useStatementAnimationDia
     handleApply: vi.fn(),
     isDirty: false,
     isOpen: true,
+    openSaveAnimationFileDialog: vi.fn(),
     preview: undefined,
     requestClose: vi.fn(),
     sessionId: 1,

@@ -21,7 +21,7 @@ interface UseStatementAnimationEditorBridgeOptions {
 
 export type StatementAnimationEditorOpenOverride = (
   parsed: ISentence,
-  onApply: (frames: AnimationFrame[]) => void,
+  onApply: (sentence: ISentence) => void,
   framePreviewContext?: AnimationFramePreviewContext,
 ) => void
 
@@ -93,6 +93,15 @@ export function applyAnimationEditorResultToSentence(sentence: ISentence, frames
   }
 }
 
+export function applyAnimationFileReferenceToSentence(sentence: ISentence, animationName: string): ISentence {
+  return {
+    ...sentence,
+    command: commandType.setAnimation,
+    commandRaw: 'setAnimation',
+    content: animationName,
+  }
+}
+
 export function parseStatementAnimationFrames(sentence: ISentence): AnimationFrame[] {
   if (sentence.command !== commandType.setTempAnimation) {
     return []
@@ -107,15 +116,13 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
   const overriddenOpen = inject(STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY, undefined)
 
   function emitAnimationEditorResult(
-    sentence: ISentence,
     target: StatementUpdateTarget,
-    frames: AnimationFrame[],
+    nextSentence: ISentence,
   ) {
-    const newSentence = applyAnimationEditorResultToSentence(sentence, frames)
     options.emitUpdate({
       target,
-      rawText: serializeSentence(newSentence),
-      parsed: newSentence,
+      rawText: serializeSentence(nextSentence),
+      parsed: nextSentence,
       source: 'visual',
     })
   }
@@ -130,7 +137,7 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
       const currentTarget = updateTarget.value ?? createStatementIdTarget(0)
       overriddenOpen(
         currentParsed,
-        frames => emitAnimationEditorResult(currentParsed, currentTarget, frames),
+        sentence => emitAnimationEditorResult(currentTarget, sentence),
         createFramePreviewContext(currentParsed, updateTarget.value),
       )
       return

@@ -9,12 +9,12 @@ import { createSentence } from '~/features/editor/__tests__/statement-editor-tes
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
 import {
   applyAnimationEditorResultToSentence,
+  applyAnimationFileReferenceToSentence,
   STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY,
   useStatementAnimationEditorBridge,
 } from '~/features/editor/animation/useStatementAnimationEditorBridge'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
-import type { AnimationFrame } from '~/domain/stage/types'
 import type { TestNode } from '~/features/editor/__tests__/utils/createTestRenderer'
 import type { AnimationFramePreviewContext } from '~/features/editor/animation/useAnimationFramePreview'
 import type { StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
@@ -44,7 +44,7 @@ function mountBridgeHarness() {
 
   let bridge: ReturnType<typeof useStatementAnimationEditorBridge> | undefined
   let capturedParsed: ISentence | undefined
-  let capturedOnApply: ((frames: AnimationFrame[]) => void) | undefined
+  let capturedOnApply: ((sentence: ISentence) => void) | undefined
   let capturedPreviewContext: AnimationFramePreviewContext | undefined
 
   const Consumer = defineComponent({
@@ -139,6 +139,31 @@ describe('applyAnimationEditorResultToSentence', () => {
   })
 })
 
+describe('applyAnimationFileReferenceToSentence', () => {
+  it('把临时动画语句改写为引用动画文件并保留其余参数', () => {
+    const sentence = createSentence({
+      command: commandType.setTempAnimation,
+      content: '[{"duration":120}]',
+      args: [
+        { key: 'target', value: 'fig-left' },
+        { key: 'keep', value: true },
+      ],
+      inlineComment: '保留注释',
+    })
+
+    const result = applyAnimationFileReferenceToSentence(sentence, 'walk/fade')
+
+    expect(result.command).toBe(commandType.setAnimation)
+    expect(result.commandRaw).toBe('setAnimation')
+    expect(result.content).toBe('walk/fade')
+    expect(result.args).toEqual([
+      { key: 'target', value: 'fig-left' },
+      { key: 'keep', value: true },
+    ])
+    expect(serializeSentence(result)).toBe('setAnimation:walk/fade -target=fig-left -keep;保留注释')
+  })
+})
+
 describe('useStatementAnimationEditorBridge', () => {
   it('打开编辑器后使用打开当时的语句与目标快照回写结果', () => {
     const {
@@ -181,24 +206,20 @@ describe('useStatementAnimationEditorBridge', () => {
       statementId: 99,
     }
 
-    onApplyNonNull([
-      { duration: 0, alpha: 0 },
-      { duration: 180, alpha: 1 },
-    ])
+    const appliedSentence = createSentence({
+      command: commandType.setTempAnimation,
+      content: '[{"duration":0,"alpha":0},{"duration":180,"alpha":1}]',
+      args: [{ key: 'target', value: 'fig-left' }],
+    })
+    onApplyNonNull(appliedSentence)
 
     expect(emitUpdate).toHaveBeenCalledWith(expect.objectContaining({
       target: {
         kind: 'statement',
         statementId: 7,
       },
-      parsed: {
-        ...createSentence({
-          command: commandType.setTempAnimation,
-          content: '[{"duration":120}]',
-        }),
-        content: '[{"duration":0,"alpha":0},{"duration":180,"alpha":1}]',
-      },
-      rawText: 'setTempAnimation:[{"duration":0,"alpha":0},{"duration":180,"alpha":1}];',
+      parsed: appliedSentence,
+      rawText: 'setTempAnimation:[{"duration":0,"alpha":0},{"duration":180,"alpha":1}] -target=fig-left;',
       source: 'visual',
     }))
     expect(emitUpdate).toHaveBeenCalledTimes(1)

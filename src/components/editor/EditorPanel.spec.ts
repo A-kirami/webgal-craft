@@ -82,6 +82,7 @@ const {
     handleApply: vi.fn(),
     isDirty: false,
     isOpen: false,
+    openSaveAnimationFileDialog: vi.fn(),
     preview: undefined as { notice?: string } | undefined,
     requestClose: vi.fn(),
   },
@@ -337,10 +338,13 @@ const globalStubs = {
   }),
   StatementAnimationEditorPanel: defineComponent({
     name: 'StubStatementAnimationEditorPanel',
-    setup() {
-      return () => h('button', {
-        type: 'button',
-      }, 'Statement Animation Editor Panel')
+    setup(_, { slots }) {
+      return () => h('div', [
+        h('button', {
+          type: 'button',
+        }, 'Statement Animation Editor Panel'),
+        ...(slots['footer-leading']?.() ?? []),
+      ])
     },
   }),
 }
@@ -723,6 +727,17 @@ describe('EditorPanel', () => {
 
     // 关闭动画期间内容可能仍在 DOM 内且持有焦点，上下文必须由 open 而不是 target 决定去留
     expect(useShortcutContextRegistry().resolveContext().panelFocus).not.toBe('animationEditor')
+  })
+
+  it('动画抽屉的底部操作区左侧提供保存为动画文件入口', async () => {
+    statementAnimationDialogMock.isOpen = true
+
+    await renderEditorPanel()
+
+    // 浏览器测试不加载 UnoCSS，预览交互区（固定定位）会盖住抽屉内容，直接派发点击即可验证转发
+    document.querySelector<HTMLElement>('[data-testid="save-animation-file"]')!.click()
+
+    expect(statementAnimationDialogMock.openSaveAnimationFileDialog).toHaveBeenCalledOnce()
   })
 
   it('动画编辑器抽屉聚焦到内置关闭按钮时仍保持动画编辑器快捷键上下文', async () => {

@@ -21,6 +21,7 @@ import GameConfigModal from '~/components/modals/GameConfigModal.vue'
 import GameDependencyResolutionModal from '~/components/modals/GameDependencyResolutionModal.vue'
 import PathOperationRewriteModal from '~/components/modals/PathOperationRewriteModal.vue'
 import RecoverGameModal from '~/components/modals/RecoverGameModal.vue'
+import SaveAnimationFileModal from '~/components/modals/SaveAnimationFileModal.vue'
 import SaveChangesModal from '~/components/modals/SaveChangesModal.vue'
 import SettingsModal from '~/components/modals/SettingsModal.vue'
 import StatementGroupModal from '~/components/modals/StatementGroupModal.vue'
@@ -52,6 +53,7 @@ const ModalDialog = {
   GameDependencyResolutionModal,
   PathOperationRewriteModal,
   RecoverGameModal,
+  SaveAnimationFileModal,
   SaveChangesModal,
   SettingsModal,
   StatementGroupModal,

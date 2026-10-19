@@ -115,7 +115,11 @@ onBeforeUnmount(() => {
       @cancel-preview="props.controller.handleTransformCancelPreview"
     />
 
-    <div v-if="props.showFooter" class="mt-4 flex gap-2 justify-end">
+    <div v-if="props.showFooter" class="mt-4 flex flex-wrap gap-2 items-center justify-end">
+      <!-- 文件级动作由宿主提供：模态宿主隐藏页脚时入口自然消失，不需要额外的宿主开关 -->
+      <div class="mr-auto flex gap-2">
+        <slot name="footer-leading" />
+      </div>
       <Button size="sm" variant="outline" @click="emit('cancel')">
         {{ $t('common.cancel') }}
       </Button>

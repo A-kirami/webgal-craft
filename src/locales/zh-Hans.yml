@@ -594,6 +594,20 @@ modals:
     fileNameRequired: 文件名不能为空
     fileExists: 文件已存在
     create: 创建
+  saveAnimationFile:
+    title: 保存为动画文件
+    description: 输入相对 game/animation 的路径，可以用 / 分隔子目录。
+    fileNamePlaceholder: 输入动画名称
+    fileNameRequired: 动画名称不能为空
+    invalidPath: 只能输入 game/animation 下的相对路径
+    reservedName: animationTable 是动画表的保留名称，不能用作动画名称
+    fileExists: 同名动画文件已存在
+    save: 保存
+    saveFailed: 保存动画文件失败
+    savedTitle: 动画文件已保存
+    rewritePrompt: 要把当前语句改为调用“{name}”吗？
+    rewrite: 改写语句
+    keep: 保持原样
   settings:
     description: 在这里调整各项设置，让 WebGAL Craft 更符合你的使用习惯
     tabs:
@@ -965,6 +979,7 @@ edit:
     animation:
       title: 动画编辑器
       description: 调整当前动画各关键帧的时长、缓动和变换
+      saveAsFile: 保存为动画文件
       invalidJson: 当前高级动画内容存在错误，无法打开动画编辑器，切换到文本模式修复
       v2ReadOnly: v2 动画暂不支持可视化编辑，切换到文本模式编辑
       timelineTitle: 时间轴
