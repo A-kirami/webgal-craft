@@ -22,6 +22,7 @@ describe('Engine runtime capabilities', () => {
       multilineStatements: false,
       opusVocalShorthand: false,
       sceneSemantics: false,
+      seekAnimation: false,
       transformFrom: false,
     })
     expect(resolveEngineRuntimeCapabilities('4.6.3')).toEqual({
@@ -30,6 +31,7 @@ describe('Engine runtime capabilities', () => {
       multilineStatements: true,
       opusVocalShorthand: true,
       sceneSemantics: true,
+      seekAnimation: false,
       transformFrom: false,
     })
     expect(resolveEngineRuntimeCapabilities('4.6.5')).toEqual({
@@ -38,6 +40,16 @@ describe('Engine runtime capabilities', () => {
       multilineStatements: true,
       opusVocalShorthand: true,
       sceneSemantics: true,
+      seekAnimation: false,
+      transformFrom: true,
+    })
+    expect(resolveEngineRuntimeCapabilities('4.6.6')).toEqual({
+      changeFigureDiff: true,
+      figurePositions: true,
+      multilineStatements: true,
+      opusVocalShorthand: true,
+      sceneSemantics: true,
+      seekAnimation: true,
       transformFrom: true,
     })
     expect(resolveEngineRuntimeCapabilities('4.10.0')).toEqual({
@@ -46,6 +58,7 @@ describe('Engine runtime capabilities', () => {
       multilineStatements: true,
       opusVocalShorthand: true,
       sceneSemantics: true,
+      seekAnimation: true,
       transformFrom: true,
     })
   })
@@ -67,6 +80,9 @@ describe('Engine runtime capabilities', () => {
     expect(supportsEngineRuntimeCapability('4.6.4', 'changeFigureDiff')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.5-beta.1', 'changeFigureDiff')).toBe(false)
     expect(supportsEngineRuntimeCapability('4.6.5', 'changeFigureDiff')).toBe(true)
+    expect(supportsEngineRuntimeCapability('4.6.5', 'seekAnimation')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.6-beta.1', 'seekAnimation')).toBe(false)
+    expect(supportsEngineRuntimeCapability('4.6.6', 'seekAnimation')).toBe(true)
     expect(supportsEngineRuntimeCapability(undefined, 'multilineStatements')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'opusVocalShorthand')).toBe(false)
     expect(supportsEngineRuntimeCapability(undefined, 'sceneSemantics')).toBe(false)

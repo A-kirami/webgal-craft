@@ -982,6 +982,13 @@ edit:
         redo: Redo
         zoom: Zoom
         totalDuration: Total
+      framePreview:
+        baselineUnavailable: The transform baseline before this statement is unavailable, so frame preview and dragging are disabled
+        engineUnsupported: Frame preview requires WebGAL {version} or later. Upgrade the engine to enable it
+        livePreviewDisabled: Live preview is off, so frame preview and dragging are unavailable
+        previewUnavailable: The preview is not ready yet, so frame preview and dragging are temporarily unavailable
+        seekFailed: The frame preview request failed. Switch frames or save the scene to retry
+        v2Overrides: This statement uses relative or inherit animation arguments, which do not support frame preview or dragging yet
       summary:
         currentFrameWithId: "Frame {id}"
     commandPanel:

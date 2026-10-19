@@ -1,5 +1,6 @@
 import { computed, reactive, shallowRef, toValue, watch } from 'vue'
 
+import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
 import { createAnimationEffectFormState } from '~/features/editor/animation/animation-inspector'
 
 import type { MaybeRefOrGetter } from 'vue'
@@ -12,9 +13,28 @@ interface AnimationEditorDurationDraft {
   frameId: number
 }
 
-export function createDefaultAnimationFrame(): AnimationFrame {
+const DEFAULT_NEW_ANIMATION_FRAME_DURATION_MS = 500
+
+/**
+ * 新建帧从当前选中帧复制视觉状态并紧挨选中帧插入。
+ * 时间线上已有帧时默认过渡 500ms；没有帧时第一帧保持 0ms。
+ */
+export function createAnimationFrameFromSelected(frame?: AnimationFrame): AnimationFrame {
+  if (!frame) {
+    return {
+      duration: 0,
+    }
+  }
+
+  const {
+    duration: _duration,
+    ease: _ease,
+    ...transform
+  } = cloneAnimationFrame(frame)
+
   return {
-    duration: 0,
+    duration: DEFAULT_NEW_ANIMATION_FRAME_DURATION_MS,
+    ...transform,
   }
 }
 

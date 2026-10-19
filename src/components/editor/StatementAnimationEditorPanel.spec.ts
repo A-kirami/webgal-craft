@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
+import { effectScope, nextTick, ref } from 'vue'
 
 import {
   createBrowserClickStub,
@@ -7,6 +8,7 @@ import {
   createBrowserTextStub,
   renderInBrowser,
 } from '~/__tests__/browser-render'
+import { useStatementAnimationEditorPanel } from '~/features/editor/animation/useStatementAnimationEditorPanel'
 import { useShortcutContextRegistry } from '~/features/editor/shortcut/shortcut-context-registry'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
@@ -14,7 +16,9 @@ import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDis
 import EditorDrawer from './EditorDrawer.vue'
 import StatementAnimationEditorPanel from './StatementAnimationEditorPanel.vue'
 
+import type { EffectScope } from 'vue'
 import type { AnimationFrame } from '~/domain/stage/types'
+import type { AnimationEditorPanelController } from '~/features/editor/animation/useStatementAnimationEditorPanel'
 
 const globalStubs = {
   EffectDraftForm: createBrowserTextStub('StubEffectDraftForm', 'Effect Draft Form'),
@@ -22,6 +26,38 @@ const globalStubs = {
   Badge: createBrowserContainerStub('StubBadge', 'span'),
   Button: createBrowserClickStub('StubButton'),
 }
+
+const controllerScopes: EffectScope[] = []
+
+function createController(
+  frames: AnimationFrame[],
+  emitFrames?: (nextFrames: AnimationFrame[]) => void,
+): { controller: AnimationEditorPanelController, frames: AnimationFrame[] } {
+  const state = reactive<AnimationFrame[]>(frames)
+  const scope = effectScope()
+  controllerScopes.push(scope)
+  const controller = scope.run(() => useStatementAnimationEditorPanel({
+    emitFrames: emitFrames ?? ((nextFrames) => {
+      state.splice(0, state.length, ...nextFrames)
+    }),
+    frames: () => state,
+  }))
+
+  if (!controller) {
+    throw new TypeError('expected animation editor controller')
+  }
+
+  return {
+    controller,
+    frames: state,
+  }
+}
+
+afterEach(() => {
+  while (controllerScopes.length > 0) {
+    controllerScopes.pop()?.stop()
+  }
+})
 
 function createAnimationEditorPaneStub() {
   const state = reactive<{
@@ -91,7 +127,7 @@ function createShortcutHarness(options: {
   frames?: AnimationFrame[]
   isModalOpen: boolean
 }) {
-  const frames = reactive<AnimationFrame[]>(options.frames ?? [
+  const { controller, frames } = createController(options.frames ?? [
     {
       duration: 120,
     },
@@ -99,9 +135,6 @@ function createShortcutHarness(options: {
       duration: 180,
     },
   ])
-  const handleUpdateFrames = vi.fn((nextFrames: AnimationFrame[]) => {
-    frames.splice(0, frames.length, ...nextFrames)
-  })
   const { state, stub } = createAnimationEditorPaneStub()
 
   const harness = defineComponent({
@@ -121,9 +154,8 @@ function createShortcutHarness(options: {
       })
 
       return () => h(StatementAnimationEditorPanel, {
-        'enableHistoryShortcuts': options.enableHistoryShortcuts,
-        frames,
-        'onUpdate:frames': handleUpdateFrames,
+        controller,
+        enableHistoryShortcuts: options.enableHistoryShortcuts,
       })
     },
   })
@@ -160,6 +192,7 @@ async function renderShortcutHarness(options: {
 
 describe('StatementAnimationEditorPanel', () => {
   it('关闭抽屉且宿主未接管焦点时把焦点还给触发元素', async () => {
+    const { controller } = createController([{ duration: 200 }])
     const harness = defineComponent({
       name: 'AnimationDrawerFocusHarness',
       setup() {
@@ -183,7 +216,7 @@ describe('StatementAnimationEditorPanel', () => {
             },
           }, {
             default: () => h(StatementAnimationEditorPanel, {
-              frames: [{ duration: 200 }],
+              controller,
             }),
           }),
         ])
@@ -208,12 +241,55 @@ describe('StatementAnimationEditorPanel', () => {
     })
   })
 
-  it('在模态框场景中隐藏历史操作按钮', async () => {
+  it('把基线和浮层实时字段传给帧属性面板', async () => {
+    const { controller } = createController([{ duration: 200, position: { x: 10 } }])
+    const previewValue = ref('12')
+    const paneStub = defineComponent({
+      name: 'StubAnimationEditorPaneWithProps',
+      props: {
+        baselineSource: String,
+        baselineTransform: Object,
+        previewFieldValue: Function,
+      },
+      setup(props) {
+        return () => h('div', { 'data-testid': 'pane-props' }, [
+          String(props.baselineSource),
+          '|',
+          String((props.baselineTransform as { scale?: { x?: number } } | undefined)?.scale?.x),
+          '|',
+          String((props.previewFieldValue as ((path: string) => string | undefined) | undefined)?.('position.x')),
+        ])
+      },
+    })
+
     await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
-        frames: [{
-          duration: 200,
-        }],
+        controller,
+        baselineSource: 'protocol',
+        baselineTransform: { scale: { x: 1.5 } },
+        previewFieldValue: (path: string) => path === 'position.x' ? previewValue.value : undefined,
+      },
+      global: {
+        stubs: {
+          ...globalStubs,
+          AnimationEditorPane: paneStub,
+        },
+      },
+    })
+
+    await expect.element(page.getByTestId('pane-props')).toHaveTextContent('protocol|1.5|12')
+
+    previewValue.value = '24'
+    await nextTick()
+
+    await expect.element(page.getByTestId('pane-props')).toHaveTextContent('protocol|1.5|24')
+  })
+
+  it('在模态框场景中隐藏历史操作按钮', async () => {
+    const { controller } = createController([{ duration: 200 }])
+    await renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        controller,
       },
       global: {
         stubs: globalStubs,
@@ -230,12 +306,11 @@ describe('StatementAnimationEditorPanel', () => {
   it('页脚按钮分别发出取消与应用事件', async () => {
     const onApply = vi.fn()
     const onCancel = vi.fn()
+    const { controller } = createController([{ duration: 200 }])
 
     await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
-        frames: [{
-          duration: 200,
-        }],
+        controller,
         onApply,
         onCancel,
       },
@@ -252,11 +327,10 @@ describe('StatementAnimationEditorPanel', () => {
   })
 
   it('宿主提供自己的页脚时可以隐藏面板页脚', async () => {
+    const { controller } = createController([{ duration: 200 }])
     await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
-        frames: [{
-          duration: 200,
-        }],
+        controller,
         showFooter: false,
       },
       global: {
@@ -325,7 +399,7 @@ describe('StatementAnimationEditorPanel', () => {
 
     globalThis.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, key: 'n' }))
     await vi.waitFor(() => {
-      expect(frames.map(frame => frame.duration)).toEqual([120, 240, 240, 0, 180])
+      expect(frames.map(frame => frame.duration)).toEqual([120, 240, 240, 500, 180])
     })
 
     // Home 回到第一帧后水平翻转，再用复制粘贴把翻转结果插到其后
@@ -401,11 +475,11 @@ describe('StatementAnimationEditorPanel', () => {
     const handleUpdateFrames = vi.fn((nextFrames: AnimationFrame[]) => {
       frames.splice(0, frames.length, ...nextFrames)
     })
+    const { controller } = createController(frames, handleUpdateFrames)
 
     await renderInBrowser(StatementAnimationEditorPanel, {
       props: {
-        frames,
-        'onUpdate:frames': handleUpdateFrames,
+        controller,
       },
       global: {
         stubs: {

@@ -132,12 +132,9 @@ const effectDialogState = {
 const animationDialogState = {
   draftFrames: [],
   handleApply: vi.fn(),
-  isDefault: true,
   isDirty: false,
   isOpen: false,
   requestClose: vi.fn(),
-  resetToDefault: vi.fn(),
-  updateFrames: vi.fn(),
 }
 
 const globalStubs = {

@@ -71,14 +71,19 @@ const {
     },
   },
   statementAnimationDialogMock: {
+    controller: {
+      handleCopyFrame: vi.fn(),
+      handleFlipScaleAxis: vi.fn(),
+      handlePasteFrame: vi.fn(),
+      handleRedo: vi.fn(),
+      handleUndo: vi.fn(),
+    },
     draftFrames: [],
     handleApply: vi.fn(),
-    isDefault: true,
     isDirty: false,
     isOpen: false,
+    preview: undefined as { notice?: string } | undefined,
     requestClose: vi.fn(),
-    resetToDefault: vi.fn(),
-    updateFrames: vi.fn(),
   },
   useEditorStoreMock: vi.fn(),
   useEditorDiagnosticsStoreMock: vi.fn(),
@@ -379,9 +384,11 @@ async function renderEditorPanelWithShortcutRegistry() {
 
 function createTransformOverlayBridge(enabled: boolean) {
   return {
+    activeSource: shallowRef<'animation' | 'effect'>('effect'),
     enabled: shallowRef(enabled),
     formDisplayTransform: shallowRef(undefined),
     handlePanelTransformUpdate: vi.fn(),
+    setAnimationProvider: vi.fn(),
   }
 }
 
@@ -413,6 +420,7 @@ describe('EditorPanel', () => {
     effectEditorProviderMock.isOpen = false
     effectEditorProviderMock.session = undefined
     statementAnimationDialogMock.isOpen = false
+    statementAnimationDialogMock.preview = undefined
     useStatementAnimationDialogMock.mockReset()
     useEditorStoreMock.mockReset()
     useEditorDiagnosticsStoreMock.mockReset()
@@ -653,6 +661,31 @@ describe('EditorPanel', () => {
     const region = document.querySelector<HTMLElement>('[data-drawer-interactive-region]')
     expect(region?.getBoundingClientRect().width).toBeGreaterThan(0)
     expect(getDrawerDismissLayers()).toHaveLength(1)
+  })
+
+  it('会把动画帧预览会话注册到变换浮层桥', async () => {
+    const transformOverlayBridge = createTransformOverlayBridge(false)
+    const preview = { notice: undefined }
+
+    statementAnimationDialogMock.preview = preview
+    await renderEditorPanel({
+      provide: {
+        [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: transformOverlayBridge,
+      },
+    })
+
+    expect(transformOverlayBridge.setAnimationProvider).toHaveBeenCalledWith(preview)
+  })
+
+  it('帧级预览降级时会在动画抽屉内显示原因', async () => {
+    statementAnimationDialogMock.isOpen = true
+    statementAnimationDialogMock.preview = { notice: 'engine-unsupported' }
+
+    await renderEditorPanel()
+
+    await expect.element(page.getByTestId('animation-frame-preview-notice')).toHaveTextContent(
+      '当前引擎版本不支持帧级预览，请升级到 WebGAL 4.6.6 或更高版本',
+    )
   })
 
   it('点击抽屉外区域会请求关闭动画编辑器', async () => {

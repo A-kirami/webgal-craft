@@ -3,7 +3,7 @@
 pub const EDITOR_PREVIEW_PROTOCOL_V1_SUBPROTOCOL: &str = "webgal-editor-preview-sync.v1";
 pub const SESSION_REGISTER_PREVIEW_TYPE: &str = "session.register-preview";
 
-pub const PREVIEW_COMMAND_TYPES: [&str; 8] = [
+pub const PREVIEW_COMMAND_TYPES: [&str; 9] = [
     "preview.command.sync-scene",
     "preview.command.run-scene-content",
     "preview.command.run-snippet",
@@ -12,6 +12,7 @@ pub const PREVIEW_COMMAND_TYPES: [&str; 8] = [
     "preview.command.set-component-visibility",
     "preview.command.set-font-optimization",
     "preview.command.set-text-read-mode",
+    "preview.command.seek-animation",
 ];
 pub const PREVIEW_QUERY_TYPES: [&str; 3] = [
     "preview.query.reference-box",

@@ -982,6 +982,13 @@ edit:
         redo: 重做
         zoom: 缩放
         totalDuration: 总时长
+      framePreview:
+        baselineUnavailable: 无法读取语句执行前的变换基线，帧级预览和拖拽暂不可用
+        engineUnsupported: 当前引擎版本不支持帧级预览，请升级到 WebGAL {version} 或更高版本
+        livePreviewDisabled: 实时预览已关闭，帧级预览和拖拽不可用
+        previewUnavailable: 预览尚未就绪，帧级预览和拖拽暂不可用
+        seekFailed: 帧级预览请求失败，切换帧或保存场景后重试
+        v2Overrides: 该语句使用相对或继承动画参数，帧级预览和拖拽暂不支持
       summary:
         currentFrameWithId: 第 {id} 帧
     commandPanel:

@@ -982,6 +982,13 @@ edit:
         redo: 重做
         zoom: 縮放
         totalDuration: 總時長
+      framePreview:
+        baselineUnavailable: 無法讀取語句執行前的變換基準線，影格預覽和拖曳暫不可用
+        engineUnsupported: 目前引擎版本不支援影格預覽，請升級到 WebGAL {version} 或更高版本
+        livePreviewDisabled: 即時預覽已關閉，影格預覽和拖曳不可用
+        previewUnavailable: 預覽尚未就緒，影格預覽和拖曳暫不可用
+        seekFailed: 影格預覽請求失敗，切換影格或儲存場景後重試
+        v2Overrides: 該語句使用相對或繼承動畫參數，影格預覽和拖曳暫不支援
       summary:
         currentFrameWithId: 第 {id} 影格
     commandPanel:

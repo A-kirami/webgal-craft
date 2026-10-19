@@ -4,6 +4,7 @@ import { useEditSettingsStore } from '~/stores/edit-settings'
 import { usePreviewSyncStore } from '~/stores/preview-sync'
 
 import type {
+  JsonValue,
   RequestPayloadByType,
   SetComponentVisibilityPayload,
   SetEffectPhase,
@@ -19,6 +20,10 @@ interface SyncSceneOptions {
 
 interface SetEffectOptions {
   phase?: SetEffectPhase
+}
+
+interface SeekAnimationOptions {
+  baseTransform?: Transform
 }
 
 /**
@@ -131,6 +136,33 @@ async function setEffect(target: string, transform: Transform, options: SetEffec
 }
 
 /**
+ * 把动画在指定时刻的状态写入目标；只影响预览，不写入舞台状态。
+ * @param target - 目标对象
+ * @param animation - v1 关键帧数组或 v2 动画对象
+ * @param time - 动画时间（毫秒）
+ * @param options - 可选的动画基准状态
+ */
+async function seekAnimation(
+  target: string,
+  animation: JsonValue,
+  time: number,
+  options: SeekAnimationOptions = {},
+) {
+  const previewSyncStore = usePreviewSyncStore()
+  const payload: RequestPayloadByType['preview.command.seek-animation'] = {
+    target,
+    animation,
+    time,
+  }
+
+  if (options.baseTransform !== undefined) {
+    payload.baseTransform = options.baseTransform
+  }
+
+  await previewSyncStore.sendPreviewCommand('preview.command.seek-animation', payload)
+}
+
+/**
  * 设置组件可见性
  * @param payload - 组件可见性映射
  */
@@ -174,4 +206,5 @@ export const debugCommander = {
   setFontOptimization,
   setTextReadMode,
   setEffect,
+  seekAnimation,
 }

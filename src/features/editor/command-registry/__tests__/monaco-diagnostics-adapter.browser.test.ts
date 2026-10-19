@@ -222,6 +222,7 @@ describe('updateEditorDiagnostics', () => {
       multilineStatements: true,
       opusVocalShorthand: true,
       sceneSemantics: true,
+      seekAnimation: true,
       transformFrom: false,
     })
 

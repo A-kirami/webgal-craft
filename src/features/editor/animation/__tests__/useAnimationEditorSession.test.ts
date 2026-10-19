@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { createDefaultAnimationFrame, useAnimationEditorSession } from '../useAnimationEditorSession'
+import { createAnimationFrameFromSelected, useAnimationEditorSession } from '../useAnimationEditorSession'
 
 import type { AnimationFrame } from '~/domain/stage/types'
 
@@ -194,7 +194,22 @@ describe('useAnimationEditorSession', () => {
     scope.stop()
   })
 
-  it('createDefaultAnimationFrame 返回零时长', () => {
-    expect(createDefaultAnimationFrame()).toEqual({ duration: 0 })
+  it('createAnimationFrameFromSelected 复制视觉效果并设置默认时长', () => {
+    const source: AnimationFrame = {
+      duration: 240,
+      ease: 'easeOut',
+      position: { x: 10 },
+      scale: { x: 1.5, y: 1.5 },
+    }
+
+    const frame = createAnimationFrameFromSelected(source)
+
+    expect(frame).toEqual({
+      duration: 500,
+      position: { x: 10 },
+      scale: { x: 1.5, y: 1.5 },
+    })
+    expect(frame.position).not.toBe(source.position)
+    expect(createAnimationFrameFromSelected()).toEqual({ duration: 0 })
   })
 })

@@ -46,6 +46,24 @@ function createFixture(framesFactory: () => AnimationFrame[] = createFrames) {
 }
 
 describe('useStatementAnimationEditorPanel', () => {
+  it('取消帧属性预览会丢弃变换草稿并恢复帧数据', () => {
+    const { controller, scope } = createFixture()
+
+    controller.session.selectedFrameId = 2
+    controller.handleTransformUpdate({
+      flush: false,
+      value: { alpha: 1 },
+    })
+    expect(controller.session.selectedFrameTransformDraft).toEqual({ alpha: 1 })
+
+    controller.handleTransformCancelPreview()
+
+    expect(controller.session.selectedFrameTransformDraft).toBeUndefined()
+    expect(controller.session.selectedFrameState?.transform).toEqual({ alpha: 0.5 })
+
+    scope.stop()
+  })
+
   it('删除当前帧前会先清空草稿，避免旧草稿挂到重排后的帧上', async () => {
     const { controller, emitFrames, scope } = createFixture()
 
@@ -114,6 +132,33 @@ describe('useStatementAnimationEditorPanel', () => {
 
     controller.handleUndo()
     expect(frames).toHaveLength(3)
+
+    scope.stop()
+  })
+
+  it('新增帧复制选中帧的视觉效果并保持零时长', () => {
+    const { controller, frames, scope } = createFixture()
+
+    controller.session.selectedFrameId = 3
+    controller.handleAddFrame()
+
+    expect(frames).toHaveLength(4)
+    expect(frames[3]).toEqual({
+      duration: 500,
+      position: { x: 30 },
+    })
+    expect(controller.session.selectedFrameId).toBe(4)
+
+    scope.stop()
+  })
+
+  it('时间线没有帧时新增的第一帧保持零时长', () => {
+    const { controller, frames, scope } = createFixture(() => [])
+
+    controller.handleAddFrame()
+
+    expect(frames).toEqual([{ duration: 0 }])
+    expect(controller.session.selectedFrameId).toBe(1)
 
     scope.stop()
   })

@@ -7,7 +7,7 @@ import {
   resolveAnimationTimelineDurationChange,
 } from '~/features/editor/animation/animation-frame-editor'
 import { createAnimationTransformPatch } from '~/features/editor/animation/animation-inspector'
-import { createDefaultAnimationFrame, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
+import { createAnimationFrameFromSelected, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
 import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 
 import type { MaybeRefOrGetter } from 'vue'
@@ -133,7 +133,7 @@ export function useVisualEditorAnimation(options: UseVisualEditorAnimationOption
   }
 
   function handleAddFrame(): void {
-    insertFrameAfterSelection(createDefaultAnimationFrame())
+    insertFrameAfterSelection(createAnimationFrameFromSelected(session.selectedFrame))
   }
 
   function handleDeleteFrame(): void {

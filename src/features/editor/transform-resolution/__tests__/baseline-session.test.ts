@@ -189,6 +189,130 @@ describe('resolveTransformBaselineSession', () => {
     expect(client.queryTransformBaseline).toHaveBeenNthCalledWith(2, 'fig-center', 'rev-effect-1')
   })
 
+  it('setTempAnimation 继承模式会用修订号同步并查询语句前目标基线', async () => {
+    const client = createClient({
+      baseTransform: {
+        status: 'ready',
+        transform: {
+          position: { x: 0, y: 20 },
+          scale: { x: 1, y: 1 },
+        },
+      },
+      transformBaselines: [
+        {
+          status: 'ready',
+          transform: {
+            position: { x: 1000 },
+          },
+        },
+      ],
+    })
+
+    await expect(resolveTransformBaselineSession({
+      client,
+      request: {
+        command: commandType.setTempAnimation,
+        lineCommandString: 'setTempAnimation:[{"duration":100}];',
+        scenePath: 'scene/start.txt',
+        sentenceId: 5,
+        target: 'fig-center',
+        writeMode: CURRENT_WRITE_MODE,
+      },
+      createTransformBaselineRevision: () => 'rev-animation-1',
+    })).resolves.toEqual({
+      baselineSource: 'protocol',
+      baselineTransform: {
+        position: { x: 1000, y: 20 },
+        scale: { x: 1, y: 1 },
+      },
+    })
+
+    expect(client.syncScene).toHaveBeenCalledWith(
+      'scene/start.txt',
+      5,
+      'setTempAnimation:[{"duration":100}];',
+      {
+        transformBaselineRevision: 'rev-animation-1',
+        settleMode: 'immediate',
+      },
+    )
+    expect(client.queryTransformBaseline).toHaveBeenCalledWith('fig-center', 'rev-animation-1')
+  })
+
+  it('setAnimation 写入默认值时只使用基础变换且不查询目标基线', async () => {
+    const client = createClient({
+      baseTransform: {
+        status: 'ready',
+        transform: {
+          scale: { x: 1, y: 1 },
+        },
+      },
+    })
+
+    await expect(resolveTransformBaselineSession({
+      client,
+      request: {
+        command: commandType.setAnimation,
+        lineCommandString: 'setAnimation:bounce -target=fig-center -transformFrom=default;',
+        scenePath: 'scene/start.txt',
+        sentenceId: 6,
+        target: 'fig-center',
+        writeMode: DEFAULT_WRITE_MODE,
+      },
+      createTransformBaselineRevision: () => 'rev-animation-2',
+    })).resolves.toEqual({
+      baselineSource: 'base',
+      baselineTransform: {
+        scale: { x: 1, y: 1 },
+      },
+    })
+
+    expect(client.syncScene).toHaveBeenCalledWith(
+      'scene/start.txt',
+      6,
+      'setAnimation:bounce -target=fig-center -transformFrom=default;',
+      {
+        settleMode: 'immediate',
+      },
+    )
+    expect(client.queryTransformBaseline).not.toHaveBeenCalled()
+  })
+
+  it('setTempAnimation 的 default 写入模式即使并行播放也不查询目标基线', async () => {
+    const client = createClient({
+      baseTransform: {
+        status: 'ready',
+        transform: {
+          position: { x: 0, y: 20 },
+        },
+      },
+    })
+
+    await expect(resolveTransformBaselineSession({
+      client,
+      request: {
+        command: commandType.setTempAnimation,
+        lineCommandString: 'setTempAnimation:[] -transformFrom=default -parallel;',
+        scenePath: 'scene/start.txt',
+        sentenceId: 7,
+        target: 'fig-center',
+        writeMode: {
+          transformFrom: 'default',
+          writeDefault: true,
+          writeFullEffect: false,
+        },
+      },
+      createTransformBaselineRevision: () => 'rev-animation-3',
+    })).resolves.toEqual({
+      baselineSource: 'base',
+      baselineTransform: {
+        position: { x: 0, y: 20 },
+      },
+    })
+
+    expect(client.queryTransformBaseline).not.toHaveBeenCalled()
+  })
+
   it('目标基线 loading 重试前会等待短暂退避', async () => {
     vi.useFakeTimers()
 

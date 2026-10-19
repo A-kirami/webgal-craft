@@ -133,4 +133,37 @@ describe('debugCommander', () => {
       },
     )
   })
+
+  it('动画选帧预览未指定基准时省略 baseTransform 字段', async () => {
+    await debugCommander.seekAnimation('fig-center', [
+      { duration: 100, alpha: 0.5 },
+    ], 100)
+
+    expect(previewSyncStoreMock.sendPreviewCommand).toHaveBeenCalledWith(
+      'preview.command.seek-animation',
+      {
+        target: 'fig-center',
+        animation: [
+          { duration: 100, alpha: 0.5 },
+        ],
+        time: 100,
+      },
+    )
+  })
+
+  it('动画选帧预览支持用空对象表达默认基准', async () => {
+    await debugCommander.seekAnimation('fig-center', [], 0, {
+      baseTransform: {},
+    })
+
+    expect(previewSyncStoreMock.sendPreviewCommand).toHaveBeenCalledWith(
+      'preview.command.seek-animation',
+      {
+        target: 'fig-center',
+        animation: [],
+        time: 0,
+        baseTransform: {},
+      },
+    )
+  })
 })

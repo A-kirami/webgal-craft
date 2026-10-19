@@ -11,7 +11,7 @@ import {
   updateAnimationFrameAt,
 } from '~/features/editor/animation/animation-frame-editor'
 import { createAnimationTransformPatch } from '~/features/editor/animation/animation-inspector'
-import { createDefaultAnimationFrame, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
+import { createAnimationFrameFromSelected, useAnimationEditorSession } from '~/features/editor/animation/useAnimationEditorSession'
 import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 
 import type { MaybeRefOrGetter } from 'vue'
@@ -45,6 +45,13 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     undoStack.push(cloneAnimationFrames(toValue(options.frames)))
     redoStack.length = 0
     options.emitFrames(nextFrames)
+  }
+
+  /** 抽屉每次打开都是一份新草稿，上一会话的撤销/重做与剪贴板不能带进来 */
+  function resetHistory(): void {
+    undoStack.length = 0
+    redoStack.length = 0
+    frameClipboard = undefined
   }
 
   function restoreFrames(frames: AnimationFrame[]): void {
@@ -94,7 +101,7 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
   }
 
   function handleAddFrame(): void {
-    insertFrameAfterSelection(createDefaultAnimationFrame())
+    insertFrameAfterSelection(createAnimationFrameFromSelected(session.selectedFrame))
   }
 
   function handleDeleteFrame(): void {
@@ -166,6 +173,14 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     }
   }
 
+  function selectFrame(frameId: number): void {
+    session.selectedFrameId = frameId
+  }
+
+  function setTimelineZoomPercent(zoomPercent: number): void {
+    session.timelineZoomPercent = zoomPercent
+  }
+
   function handleFlipScaleAxis(axis: TransformScaleAxis): void {
     const selectedFrame = session.selectedFrameState
     if (!selectedFrame) {
@@ -179,6 +194,10 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
         transform: selectedFrame.transform,
       }),
     })
+  }
+
+  function handleTransformCancelPreview(): void {
+    session.resetSelectedFrameTransformDraft()
   }
 
   function handleTransformUpdate(payload: EffectEditorTransformUpdatePayload): void {
@@ -247,7 +266,13 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
     handleSelectFirstFrame,
     handleSelectLastFrame,
     handleTimelineResizeDuration,
+    handleTransformCancelPreview,
     handleTransformUpdate,
     handleUndo,
+    resetHistory,
+    selectFrame,
+    setTimelineZoomPercent,
   })
 }
+
+export type AnimationEditorPanelController = ReturnType<typeof useStatementAnimationEditorPanel>

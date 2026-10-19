@@ -1,7 +1,7 @@
 import {
-  isSetTransformCommand,
+  isTransformBaselineCommand,
   selectTransformBaseline,
-  usesBaseTransformBaseline,
+  usesBaseTransformBaselineForCommand,
 } from './model'
 
 import type { ResolvedTransformBaseline } from './model'
@@ -133,8 +133,8 @@ export async function resolveTransformBaselineSession(
     : undefined
 
   if (
-    !isSetTransformCommand(request.command)
-    || usesBaseTransformBaseline(request.writeMode)
+    !isTransformBaselineCommand(request.command)
+    || usesBaseTransformBaselineForCommand(request.command, request.writeMode)
     || !request.target
     || !readyBaseTransform
   ) {

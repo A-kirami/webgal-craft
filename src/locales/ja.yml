@@ -982,6 +982,13 @@ edit:
         redo: やり直し
         zoom: ズーム
         totalDuration: 合計時間
+      framePreview:
+        baselineUnavailable: ステートメント実行前の変形ベースラインを取得できないため、フレームプレビューとドラッグは利用できません
+        engineUnsupported: フレームプレビューには WebGAL {version} 以降が必要です。エンジンをアップグレードしてください
+        livePreviewDisabled: ライブプレビューがオフのため、フレームプレビューとドラッグは利用できません
+        previewUnavailable: プレビューの準備ができていないため、フレームプレビューとドラッグは一時的に利用できません
+        seekFailed: フレームプレビューのリクエストに失敗しました。フレームを切り替えるかシーンを保存して再試行してください
+        v2Overrides: このステートメントは相対または継承アニメーション引数を使用しているため、フレームプレビューとドラッグには未対応です
       summary:
         currentFrameWithId: "{id} フレーム目"
     commandPanel:

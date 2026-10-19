@@ -1,8 +1,10 @@
 import '~/__tests__/mocks/modal-store'
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { serializeSentence } from '~/domain/script/serialize'
 import { createSentence } from '~/features/editor/__tests__/statement-editor-test-utils'
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
 import {
@@ -14,7 +16,17 @@ import {
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { AnimationFrame } from '~/domain/stage/types'
 import type { TestNode } from '~/features/editor/__tests__/utils/createTestRenderer'
+import type { AnimationFramePreviewContext } from '~/features/editor/animation/useAnimationFramePreview'
 import type { StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
+
+const { useEditorStoreMock } = vi.hoisted(() => ({
+  useEditorStoreMock: vi.fn(),
+}))
+
+vi.mock('~/stores/editor', () => ({
+  isEditableEditor: (state: { projection?: unknown }) => 'projection' in state,
+  useEditorStore: useEditorStoreMock,
+}))
 
 const mountedApps: { unmount: () => void }[] = []
 const renderer = createTestRenderer()
@@ -33,6 +45,7 @@ function mountBridgeHarness() {
   let bridge: ReturnType<typeof useStatementAnimationEditorBridge> | undefined
   let capturedParsed: ISentence | undefined
   let capturedOnApply: ((frames: AnimationFrame[]) => void) | undefined
+  let capturedPreviewContext: AnimationFramePreviewContext | undefined
 
   const Consumer = defineComponent({
     setup() {
@@ -48,9 +61,10 @@ function mountBridgeHarness() {
 
   const Root = defineComponent({
     setup() {
-      provide(STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY, (currentParsed, onApply) => {
+      provide(STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY, (currentParsed, onApply, previewContext) => {
         capturedParsed = currentParsed
         capturedOnApply = onApply
+        capturedPreviewContext = previewContext
       })
 
       return () => h(Consumer)
@@ -70,13 +84,31 @@ function mountBridgeHarness() {
     bridge,
     capturedOnApply: () => capturedOnApply,
     capturedParsed: () => capturedParsed,
+    capturedPreviewContext: () => capturedPreviewContext,
     emitUpdate,
     parsed,
     updateTarget,
   }
 }
 
+beforeEach(() => {
+  useEditorStoreMock.mockReturnValue({
+    currentSceneSelection: {
+      lastLineNumber: 12,
+      selectedStatementId: 7,
+    },
+    currentState: {
+      kind: 'scene',
+      path: '/game/scene/start.txt',
+      projection: 'visual',
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+      statements: [],
+    },
+  })
+})
+
 afterEach(() => {
+  useEditorStoreMock.mockReset()
   while (mountedApps.length > 0) {
     mountedApps.pop()?.unmount()
   }
@@ -113,6 +145,7 @@ describe('useStatementAnimationEditorBridge', () => {
       bridge,
       capturedOnApply,
       capturedParsed,
+      capturedPreviewContext,
       emitUpdate,
       parsed,
       updateTarget,
@@ -122,6 +155,20 @@ describe('useStatementAnimationEditorBridge', () => {
 
     const onApply = capturedOnApply()
     expect(capturedParsed()).toEqual(parsed.value)
+    expect(capturedPreviewContext()).toEqual({
+      command: commandType.setTempAnimation,
+      hasAnimationOverrides: false,
+      lineCommandString: serializeSentence(parsed.value!),
+      runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+      scenePath: '/game/scene/start.txt',
+      sentenceId: 12,
+      target: '',
+      writeMode: {
+        transformFrom: 'current',
+        writeDefault: false,
+        writeFullEffect: false,
+      },
+    })
     expect(onApply, 'onApply not captured').toBeDefined()
     const onApplyNonNull = onApply as NonNullable<typeof onApply>
 
