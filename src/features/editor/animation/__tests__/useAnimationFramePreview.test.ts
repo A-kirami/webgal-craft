@@ -192,6 +192,21 @@ async function openHarness(harness: ReturnType<typeof createHarness>) {
   await nextTick()
 }
 
+function createDeferred<T>(): {
+  promise: Promise<T>
+  resolve: (value: T) => void
+} {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((next) => {
+    resolve = next
+  })
+
+  return {
+    promise,
+    resolve,
+  }
+}
+
 afterEach(() => {
   while (scopes.length > 0) {
     scopes.pop()?.stop()
@@ -486,6 +501,21 @@ describe('useAnimationFramePreview', () => {
     await nextTick()
 
     expect(harness.restoreScene).not.toHaveBeenCalled()
+  })
+
+  it('关闭会话会等待进行中的 seek 完成后才恢复', async () => {
+    const deferred = createDeferred<undefined>()
+    debugCommanderMock.seekAnimation.mockImplementationOnce(() => deferred.promise)
+    const harness = createTrackedHarness()
+    await openHarness(harness)
+    await vi.waitFor(() => expect(harness.seekAnimation).toHaveBeenCalledOnce())
+
+    harness.isOpen.value = false
+    await nextTick()
+    expect(harness.restoreScene).not.toHaveBeenCalled()
+
+    deferred.resolve(undefined)
+    await vi.waitFor(() => expect(harness.restoreScene).toHaveBeenCalledOnce())
   })
 
   it('自动保存关闭时，关闭仍立即恢复真实状态', async () => {

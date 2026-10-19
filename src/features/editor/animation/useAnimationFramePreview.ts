@@ -104,7 +104,7 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
   let seekFailed = $ref(false)
   let resolutionRevision = 0
   let cancelScheduledFrame: (() => void) | undefined
-  let seekInFlight = false
+  let seekTask: Promise<void> | undefined
   let seekPending = false
   let touchedPreview = false
   let hasPreviewTransform = false
@@ -239,44 +239,45 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
     cancelScheduledSeek()
     cancelScheduledFrame = requestFrame(() => {
       cancelScheduledFrame = undefined
-      void flushSeek()
+      flushSeek()
     })
   }
 
-  async function flushSeek(): Promise<void> {
-    if (seekInFlight) {
+  function flushSeek(): void {
+    if (seekTask) {
       seekPending = true
       return
     }
 
-    seekInFlight = true
-    try {
-      do {
-        seekPending = false
-        const currentContext = context.value
-        const currentTime = selectedFrameTime.value
-        if (!canSeek.value || !currentContext || currentTime === undefined) {
-          return
-        }
+    seekTask = runSeekLoop().finally(() => {
+      seekTask = undefined
+    })
+  }
 
-        const animation = toJsonValue(buildFrames())
-        const seekOptions = currentContext.writeMode.writeDefault
-          ? { baseTransform: {} }
-          : {}
+  async function runSeekLoop(): Promise<void> {
+    do {
+      seekPending = false
+      const currentContext = context.value
+      const currentTime = selectedFrameTime.value
+      if (!canSeek.value || !currentContext || currentTime === undefined) {
+        return
+      }
 
-        touchedPreview = true
-        try {
-          // eslint-disable-next-line no-await-in-loop -- seek 必须按发送顺序执行，latest-only 由 pending 重跑实现
-          await debugCommander.seekAnimation(target.value, animation, currentTime, seekOptions)
-        } catch (error) {
-          seekFailed = true
-          logger.warn(`动画帧预览 seek 失败: ${String(error)}`)
-          return
-        }
-      } while (seekPending)
-    } finally {
-      seekInFlight = false
-    }
+      const animation = toJsonValue(buildFrames())
+      const seekOptions = currentContext.writeMode.writeDefault
+        ? { baseTransform: {} }
+        : {}
+
+      touchedPreview = true
+      try {
+        // eslint-disable-next-line no-await-in-loop -- seek 必须按发送顺序执行，latest-only 由 pending 重跑实现
+        await debugCommander.seekAnimation(target.value, animation, currentTime, seekOptions)
+      } catch (error) {
+        seekFailed = true
+        logger.warn(`动画帧预览 seek 失败: ${String(error)}`)
+        return
+      }
+    } while (seekPending)
   }
 
   async function resolveBaseline(): Promise<void> {
@@ -341,11 +342,14 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
       && state.isDirty
   }
 
-  function closeSession(): void {
+  async function closeSession(): Promise<void> {
     resolutionRevision++
     cancelScheduledSeek()
     clearPreviewTransform()
     resetBaseline()
+
+    // seek 已经发出但尚未完成时，恢复 sync 必须排在它之后，否则会被迟到的 seek 覆盖。
+    await seekTask
 
     const currentContext = context.value
     const shouldRestore = touchedPreview
@@ -410,7 +414,7 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
     ([open, sessionId], [wasOpen, previousSessionId]) => {
       if (!open) {
         if (wasOpen) {
-          closeSession()
+          void closeSession()
         }
         return
       }
