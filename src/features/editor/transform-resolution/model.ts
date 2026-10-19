@@ -67,8 +67,32 @@ export interface MaterializeTransformDraftChangeOptions {
 export const TRANSFORM_FIELD_PATHS = Object.freeze(resolveTransformFieldPaths())
 const EDITOR_DEFAULT_TRANSFORM = createEditorDefaultTransform()
 
-export function isSetTransformCommand(command: commandType): boolean {
+function isSetTransformCommand(command: commandType): boolean {
   return command === commandType.setTransform
+}
+
+/** 帧级动画会话与 setTransform 共用语句前目标基线查询 */
+function isAnimationTransformCommand(command: commandType): boolean {
+  return command === commandType.setTempAnimation || command === commandType.setAnimation
+}
+
+export function isTransformBaselineCommand(command: commandType): boolean {
+  return isSetTransformCommand(command) || isAnimationTransformCommand(command)
+}
+
+/**
+ * 动画的基准来源与 setTransform 的写回模式不同：seek-animation 固定从语句前状态起算，
+ * transformFrom=default 用 baseTransform {} 表达；其余动画写入模式都必须拿语句前基线。
+ */
+export function usesBaseTransformBaselineForCommand(
+  command: commandType,
+  writeMode: TransformWriteMode,
+): boolean {
+  if (isAnimationTransformCommand(command)) {
+    return writeMode.writeDefault
+  }
+
+  return usesBaseTransformBaseline(writeMode)
 }
 
 /**
@@ -76,7 +100,7 @@ export function isSetTransformCommand(command: commandType): boolean {
  * writeDefault 决定写回源，writeFullEffect 决定动画未定义的字段是否一并写回；
  * 只有两者同时成立时，语句执行后未显式字段才来自 baseTransform 而不是语句前的当前变换。
  */
-export function usesBaseTransformBaseline(writeMode: TransformWriteMode): boolean {
+function usesBaseTransformBaseline(writeMode: TransformWriteMode): boolean {
   return writeMode.writeDefault && writeMode.writeFullEffect
 }
 
@@ -207,7 +231,10 @@ export function mergeTransformBaseline(
 export function selectTransformBaseline(
   options: SelectTransformBaselineOptions,
 ): ResolvedTransformBaseline {
-  if (!isSetTransformCommand(options.command) || usesBaseTransformBaseline(options.writeMode)) {
+  if (
+    !isTransformBaselineCommand(options.command)
+    || usesBaseTransformBaselineForCommand(options.command, options.writeMode)
+  ) {
     return {
       baselineSource: options.baseTransform ? 'base' : 'unknown',
       baselineTransform: options.baseTransform ? cloneTransform(options.baseTransform) : undefined,

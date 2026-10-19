@@ -20,6 +20,7 @@ import type { Transform } from '~/domain/stage/types'
 import type { SceneEditorDiagnostic } from '~/features/editor/diagnostics/types'
 import type { TransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import type { ShortcutDefinition } from '~/features/editor/shortcut/types'
+import type { TransformOverlaySource } from '~/features/editor/transform-overlay/useTransformOverlayBridge'
 
 interface ResizablePanelLike {
   collapse: () => void
@@ -33,10 +34,14 @@ interface ReadonlyRefLike<T = unknown> {
 
 interface UseEditorPanelShellOptions {
   commandPanelRef: ReadonlyRefLike<ResizablePanelLike | null | undefined>
+  transformOverlayBridge?: {
+    activeSource: ReadonlyRefLike<TransformOverlaySource>
+  }
 }
 
-interface EffectEditorShortcutDefinition {
-  action: () => void
+interface TransformShortcutDefinition {
+  animationOverlayAction: () => void
+  effectAction: () => void
   i18nKey: string
   id: string
   keys: ShortcutDefinition['keys']
@@ -49,7 +54,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
   const tabsStore = useTabsStore()
 
   const effectEditorProvider = useEffectEditorProvider()
-  const statementAnimationDialog = useStatementAnimationDialog()
+  const statementAnimationDialog = useStatementAnimationDialog({ enableFramePreview: true })
 
   const sidebarPanel = useSidebarPanelProvider()
   const commandPanelBridge = useCommandPanelBridgeProvider()
@@ -172,52 +177,63 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     when: { panelFocus: 'statementEditor' },
   })
 
-  // 变换浮层是效果编辑器会话在预览区的编辑面，与抽屉共用这批绑定；两者都在抽屉打开期间运行
-  const effectEditorShortcutPanelFocuses = ['effectEditor', 'transformOverlay'] as const
-  const effectEditorShortcutDefinitions: EffectEditorShortcutDefinition[] = [
+  // 变换浮层可能由效果编辑器或动画帧会话驱动；两种焦点共用这批绑定，按 activeSource 分派
+  const transformShortcutPanelFocuses = ['effectEditor', 'transformOverlay'] as const
+  const transformShortcutDefinitions: TransformShortcutDefinition[] = [
     {
-      action: effectEditorProvider.undoDraft,
+      effectAction: effectEditorProvider.undoDraft,
       i18nKey: 'shortcut.effect.undo',
       id: 'effect.undo',
       keys: 'Mod+Z',
+      animationOverlayAction: statementAnimationDialog.controller.handleUndo,
     },
     {
-      action: effectEditorProvider.redoDraft,
+      effectAction: effectEditorProvider.redoDraft,
       i18nKey: 'shortcut.effect.redo',
       id: 'effect.redo',
       keys: ['Mod+Shift+Z', 'Mod+Y'],
+      animationOverlayAction: statementAnimationDialog.controller.handleRedo,
     },
     {
-      action: effectEditorProvider.copyCurrentEffect,
+      effectAction: effectEditorProvider.copyCurrentEffect,
       i18nKey: 'shortcut.effect.copy',
       id: 'effect.copy',
       keys: 'Mod+C',
+      animationOverlayAction: statementAnimationDialog.controller.handleCopyFrame,
     },
     {
-      action: effectEditorProvider.pasteCurrentEffect,
+      effectAction: effectEditorProvider.pasteCurrentEffect,
       i18nKey: 'shortcut.effect.paste',
       id: 'effect.paste',
       keys: 'Mod+V',
+      animationOverlayAction: statementAnimationDialog.controller.handlePasteFrame,
     },
     {
-      action: () => flipEffectScaleAxis('x'),
+      effectAction: () => flipEffectScaleAxis('x'),
       i18nKey: 'shortcut.effect.flipHorizontal',
       id: 'effect.flipHorizontal',
       keys: 'Shift+H',
+      animationOverlayAction: () => statementAnimationDialog.controller.handleFlipScaleAxis('x'),
     },
     {
-      action: () => flipEffectScaleAxis('y'),
+      effectAction: () => flipEffectScaleAxis('y'),
       i18nKey: 'shortcut.effect.flipVertical',
       id: 'effect.flipVertical',
       keys: 'Shift+V',
+      animationOverlayAction: () => statementAnimationDialog.controller.handleFlipScaleAxis('y'),
     },
   ]
 
-  for (const panelFocus of effectEditorShortcutPanelFocuses) {
-    for (const shortcut of effectEditorShortcutDefinitions) {
+  for (const panelFocus of transformShortcutPanelFocuses) {
+    for (const shortcut of transformShortcutDefinitions) {
       useShortcut({
         allowInEditorDrawer: true,
-        execute: shortcut.action,
+        execute: () => {
+          const useAnimationFrame = panelFocus === 'transformOverlay'
+            && options.transformOverlayBridge?.activeSource.value === 'animation'
+          const action = useAnimationFrame ? shortcut.animationOverlayAction : shortcut.effectAction
+          action()
+        },
         i18nKey: shortcut.i18nKey,
         id: shortcut.id,
         keys: shortcut.keys,

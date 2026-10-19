@@ -8,6 +8,7 @@ import { useTransformOverlayBridge } from '../useTransformOverlayBridge'
 
 import type { EffectScope } from 'vue'
 import type { EffectEditorProvider, EffectEditorSession } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import type { TransformOverlayProvider, TransformOverlaySession } from '~/features/editor/transform-overlay/provider'
 import type { ReferenceBoxQueryResultPayload } from '~/types/editorPreviewProtocol'
 
 const previewSyncStore = vi.hoisted(() => ({
@@ -463,5 +464,77 @@ describe('useTransformOverlayBridge', () => {
     await vi.advanceTimersByTimeAsync(5000)
 
     expect(previewSyncStore.queryReferenceBox).toHaveBeenCalledTimes(5)
+  })
+
+  it('动画帧会话存在时由动画 provider 接管浮层和拖拽写回', async () => {
+    const effectProvider = createProvider(createSession())
+    const animationSession = reactive<TransformOverlaySession>({
+      baselineResolved: true,
+      baselineSource: 'protocol',
+      baselineTransform: {
+        position: { x: 100, y: 100 },
+        scale: { x: 1, y: 1 },
+      },
+      draft: {
+        transform: {},
+      },
+      effectTarget: 'fig-left',
+      sessionId: 2,
+    })
+    const animationProvider: TransformOverlayProvider = {
+      get session() {
+        return animationSession
+      },
+      cancelPreview: vi.fn(),
+      requestPreview: vi.fn(),
+      updateDraft: vi.fn(),
+      updatePreviewTransform: vi.fn(),
+    }
+    previewSyncStore.queryReferenceBox.mockImplementation(async target => ({
+      box: {
+        anchorX: 0.5,
+        anchorY: 0.5,
+        height: 100,
+        originX: 0,
+        originY: 0,
+        stageHeight: 720,
+        stageWidth: 1280,
+        width: 200,
+      },
+      status: 'ready',
+      target,
+    }))
+
+    const bridge = createBridge({
+      provider: effectProvider,
+    })
+    expect(bridge.activeSource.value).toBe('effect')
+
+    bridge.setAnimationProvider(animationProvider)
+    expect(bridge.activeSource.value).toBe('animation')
+
+    await vi.waitFor(() => {
+      expect(previewSyncStore.queryReferenceBox).toHaveBeenLastCalledWith('fig-left')
+      expect(bridge.enabled.value).toBe(true)
+    })
+
+    bridge.updateDisplayTransform({
+      position: { x: 140, y: 120 },
+      rotation: 0,
+      scale: { x: 1, y: 1 },
+    }, { flush: true })
+
+    expect(animationProvider.updateDraft).toHaveBeenCalledWith(
+      { transform: { position: { x: 140, y: 120 } } },
+      { deferAutoApply: false },
+    )
+    expect(animationProvider.requestPreview).toHaveBeenCalledWith({ flush: true })
+    expect(effectProvider.updateDraft).not.toHaveBeenCalled()
+
+    bridge.setAnimationProvider(undefined)
+    expect(bridge.activeSource.value).toBe('effect')
+    await vi.waitFor(() => {
+      expect(previewSyncStore.queryReferenceBox).toHaveBeenLastCalledWith('fig-center')
+    })
   })
 })

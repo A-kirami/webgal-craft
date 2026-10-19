@@ -240,6 +240,19 @@ describe('命令注册表完整性', () => {
     })
   })
 
+  it('setTempAnimation 的工厂默认语句带一个零时长起始帧', () => {
+    const text = getFactoryDefaultCommandText(commandType.setTempAnimation)
+
+    expect(text).toBe('setTempAnimation:[{"duration":0}];')
+    const parsed = parseSentence(text)
+    expect(parsed).toMatchObject({
+      command: commandType.setTempAnimation,
+      content: '[{"duration":0}]',
+      args: [],
+    })
+    expect(serializeSentence(parsed!)).toBe(text)
+  })
+
   it('changeFigureDiff 的工厂默认语句可稳定往返', () => {
     const text = getFactoryDefaultCommandText(commandType.changeFigureDiff)
 

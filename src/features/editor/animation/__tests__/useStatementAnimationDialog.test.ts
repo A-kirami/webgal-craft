@@ -2,7 +2,7 @@ import '~/__tests__/mocks/i18n'
 import '~/__tests__/mocks/modal-store'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, inject, reactive } from 'vue'
+import { defineComponent, h, inject } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { createSentence } from '~/features/editor/__tests__/statement-editor-test-utils'
@@ -91,7 +91,7 @@ describe('useStatementAnimationDialog', () => {
     expect(handleApply).not.toHaveBeenCalled()
   })
 
-  it('保存时可以处理来自编辑器的 reactive frames', () => {
+  it('应用时保存 controller 提交的帧', () => {
     const { dialog, openDialog } = mountDialogHarness()
     const handleApply = vi.fn()
 
@@ -101,33 +101,53 @@ describe('useStatementAnimationDialog', () => {
       content: '[{"duration":120}]',
     }), handleApply)
 
-    const nextFrames = reactive<AnimationFrame[]>([
-      {
-        duration: 120,
-        position: {
-          x: 32,
-        },
-      },
-      {
-        duration: 240,
-        alpha: 0.5,
-      },
-    ])
-
-    dialog.updateFrames(nextFrames)
+    dialog.controller.handleAddFrame()
+    dialog.controller.handleTransformUpdate({
+      flush: true,
+      value: { alpha: 0.5 },
+    })
     expect(() => dialog.handleApply()).not.toThrow()
     expect(handleApply).toHaveBeenCalledWith([
-      {
-        duration: 120,
-        position: {
-          x: 32,
-        },
-      },
-      {
-        duration: 240,
-        alpha: 0.5,
-      },
+      { duration: 120 },
+      { duration: 500, alpha: 0.5 },
     ])
+  })
+
+  it('打开时默认选中最后一帧以匹配语句执行后的终态', () => {
+    const { dialog, openDialog } = mountDialogHarness()
+
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '[{"duration":120},{"duration":240},{"duration":360}]',
+    }), vi.fn())
+
+    expect(dialog.controller.session.selectedFrameId).toBe(3)
+    expect(dialog.controller.session.selectedFrameState?.id).toBe(3)
+  })
+
+  it('重新打开会重置帧选择与撤销历史', () => {
+    const { dialog, openDialog } = mountDialogHarness()
+
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '[{"duration":120},{"duration":240}]',
+    }), vi.fn())
+
+    dialog.controller.handleAddFrame()
+    expect(dialog.draftFrames).toHaveLength(3)
+
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '[{"duration":60}]',
+    }), vi.fn())
+
+    expect(dialog.controller.session.selectedFrameId).toBe(1)
+    expect(dialog.draftFrames).toHaveLength(1)
+    dialog.controller.handleUndo()
+    expect(dialog.draftFrames).toHaveLength(1)
   })
 
   it('每次打开都新建会话标识，同一会话内改动草稿不会改变它', () => {
@@ -140,7 +160,7 @@ describe('useStatementAnimationDialog', () => {
     }), vi.fn())
     const firstSessionId = dialog.sessionId
 
-    dialog.updateFrames([{ duration: 240 }])
+    dialog.controller.handleAddFrame()
     expect(dialog.sessionId).toBe(firstSessionId)
 
     openDialog(createSentence({

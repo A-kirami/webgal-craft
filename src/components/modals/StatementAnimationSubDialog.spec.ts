@@ -13,6 +13,7 @@ import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDis
 import StatementAnimationSubDialog from './StatementAnimationSubDialog.vue'
 
 import type { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
+import type { AnimationEditorPanelController } from '~/features/editor/animation/useStatementAnimationEditorPanel'
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
@@ -27,15 +28,14 @@ const globalStubs = {
 
 function createAnimationDialogMock(): ReturnType<typeof useStatementAnimationDialog> {
   return {
+    controller: {} as AnimationEditorPanelController,
     draftFrames: [],
     handleApply: vi.fn(),
-    isDefault: true,
     isDirty: false,
     isOpen: true,
+    preview: undefined,
     requestClose: vi.fn(),
-    resetToDefault: vi.fn(),
     sessionId: 1,
-    updateFrames: vi.fn(),
   }
 }
 

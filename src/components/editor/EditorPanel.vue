@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ResizablePanel } from '~/components/ui/resizable'
+import { capabilityMinimumVersion } from '~/domain/engine/runtime-capabilities'
 import { useEditorDiagnostics } from '~/features/editor/diagnostics/useEditorDiagnostics'
 import { useEditorPanelShell } from '~/features/editor/shell/useEditorPanelShell'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
+
+import type { AnimationFramePreviewNotice } from '~/features/editor/animation/useAnimationFramePreview'
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
 const editorPanelRef = $(useTemplateRef('editorPanel'))
@@ -21,6 +24,34 @@ const TRANSFORM_OVERLAY_FIELD_PATHS = new Set([
   'scale.y',
   'rotation',
 ])
+
+function resolveAnimationFramePreviewNotice(notice: AnimationFramePreviewNotice | undefined): string | undefined {
+  switch (notice) {
+    case 'baseline-unavailable': {
+      return t('edit.visualEditor.animation.framePreview.baselineUnavailable')
+    }
+    case 'engine-unsupported': {
+      return t('edit.visualEditor.animation.framePreview.engineUnsupported', {
+        version: capabilityMinimumVersion('seekAnimation'),
+      })
+    }
+    case 'live-preview-disabled': {
+      return t('edit.visualEditor.animation.framePreview.livePreviewDisabled')
+    }
+    case 'preview-unavailable': {
+      return t('edit.visualEditor.animation.framePreview.previewUnavailable')
+    }
+    case 'seek-failed': {
+      return t('edit.visualEditor.animation.framePreview.seekFailed')
+    }
+    case 'v2-overrides': {
+      return t('edit.visualEditor.animation.framePreview.v2Overrides')
+    }
+    default: {
+      return undefined
+    }
+  }
+}
 
 const {
   binding,
@@ -49,14 +80,25 @@ const {
   toggleCommandPanel,
 } = useEditorPanelShell({
   commandPanelRef,
+  transformOverlayBridge,
+})
+
+// 动画抽屉的帧会话是预览面板拖拽的另一个写入端；注册到与效果编辑器同一个浮层桥，
+// 由桥按会话是否活跃切换驱动源。
+transformOverlayBridge?.setAnimationProvider(statementAnimationDialog.preview)
+onScopeDispose(() => {
+  transformOverlayBridge?.setAnimationProvider(undefined)
 })
 
 provide(sceneAutocompleteOptionsKey, sceneAutocompleteOptions)
 
-// 预览工作区只在该抽屉的编辑面确实落在预览区时才豁免遮罩：效果编辑器对应变换浮层可用，
-// 动画编辑器的帧级浮层尚未交付，因此它打开期间点预览等同于点抽屉外
-const effectEditorInteractiveRegionSelector = $computed(() =>
+// 预览工作区只在该抽屉的编辑面确实落在预览区时才豁免遮罩。
+// 效果编辑器与动画帧预览共用同一个变换浮层，因此都按浮层可用性判断。
+const editorDrawerInteractiveRegionSelector = $computed(() =>
   transformOverlayBridge?.enabled.value === true ? DRAWER_INTERACTIVE_REGION_SELECTOR : undefined,
+)
+const animationFramePreviewNotice = $computed(() =>
+  resolveAnimationFramePreviewNotice(statementAnimationDialog.preview?.notice),
 )
 
 function handleAnimationEditorDrawerOpenChange(nextOpen: boolean): void {
@@ -244,7 +286,7 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
 
       <EditorDrawer
         :anchor="editorPanelRef ?? undefined"
-        :interactive-region-selector="effectEditorInteractiveRegionSelector"
+        :interactive-region-selector="editorDrawerInteractiveRegionSelector"
         :open="effectEditorProvider.isOpen"
         panel-focus="effectEditor"
         data-tour="effect-editor"
@@ -285,6 +327,7 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
 
       <EditorDrawer
         :anchor="editorPanelRef ?? undefined"
+        :interactive-region-selector="editorDrawerInteractiveRegionSelector"
         :open="statementAnimationDialog.isOpen"
         panel-focus="animationEditor"
         class="p-4 max-w-full w-160 sm:max-w-full"
@@ -299,12 +342,23 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
               {{ $t('edit.visualEditor.animation.description') }}
             </SheetDescription>
           </SheetHeader>
+          <p
+            v-if="animationFramePreviewNotice"
+            role="status"
+            data-testid="animation-frame-preview-notice"
+            class="text-xs text-muted-foreground mt-2 flex gap-1.5 items-start"
+          >
+            <span class="i-lucide-info mt-0.5 shrink-0 size-3.5" />
+            <span>{{ animationFramePreviewNotice }}</span>
+          </p>
           <Separator class="mb-4 mt-2" />
           <StatementAnimationEditorPanel
             :key="statementAnimationDialog.sessionId"
             class="flex-1 min-h-0"
-            :frames="statementAnimationDialog.draftFrames"
-            @update:frames="statementAnimationDialog.updateFrames"
+            :controller="statementAnimationDialog.controller"
+            :baseline-source="statementAnimationDialog.preview?.session?.baselineSource"
+            :baseline-transform="statementAnimationDialog.preview?.session?.baselineTransform"
+            :preview-field-value="getTransformOverlayFieldValue"
             @apply="statementAnimationDialog.handleApply"
             @cancel="statementAnimationDialog.requestClose"
           />

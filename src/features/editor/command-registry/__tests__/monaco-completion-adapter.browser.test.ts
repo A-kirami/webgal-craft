@@ -191,6 +191,7 @@ describe('getArgKeyCompletions', () => {
       multilineStatements: false,
       opusVocalShorthand: false,
       sceneSemantics: false,
+      seekAnimation: false,
       transformFrom: false,
     })
 

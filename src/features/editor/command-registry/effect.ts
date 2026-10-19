@@ -35,7 +35,13 @@ export const effectEntries: CommandEntry[] = [
     category: 'effect',
     hasAnimationEditor: true,
     fields: [
-      content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'text' }),
+      content({
+        key: 'animation',
+        label: t => t('edit.visualEditor.params.animationName'),
+        type: 'text',
+        // 新插入的命令直接带一个零时长起始帧，打开动画编辑器即可看到第一帧
+        defaultValue: '[{"duration":0}]',
+      }),
       arg(TARGET),
       arg(TRANSFORM_FROM),
       arg(LEGACY_WRITE_DEFAULT),

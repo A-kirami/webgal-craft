@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { Transform } from '~/domain/stage/types'
 import type { AnimationEditorSelectedFrameState, AnimationTimelineResizeDurationPayload } from '~/features/editor/animation/animation-editor-contract'
 import type { AnimationEditorKeyframe } from '~/features/editor/animation/animation-inspector'
 import type { EffectEditorTransformUpdatePayload } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import type { TransformBaselineSource } from '~/features/editor/transform-resolution/model'
 
 interface Props {
   keyframes: readonly AnimationEditorKeyframe[]
@@ -10,6 +12,9 @@ interface Props {
   totalDuration: number
   canDeleteFrame: boolean
   selectedFrame?: AnimationEditorSelectedFrameState
+  baselineSource?: TransformBaselineSource
+  baselineTransform?: Transform
+  previewFieldValue?: (path: string) => string | undefined
   showHistoryActions?: boolean
   canUndo?: boolean
   canRedo?: boolean
@@ -33,6 +38,7 @@ const emit = defineEmits<{
   'update:selected-frame-transform': [payload: EffectEditorTransformUpdatePayload]
   'update:selected-frame-duration': [value: string]
   'update:selected-frame-ease': [value: string]
+  'cancel-preview': []
 }>()
 
 const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() => props.selectedFrame ?? {
@@ -139,6 +145,9 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
         <EffectDraftForm
           class="flex-1 min-h-0"
           :transform="inspectorSelectedFrame.transform"
+          :baseline-source="props.baselineSource"
+          :baseline-transform="props.baselineTransform"
+          :preview-field-value="props.previewFieldValue"
           :duration="inspectorSelectedFrame.duration"
           :ease="inspectorSelectedFrame.ease"
           :ease-disabled="inspectorSelectedFrame.isEaseDisabled"
@@ -147,6 +156,7 @@ const inspectorSelectedFrame = $computed<AnimationEditorSelectedFrameState>(() =
           @update:transform="emit('update:selected-frame-transform', $event)"
           @update:duration="emit('update:selected-frame-duration', $event)"
           @update:ease="emit('update:selected-frame-ease', $event)"
+          @cancel-preview="emit('cancel-preview')"
         />
       </div>
     </div>

@@ -110,10 +110,16 @@ const globalStubs = {
     name: 'StubStatementEditorInline',
     emits: ['openAnimationEditor', 'openEffectEditor', 'update'],
     setup(_, { emit }) {
-      return () => h('button', {
-        type: 'button',
-        onClick: () => emit('openEffectEditor'),
-      }, 'Effect Editor')
+      return () => h('div', [
+        h('button', {
+          type: 'button',
+          onClick: () => emit('openEffectEditor'),
+        }, 'Effect Editor'),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('openAnimationEditor'),
+        }, 'Animation Editor'),
+      ])
     },
   }),
 }
@@ -163,6 +169,35 @@ describe('VisualEditorStatementCard', () => {
     await page.getByRole('button', { name: 'Effect Editor' }).click()
 
     expect(events.slice(0, 2)).toEqual(['select', 'openEffectEditor'])
+    expect(onSelect).toHaveBeenCalledWith(7)
+  })
+
+  it('打开动画编辑器前会先选中当前语句', async () => {
+    const events: string[] = []
+    const entry = createStatementEntry(7, 'setTempAnimation:[{"duration":120}];')
+    const onSelect = vi.fn(() => {
+      events.push('select')
+    })
+    openAnimationEditorMock.mockImplementation(() => {
+      events.push('openAnimationEditor')
+    })
+
+    await renderInBrowser(VisualEditorStatementCard, {
+      props: {
+        collapsed: false,
+        entry,
+        index: 0,
+        selected: false,
+        onSelect,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'Animation Editor' }).click()
+
+    expect(events.slice(0, 2)).toEqual(['select', 'openAnimationEditor'])
     expect(onSelect).toHaveBeenCalledWith(7)
   })
 

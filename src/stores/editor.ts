@@ -99,6 +99,7 @@ function sameEngineRuntimeCapabilities(
   return current.figurePositions === next.figurePositions
     && current.multilineStatements === next.multilineStatements
     && current.opusVocalShorthand === next.opusVocalShorthand
+    && current.seekAnimation === next.seekAnimation
     && current.transformFrom === next.transformFrom
 }
 

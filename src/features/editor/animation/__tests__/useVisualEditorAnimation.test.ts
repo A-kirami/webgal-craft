@@ -161,6 +161,30 @@ describe('useVisualEditorAnimation', () => {
     scope.stop()
   })
 
+  it('新增帧复制选中帧的视觉效果并插入零时长帧', () => {
+    const { applyAnimationFrameInsert, controller, scope } = createFixture({
+      frames: [
+        { duration: 200, position: { x: 10 } },
+        { duration: 300, alpha: 0.5 },
+      ],
+    })
+
+    controller.session.selectedFrameId = 1
+    controller.handleAddFrame()
+
+    expect(applyAnimationFrameInsert).toHaveBeenCalledWith(
+      '/game/animation/opening.json',
+      0,
+      {
+        duration: 500,
+        position: { x: 10 },
+      },
+    )
+    expect(controller.session.selectedFrameId).toBe(2)
+
+    scope.stop()
+  })
+
   it('复制后粘贴会在选中帧之后插入剪贴板里的帧', () => {
     const { applyAnimationFrameInsert, controller, scheduleAutoSaveIfEnabled, scope } = createFixture({
       frames: [{ duration: 200 }, { duration: 300 }],

@@ -6,6 +6,7 @@ export interface EngineRuntimeCapabilities {
   multilineStatements: boolean
   opusVocalShorthand: boolean
   sceneSemantics: boolean
+  seekAnimation: boolean
   transformFrom: boolean
 }
 
@@ -19,6 +20,7 @@ const CAPABILITY_MINIMUM_VERSIONS: Record<EngineRuntimeCapability, string> = {
   multilineStatements: '4.6.3',
   opusVocalShorthand: '4.6.3',
   sceneSemantics: '4.6.3',
+  seekAnimation: '4.6.6',
   transformFrom: '4.6.5',
 }
 
@@ -33,6 +35,7 @@ export const LEGACY_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
   multilineStatements: false,
   opusVocalShorthand: false,
   sceneSemantics: false,
+  seekAnimation: false,
   transformFrom: false,
 }
 
@@ -42,6 +45,7 @@ export const LATEST_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
   multilineStatements: true,
   opusVocalShorthand: true,
   sceneSemantics: true,
+  seekAnimation: true,
   transformFrom: true,
 }
 
@@ -81,6 +85,7 @@ export function resolveEngineRuntimeCapabilities(
     multilineStatements: supportsEngineRuntimeCapability(version, 'multilineStatements'),
     opusVocalShorthand: supportsEngineRuntimeCapability(version, 'opusVocalShorthand'),
     sceneSemantics: supportsEngineRuntimeCapability(version, 'sceneSemantics'),
+    seekAnimation: supportsEngineRuntimeCapability(version, 'seekAnimation'),
     transformFrom: supportsEngineRuntimeCapability(version, 'transformFrom'),
   }
 }

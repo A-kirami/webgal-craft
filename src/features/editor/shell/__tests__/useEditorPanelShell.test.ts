@@ -73,14 +73,18 @@ const {
     activeBinding: { value: undefined as BindingMock | undefined },
   },
   statementAnimationDialogMock: {
+    controller: {
+      handleCopyFrame: vi.fn(),
+      handleFlipScaleAxis: vi.fn(),
+      handlePasteFrame: vi.fn(),
+      handleRedo: vi.fn(),
+      handleUndo: vi.fn(),
+    },
     draftFrames: [],
     handleApply: vi.fn(),
-    isDefault: true,
     isDirty: false,
     isOpen: false,
     requestClose: vi.fn(),
-    resetToDefault: vi.fn(),
-    updateFrames: vi.fn(),
   },
   useShortcutMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
@@ -131,6 +135,7 @@ function createFixture(options: {
   isCurrentSceneFile?: boolean
   sceneStatements?: ReturnType<typeof buildStatements>
   sceneTextContent?: string
+  transformOverlaySource?: 'animation' | 'effect'
 } = {}) {
   const sceneStatements = options.sceneStatements ?? []
   const tabsStore = {
@@ -171,9 +176,17 @@ function createFixture(options: {
     isCollapsed: computed(() => commandPanelState.isCollapsed),
   })
 
+  const transformOverlaySource = options.transformOverlaySource
   const scope = effectScope()
   const shell = scope.run(() => useEditorPanelShell({
     commandPanelRef,
+    transformOverlayBridge: transformOverlaySource === undefined
+      ? undefined
+      : {
+          activeSource: {
+            value: transformOverlaySource,
+          },
+        },
   }))
 
   if (!shell) {
@@ -223,6 +236,11 @@ describe('useEditorPanelShell', () => {
     effectEditorProviderMock.undoDraft.mockClear()
     effectEditorProviderMock.undoDraft.mockReturnValue(false)
     effectEditorProviderMock.updateDraft.mockClear()
+    statementAnimationDialogMock.controller.handleCopyFrame.mockClear()
+    statementAnimationDialogMock.controller.handleFlipScaleAxis.mockClear()
+    statementAnimationDialogMock.controller.handlePasteFrame.mockClear()
+    statementAnimationDialogMock.controller.handleRedo.mockClear()
+    statementAnimationDialogMock.controller.handleUndo.mockClear()
     useShortcutMock.mockReset()
     useEditorStoreMock.mockReset()
     useEditorDiagnosticsStoreMock.mockReset()
@@ -347,6 +365,35 @@ describe('useEditorPanelShell', () => {
     expect(effectEditorProviderMock.requestPreview).toHaveBeenCalledWith({
       flush: true,
     })
+
+    scope.stop()
+  })
+
+  it('动画浮层激活时历史、剪贴板和翻转快捷键会委托给帧 controller', async () => {
+    const { scope } = createFixture({
+      transformOverlaySource: 'animation',
+    })
+
+    await Promise.all([
+      findEffectShortcutBinding('transformOverlay', 'effect.undo').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.redo').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.copy').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.paste').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.flipHorizontal').execute(),
+      findEffectShortcutBinding('transformOverlay', 'effect.flipVertical').execute(),
+    ])
+
+    expect(statementAnimationDialogMock.controller.handleUndo).toHaveBeenCalledOnce()
+    expect(statementAnimationDialogMock.controller.handleRedo).toHaveBeenCalledOnce()
+    expect(statementAnimationDialogMock.controller.handleCopyFrame).toHaveBeenCalledOnce()
+    expect(statementAnimationDialogMock.controller.handlePasteFrame).toHaveBeenCalledOnce()
+    expect(statementAnimationDialogMock.controller.handleFlipScaleAxis).toHaveBeenNthCalledWith(1, 'x')
+    expect(statementAnimationDialogMock.controller.handleFlipScaleAxis).toHaveBeenNthCalledWith(2, 'y')
+    expect(effectEditorProviderMock.undoDraft).not.toHaveBeenCalled()
+    expect(effectEditorProviderMock.redoDraft).not.toHaveBeenCalled()
+    expect(effectEditorProviderMock.copyCurrentEffect).not.toHaveBeenCalled()
+    expect(effectEditorProviderMock.pasteCurrentEffect).not.toHaveBeenCalled()
+    expect(effectEditorProviderMock.updateDraft).not.toHaveBeenCalled()
 
     scope.stop()
   })

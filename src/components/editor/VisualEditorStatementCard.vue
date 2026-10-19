@@ -107,6 +107,11 @@ const { openAnimationEditor } = useStatementAnimationEditorBridge({
   emitUpdate: payload => emit('update', payload),
 })
 
+function handleOpenAnimationEditor() {
+  emit('select', props.entry.id)
+  openAnimationEditor()
+}
+
 function paramBadgeClass(param: StatementCardPreviewParam): string {
   if (param.status === 'error') {
     return 'bg-destructive/10 text-destructive'
@@ -261,7 +266,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             :update-target="createStatementIdTarget(entry.id)"
             ::show-inline-comment="showInlineComment"
             @update="emit('update', $event)"
-            @open-animation-editor="openAnimationEditor"
+            @open-animation-editor="handleOpenAnimationEditor"
             @open-effect-editor="handleOpenEffectEditor"
           />
         </CollapsibleContent>

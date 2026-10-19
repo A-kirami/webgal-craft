@@ -6,14 +6,20 @@ import {
 } from './model'
 
 import type { DisplayTransform } from './model'
-import type {
-  EffectEditorProvider,
-  EffectEditorTransformUpdatePayload,
-} from '~/features/editor/effect-editor/useEffectEditorProvider'
+import type { TransformOverlayProvider } from './provider'
+import type { Transform } from '~/domain/stage/types'
 import type { ReferenceBoxQueryResultPayload } from '~/types/editorPreviewProtocol'
 
-export interface UseTransformOverlayBridgeOptions {
-  provider: EffectEditorProvider
+export type TransformOverlaySource = 'animation' | 'effect'
+
+interface UseTransformOverlayBridgeOptions {
+  provider: TransformOverlayProvider
+}
+
+interface TransformOverlayTransformUpdatePayload {
+  value: Transform
+  deferAutoApply?: boolean
+  flush?: boolean
 }
 
 const FORM_DISPLAY_THROTTLE_MS = 32
@@ -24,6 +30,7 @@ const REFERENCE_BOX_RETRY_DELAYS_MS = [120, 300, 700, 1500] as const
 export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOptions) {
   const previewSyncStore = usePreviewSyncStore()
 
+  let animationProvider = $ref<TransformOverlayProvider>()
   let referenceBoxResult = $ref<ReferenceBoxQueryResultPayload>()
   // 用户是否已在预览里拖拽过：只由 overlay 拖拽（updateDisplayTransform）置位，表单改动不算
   let hasOverlayInteraction = $ref(false)
@@ -35,7 +42,15 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
   let referenceBoxRetryAttempt = 0
   let referenceBoxRetryTimeoutId: ReturnType<typeof setTimeout> | undefined
 
-  const session = computed(() => options.provider.session)
+  // 动画帧会话打开时优先接管浮层；它的 session 存在即表示当前抽屉拥有预览编辑面，
+  // 即使目标或基线暂不可用也不能回退到效果编辑器，否则会拖错对象。
+  const activeProvider = computed<TransformOverlayProvider>(() =>
+    animationProvider?.session ? animationProvider : options.provider,
+  )
+  const activeSource = computed<TransformOverlaySource>(() =>
+    animationProvider?.session ? 'animation' : 'effect',
+  )
+  const session = computed(() => activeProvider.value.session)
   const referenceBox = computed(() => referenceBoxResult?.status === 'ready' ? referenceBoxResult.box : undefined)
   const draftDisplayTransform = computed<DisplayTransform | undefined>(() => {
     const currentSession = session.value
@@ -159,7 +174,8 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
   ): void {
     hasOverlayInteraction = true
 
-    const currentSession = session.value
+    const provider = activeProvider.value
+    const currentSession = provider.session
     if (!currentSession) {
       return
     }
@@ -176,16 +192,16 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
         nextDisplayTransform,
       })
       liveDisplayTransform = undefined
-      options.provider.updateDraft(
+      provider.updateDraft(
         { transform: nextDraftTransform },
         { deferAutoApply: false },
       )
-      options.provider.updatePreviewTransform(nextDraftTransform)
+      provider.updatePreviewTransform(nextDraftTransform)
       applyFormDisplayTransform(nextDisplayTransform)
     } else {
       liveDisplayTransform = nextDisplayTransform
       scheduleFormDisplayTransform(nextDisplayTransform)
-      options.provider.updatePreviewTransform(() => {
+      provider.updatePreviewTransform(() => {
         const latestDisplayTransform = liveDisplayTransform ?? nextDisplayTransform
         return materializeDisplayTransform({
           currentDisplayTransform: baseDisplayTransform,
@@ -195,34 +211,45 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
       })
     }
 
-    options.provider.requestPreview({
+    provider.requestPreview({
       flush: options_.flush,
     })
   }
 
-  function handlePanelTransformUpdate(payload: EffectEditorTransformUpdatePayload): void {
-    const currentSession = session.value
-    if (!currentSession) {
+  function handlePanelTransformUpdate(payload: TransformOverlayTransformUpdatePayload): void {
+    const provider = activeProvider.value
+    if (!provider.session) {
       return
     }
 
     liveDisplayTransform = undefined
     resetFormDisplayTransform()
-    options.provider.updateDraft(
+    provider.updateDraft(
       { transform: payload.value },
       { deferAutoApply: payload.deferAutoApply },
     )
-    options.provider.updatePreviewTransform(payload.value)
+    provider.updatePreviewTransform(payload.value)
   }
 
   function cancelDisplayTransform(): void {
     liveDisplayTransform = undefined
     resetFormDisplayTransform()
-    if (!session.value) {
+    if (!activeProvider.value.session) {
       return
     }
 
-    void options.provider.cancelPreview()
+    void activeProvider.value.cancelPreview()
+  }
+
+  /** 由动画抽屉注册/注销浮层写入端；动画会话是否活跃仍以其 session 是否存在为准 */
+  function setAnimationProvider(provider: TransformOverlayProvider | undefined): void {
+    if (animationProvider === provider) {
+      return
+    }
+
+    animationProvider = provider
+    liveDisplayTransform = undefined
+    resetFormDisplayTransform()
   }
 
   watch(
@@ -257,6 +284,7 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
   })
 
   return {
+    activeSource,
     displayTransform,
     enabled,
     formDisplayTransform: displayFormTransform,
@@ -264,6 +292,7 @@ export function useTransformOverlayBridge(options: UseTransformOverlayBridgeOpti
     cancelDisplayTransform,
     handlePanelTransformUpdate,
     referenceBox,
+    setAnimationProvider,
     updateDisplayTransform,
   }
 }

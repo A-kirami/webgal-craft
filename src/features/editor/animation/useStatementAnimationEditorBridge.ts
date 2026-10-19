@@ -1,11 +1,17 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseAnimationDocument } from '~/domain/document/animation-document-codec'
+import { computeLineNumberFromStatementId } from '~/domain/document/scene-selection'
+import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { resolveTransformWriteMode } from '~/domain/engine/transform-args'
+import { readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { createStatementIdTarget, StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
+import { isEditableEditor, useEditorStore } from '~/stores/editor'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { AnimationFrame } from '~/domain/stage/types'
+import type { AnimationFramePreviewContext } from '~/features/editor/animation/useAnimationFramePreview'
 
 interface UseStatementAnimationEditorBridgeOptions {
   updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
@@ -16,10 +22,69 @@ interface UseStatementAnimationEditorBridgeOptions {
 export type StatementAnimationEditorOpenOverride = (
   parsed: ISentence,
   onApply: (frames: AnimationFrame[]) => void,
+  framePreviewContext?: AnimationFramePreviewContext,
 ) => void
 
 export const STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY: InjectionKey<StatementAnimationEditorOpenOverride> =
   Symbol('statementAnimationEditorOpenOverride')
+
+interface SceneStatementLineLookupEntry {
+  id: number
+  rawText: string
+}
+
+function resolveVisualStatementLineNumber(
+  statements: readonly SceneStatementLineLookupEntry[],
+  selection: { selectedStatementId?: number, lastLineNumber?: number } | undefined,
+  statementId: number,
+): number | undefined {
+  if (selection?.selectedStatementId === statementId && selection.lastLineNumber !== undefined) {
+    return selection.lastLineNumber
+  }
+
+  return computeLineNumberFromStatementId(statements, statementId)
+}
+
+function hasAnimationOverrides(sentence: ISentence): boolean {
+  return sentence.args.some(arg => arg.key === 'relative' || arg.key === 'inherit')
+}
+
+function createFramePreviewContext(parsed: ISentence, updateTarget?: StatementUpdateTarget): AnimationFramePreviewContext | undefined {
+  const editorStore = useEditorStore()
+  const state = editorStore.currentState
+  if (!state || !isEditableEditor(state) || state.kind !== 'scene') {
+    return
+  }
+
+  const selection = editorStore.currentSceneSelection
+  const statementId = updateTarget?.kind === 'statement'
+    ? updateTarget.statementId
+    : selection?.selectedStatementId
+  let sentenceId: number | undefined
+  if (updateTarget?.kind === 'line') {
+    sentenceId = updateTarget.lineNumber
+  } else if (statementId === undefined || state.projection !== 'visual') {
+    sentenceId = selection?.lastLineNumber
+  } else {
+    sentenceId = resolveVisualStatementLineNumber(state.statements, selection, statementId)
+  }
+
+  if (sentenceId === undefined) {
+    return
+  }
+
+  const runtimeCapabilities = state.runtimeCapabilities ?? LATEST_ENGINE_RUNTIME_CAPABILITIES
+  return {
+    command: parsed.command,
+    hasAnimationOverrides: hasAnimationOverrides(parsed),
+    lineCommandString: serializeSentence(parsed),
+    runtimeCapabilities,
+    scenePath: state.path,
+    sentenceId,
+    target: readSentenceArgString(parsed, 'target').trim(),
+    writeMode: resolveTransformWriteMode(parsed, runtimeCapabilities),
+  }
+}
 
 export function applyAnimationEditorResultToSentence(sentence: ISentence, frames: readonly AnimationFrame[]): ISentence {
   return {
@@ -55,14 +120,6 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
     })
   }
 
-  function applyAnimationEditorResult(frames: AnimationFrame[]) {
-    if (!parsed.value) {
-      return
-    }
-
-    emitAnimationEditorResult(parsed.value, updateTarget.value ?? createStatementIdTarget(0), frames)
-  }
-
   function openAnimationEditor() {
     const currentParsed = parsed.value
     if (!currentParsed) {
@@ -71,7 +128,11 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
 
     if (overriddenOpen) {
       const currentTarget = updateTarget.value ?? createStatementIdTarget(0)
-      overriddenOpen(currentParsed, frames => emitAnimationEditorResult(currentParsed, currentTarget, frames))
+      overriddenOpen(
+        currentParsed,
+        frames => emitAnimationEditorResult(currentParsed, currentTarget, frames),
+        createFramePreviewContext(currentParsed, updateTarget.value),
+      )
       return
     }
 
@@ -80,6 +141,5 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
 
   return {
     openAnimationEditor,
-    applyAnimationEditorResult,
   }
 }
