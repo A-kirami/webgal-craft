@@ -1,3 +1,4 @@
+import { isAnimationFramesDocumentModel } from '~/domain/document/document-model'
 import { applyTransactionToModel } from '~/domain/document/transaction-apply'
 import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
 
@@ -108,7 +109,7 @@ function computeStatementDeleteInverse(docEntry: DocumentState, statementId: num
 }
 
 function computeAnimationReplaceFrameInverse(docEntry: DocumentState, index: number): Transaction {
-  if (docEntry.model.kind !== 'animation') {
+  if (!isAnimationFramesDocumentModel(docEntry.model)) {
     return createFallbackInverse(docEntry)
   }
 
@@ -125,7 +126,7 @@ function computeAnimationReplaceFrameInverse(docEntry: DocumentState, index: num
 }
 
 function computeAnimationDeleteInverse(docEntry: DocumentState, index: number): Transaction {
-  if (docEntry.model.kind !== 'animation') {
+  if (!isAnimationFramesDocumentModel(docEntry.model)) {
     return createFallbackInverse(docEntry)
   }
 
@@ -142,7 +143,7 @@ function computeAnimationDeleteInverse(docEntry: DocumentState, index: number): 
 }
 
 function getAnimationFrameCount(docEntry: DocumentState): number {
-  return docEntry.model.kind === 'animation' ? docEntry.model.frames.length : 0
+  return isAnimationFramesDocumentModel(docEntry.model) ? docEntry.model.frames.length : 0
 }
 
 function computeSceneBatchInverse(

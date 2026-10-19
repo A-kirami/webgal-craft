@@ -27,7 +27,9 @@ export function serializeDocument(model: DocumentModel): string {
       break
     }
     case 'animation': {
-      result = serializeAnimationFrames(model.frames)
+      result = model.format === 'v1-frames'
+        ? serializeAnimationFrames(model.frames)
+        : model.content
       break
     }
     case 'template':

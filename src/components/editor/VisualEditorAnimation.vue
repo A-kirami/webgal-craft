@@ -7,10 +7,10 @@ import { useVisualEditorFocusRequest } from '~/features/editor/visual-editor/use
 import { findSelectedVisualEditorAnimationFrame } from '~/features/editor/visual-editor/visual-editor-focus'
 import { useEditorStore } from '~/stores/editor'
 
-import type { AnimationVisualProjectionState } from '~/stores/editor'
+import type { AnimationFramesVisualProjectionState } from '~/stores/editor'
 
 interface Props {
-  state: AnimationVisualProjectionState
+  state: AnimationFramesVisualProjectionState
 }
 
 const props = defineProps<Props>()

@@ -4,7 +4,7 @@ import { AnimationFrame } from '~/domain/stage/types'
 
 import { isAnimationFrameEqual } from './transaction-apply'
 
-import type { AnimationDocumentModel, SceneDocumentModel } from './document-model'
+import type { AnimationFramesDocumentModel, SceneDocumentModel } from './document-model'
 
 export function projectSceneStatements(
   model: SceneDocumentModel,
@@ -28,7 +28,7 @@ export function projectSceneStatements(
 }
 
 export function projectAnimationFrames(
-  model: AnimationDocumentModel,
+  model: AnimationFramesDocumentModel,
   previousFrames: AnimationFrame[] = [],
 ): AnimationFrame[] {
   return model.frames.map((frame, index) => {

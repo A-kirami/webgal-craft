@@ -14,7 +14,8 @@ import {
 } from '../editor-status-bar'
 
 import type {
-  AnimationVisualProjectionState,
+  AnimationFramesVisualProjectionState,
+  AnimationObjectVisualProjectionState,
   AssetPreviewState,
   SceneVisualProjectionState,
   TextProjectionState,
@@ -45,9 +46,10 @@ function createSceneVisualState(overrides: Partial<SceneVisualProjectionState> =
 }
 
 function createAnimationVisualState(
-  overrides: Partial<AnimationVisualProjectionState> = {},
-): AnimationVisualProjectionState {
+  overrides: Partial<AnimationFramesVisualProjectionState> = {},
+): AnimationFramesVisualProjectionState {
   return {
+    format: 'v1-frames',
     frames: [],
     isDirty: false,
     kind: 'animation',
@@ -138,6 +140,21 @@ describe('editorStatusBar', () => {
       count: 3,
       kind: 'animation',
     })
+  })
+
+  it('v2 动画没有帧模型时不返回帧数统计', () => {
+    const state: AnimationObjectVisualProjectionState = {
+      format: 'v2-object',
+      isDirty: false,
+      kind: 'animation',
+      path: AbsPath.from('/project/v2-effect.json'),
+      projection: 'visual',
+    }
+
+    expect(resolveEditorStatusBarMetrics(state, {
+      lineCount: 0,
+      wordCount: 0,
+    })).toBeUndefined()
   })
 
   it('会识别图片预览并忽略非图片资源', () => {

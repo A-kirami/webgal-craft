@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
+import { detectAnimationDocumentFormat } from '~/domain/document/animation-document-codec'
 import { serializeSentence } from '~/domain/script/serialize'
 import { cloneAnimationFrames } from '~/domain/stage/animation-frame'
 import { useAnimationFramePreview } from '~/features/editor/animation/useAnimationFramePreview'
@@ -83,6 +84,11 @@ export function useStatementAnimationDialog(options: UseStatementAnimationDialog
     let frames: AnimationFrame[]
 
     try {
+      if (detectAnimationDocumentFormat(parsed.content) === 'v2-object') {
+        toast.warning(t('edit.visualEditor.animation.v2ReadOnly'))
+        return
+      }
+
       frames = parseStatementAnimationFrames(parsed)
     } catch (error) {
       logger.warn(`高级动画语句内容解析失败，无法打开动画编辑器: ${error}`)

@@ -15,9 +15,10 @@ import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { AnimationFrame } from '~/domain/stage/types'
 import type { TestNode } from '~/features/editor/__tests__/utils/createTestRenderer'
 
-const { loggerWarnMock, toastErrorMock } = vi.hoisted(() => ({
+const { loggerWarnMock, toastErrorMock, toastWarningMock } = vi.hoisted(() => ({
   loggerWarnMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  toastWarningMock: vi.fn(),
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
@@ -27,6 +28,7 @@ vi.mock('@tauri-apps/plugin-log', () => ({
 vi.mock('vue-sonner', () => ({
   toast: {
     error: toastErrorMock,
+    warning: toastWarningMock,
   },
 }))
 
@@ -69,6 +71,7 @@ function mountDialogHarness() {
 afterEach(() => {
   loggerWarnMock.mockReset()
   toastErrorMock.mockReset()
+  toastWarningMock.mockReset()
   while (mountedApps.length > 0) {
     mountedApps.pop()?.unmount()
   }
@@ -88,6 +91,24 @@ describe('useStatementAnimationDialog', () => {
     expect(dialog.isOpen).toBe(false)
     expect(dialog.draftFrames).toEqual([])
     expect(toastErrorMock).toHaveBeenCalledWith('edit.visualEditor.animation.invalidJson')
+    expect(handleApply).not.toHaveBeenCalled()
+  })
+
+  it('v2 动画内容不会进入帧编辑器并提示改用文本编辑', () => {
+    const { dialog, openDialog } = mountDialogHarness()
+    const handleApply = vi.fn()
+
+    openDialog(createSentence({
+      command: commandType.setTempAnimation,
+      commandRaw: 'setTempAnimation',
+      content: '{"version":2,"relative":true,"keyframes":[{"time":0,"alpha":0}]}',
+    }), handleApply)
+
+    expect(dialog.isOpen).toBe(false)
+    expect(dialog.draftFrames).toEqual([])
+    expect(toastWarningMock).toHaveBeenCalledWith('edit.visualEditor.animation.v2ReadOnly')
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(loggerWarnMock).not.toHaveBeenCalled()
     expect(handleApply).not.toHaveBeenCalled()
   })
 

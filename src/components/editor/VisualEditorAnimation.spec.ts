@@ -54,6 +54,7 @@ function createAnimationState(path: string) {
     frames: [{
       duration: 200,
     }],
+    format: 'v1-frames' as const,
     isDirty: false,
     kind: 'animation' as const,
     path: AbsPath.from(path),

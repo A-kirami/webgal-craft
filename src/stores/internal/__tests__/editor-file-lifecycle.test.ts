@@ -97,11 +97,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
       return
     }
 
-    syncProjectionStateFromDocument(
-      currentSession.document,
-      currentSession.textState,
-      currentSession.visualState,
-    )
+    syncProjectionStateFromDocument(currentSession)
   })
   const syncStateFromDocument = providedSyncStateFromDocument ?? defaultSyncStateFromDocument
 

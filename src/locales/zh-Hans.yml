@@ -854,6 +854,7 @@ edit:
       noStatement: 将光标移到语句行即可编辑
       multipleEditTargets: 同时选中了多个编辑目标，语句编辑已暂停
     invalidAnimationVisualMessage: 当前动画文件存在错误，无法在可视化模式下编辑，切换到文本模式修复
+    animationV2ReadOnlyMessage: 当前动画使用 v2 格式，暂不支持可视化编辑，切换到文本模式编辑
   scenePanel:
     scene: 场景
     resource: 资源
@@ -965,6 +966,7 @@ edit:
       title: 动画编辑器
       description: 调整当前动画各关键帧的时长、缓动和变换
       invalidJson: 当前高级动画内容存在错误，无法打开动画编辑器，切换到文本模式修复
+      v2ReadOnly: v2 动画暂不支持可视化编辑，切换到文本模式编辑
       timelineTitle: 时间轴
       inspectorTitle: 帧属性
       startFrame: 起始帧

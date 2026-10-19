@@ -52,6 +52,44 @@ describe('编辑器会话与已加载文档状态', () => {
     expect(textSession.textState.textSource).toBe('draft')
   })
 
+  it('v2 动画文档保留原文并显式标记为不可帧编辑', () => {
+    const content = [
+      '{',
+      '  "version": 2,',
+      '  "relative": true,',
+      '  "keyframes": [',
+      '    {',
+      '      "time": 0,',
+      '      "alpha": 0',
+      '    }',
+      '  ]',
+      '}',
+    ].join('\n')
+    const loadedState = createLoadedDocumentState('animation', content)
+
+    expect(loadedState.model).toMatchObject({
+      content,
+      format: 'v2-object',
+      kind: 'animation',
+    })
+    expect(loadedState.textProjection).toEqual({
+      content,
+      source: 'draft',
+    })
+
+    const session = createEditableSession(AbsPath.from('/game/animation/v2.json'), loadedState, 'visual')
+
+    expect(session.activeProjection).toBe('visual')
+    expect(session.visualState).toMatchObject({
+      format: 'v2-object',
+      kind: 'animation',
+      projection: 'visual',
+    })
+    expect(session.visualState).not.toHaveProperty('frames')
+    expect(session.textState.textContent).toBe(content)
+    expect(session.textState.syncError).toBeUndefined()
+  })
+
   it('applyLoadedDocumentState 会从显式快照恢复文本投影', () => {
     const session = createEditableSession(
       AbsPath.from('/game/animation/state.json'),
@@ -66,6 +104,24 @@ describe('编辑器会话与已加载文档状态', () => {
     expect(session.textState.textContent).toBe('{broken')
     expect(session.textState.textSource).toBe('draft')
     expect(session.textState.syncError).toBe('invalid-animation-json')
+  })
+
+  it('外部重载把动画文档从 v1 换成 v2 时重建可视投影', () => {
+    const v2Content = '{"version":2,"keyframes":[{"time":0,"alpha":0}]}'
+    const session = createEditableSession(
+      AbsPath.from('/game/animation/format-change.json'),
+      createLoadedDocumentState('animation', '[{"duration":100}]'),
+      'visual',
+    )
+
+    expect(session.visualState).toMatchObject({ format: 'v1-frames' })
+
+    applyLoadedDocumentState(session, createLoadedDocumentState('animation', v2Content), 'visual')
+    syncProjectionStateFromDocument(session)
+
+    expect(session.visualState).toMatchObject({ format: 'v2-object' })
+    expect(session.visualState).not.toHaveProperty('frames')
+    expect(session.textState.textContent).toBe(v2Content)
   })
 
   it('偏好可视模式时，applyLoadedDocumentState 会为非法动画草稿保持可视投影激活', () => {
@@ -93,7 +149,7 @@ describe('编辑器会话与已加载文档状态', () => {
     session.textState.isDirty = true
 
     applyLoadedDocumentState(session, createLoadedDocumentState('animation', '{broken'), 'text')
-    syncProjectionStateFromDocument(session.document, session.textState, session.visualState)
+    syncProjectionStateFromDocument(session)
 
     expect(session.textState.syncError).toBe('invalid-animation-json')
     expect(session.textState.isDirty).toBe(false)

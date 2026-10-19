@@ -45,11 +45,23 @@ export interface SceneVisualProjectionState extends EditableProjectionBase {
   statements: StatementEntry[]
 }
 
-export interface AnimationVisualProjectionState extends EditableProjectionBase {
+export interface AnimationFramesVisualProjectionState extends EditableProjectionBase {
   projection: 'visual'
   kind: 'animation'
+  format: 'v1-frames'
   frames: AnimationFrame[]
 }
+
+/** v2 文档可以进入可视投影，但帧编辑器不可用；这里不携带帧，避免把空帧当成可编辑模型 */
+export interface AnimationObjectVisualProjectionState extends EditableProjectionBase {
+  projection: 'visual'
+  kind: 'animation'
+  format: 'v2-object'
+}
+
+export type AnimationVisualProjectionState =
+  | AnimationFramesVisualProjectionState
+  | AnimationObjectVisualProjectionState
 
 export type VisualProjectionState = SceneVisualProjectionState | AnimationVisualProjectionState
 
@@ -98,8 +110,9 @@ export type EditorSession =
 export type SceneProjectionActivation = 'text' | 'visual'
 
 type InitialVisualProjectionState =
-  Pick<SceneVisualProjectionState, 'kind' | 'runtimeCapabilities' | 'statements'>
-  | Pick<AnimationVisualProjectionState, 'kind' | 'frames'>
+  | Pick<SceneVisualProjectionState, 'kind' | 'runtimeCapabilities' | 'statements'>
+  | Pick<AnimationFramesVisualProjectionState, 'kind' | 'format' | 'frames'>
+  | Pick<AnimationObjectVisualProjectionState, 'kind' | 'format'>
 
 export function isEditableEditor(state: EditorState): state is EditableEditorState {
   return 'projection' in state
@@ -208,29 +221,27 @@ export function syncAnimationTextProjection(
   }
 }
 
-export function syncProjectionStateFromDocument(
-  document: DocumentState,
-  textState?: TextProjectionState,
-  visualState?: VisualProjectionState,
-): void {
+export function syncProjectionStateFromDocument(session: EditableEditorSession): void {
+  const { document, textState } = session
   syncDocumentHistoryState(document)
 
-  if (textState) {
-    const nextContent = getDocumentTextContent(document)
-    if (
-      textState.textSource === 'projection'
-      && textState.syncError === undefined
-      && textState.textContent !== nextContent
-    ) {
-      textState.textContent = nextContent
-    }
-
-    textState.isDirty = isTextProjectionDirty(document, textState)
-    textState.runtimeCapabilities = document.model.kind === 'scene'
-      ? document.model.runtimeCapabilities
-      : undefined
+  const nextContent = getDocumentTextContent(document)
+  if (
+    textState.textSource === 'projection'
+    && textState.syncError === undefined
+    && textState.textContent !== nextContent
+  ) {
+    textState.textContent = nextContent
   }
 
+  textState.isDirty = isTextProjectionDirty(document, textState)
+  textState.runtimeCapabilities = document.model.kind === 'scene'
+    ? document.model.runtimeCapabilities
+    : undefined
+
+  // 文本编辑或外部重载可能改变动画文档格式；可视状态必须先跟上当前模型再同步
+  reconcileAnimationVisualProjectionState(session)
+  const visualState = session.visualState
   if (!visualState) {
     return
   }
@@ -242,9 +253,35 @@ export function syncProjectionStateFromDocument(
     visualState.statements = projectSceneStatements(document.model, visualState.statements)
   }
 
-  if (visualState.kind === 'animation' && document.model.kind === 'animation') {
+  if (
+    visualState.kind === 'animation'
+    && visualState.format === 'v1-frames'
+    && document.model.kind === 'animation'
+    && document.model.format === 'v1-frames'
+  ) {
     visualState.frames = projectAnimationFrames(document.model, visualState.frames)
   }
+}
+
+/** 文本编辑或外部重载可能改变动画文档格式：可视化投影必须跟随，避免用旧的帧模型操作新文档 */
+function reconcileAnimationVisualProjectionState(session: EditableEditorSession): void {
+  const model = session.document.model
+  if (model.kind !== 'animation') {
+    return
+  }
+
+  if (session.visualState?.kind === 'animation' && session.visualState.format === model.format) {
+    return
+  }
+
+  const lastSavedTime = session.visualState?.lastSavedTime
+  session.visualState = reactive({
+    path: session.textState.path,
+    isDirty: false,
+    projection: 'visual',
+    ...createInitialVisualProjectionState(model),
+  }) as VisualProjectionState
+  session.visualState.lastSavedTime = lastSavedTime
 }
 
 export function getTextProjectionPersistedContent(
@@ -275,8 +312,16 @@ function createInitialVisualProjectionState(
     }
   }
 
+  if (model.format === 'v2-object') {
+    return {
+      kind: 'animation',
+      format: 'v2-object',
+    }
+  }
+
   return {
     kind: 'animation',
+    format: 'v1-frames',
     frames: projectAnimationFrames(model),
   }
 }

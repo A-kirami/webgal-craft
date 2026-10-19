@@ -89,10 +89,9 @@ export function resolveEditorStatusBarMetrics(
     }
 
     if (editableState.kind === 'animation') {
-      return {
-        kind: 'animation',
-        count: editableState.frames.length,
-      }
+      return editableState.format === 'v1-frames'
+        ? { kind: 'animation', count: editableState.frames.length }
+        : undefined
     }
   }
 

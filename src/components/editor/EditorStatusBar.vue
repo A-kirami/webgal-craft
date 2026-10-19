@@ -290,7 +290,7 @@ watchDebounced(() => textContent, updateStats, { debounce: 500, maxWait: 1000 })
       </div>
 
       <!-- 统计 -->
-      <div class="flex gap-1 items-center">
+      <div v-if="metrics" class="flex gap-1 items-center">
         <ChartSpline class="text-muted-foreground h-3 w-3" />
         <span v-if="isSceneMode">
           {{ $t('edit.statusBar.statements', { count: statementCount }) }}

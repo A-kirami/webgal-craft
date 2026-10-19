@@ -223,7 +223,7 @@ describe('编辑器文档动作回滚', () => {
     applyTextDocumentContent(context, animationPath, '[{"duration":200}]')
 
     expect(document.model.kind).toBe('animation')
-    if (document.model.kind !== 'animation') {
+    if (document.model.kind !== 'animation' || document.model.format !== 'v1-frames') {
       throw new TypeError('expected animation document model')
     }
     expect(document.model.frames[0]).toMatchObject({ duration: 100 })
@@ -256,7 +256,7 @@ describe('编辑器文档动作回滚', () => {
     expect(textState.textSource).toBe('draft')
     expect(textState.syncError).toBeUndefined()
     expect(document.model.kind).toBe('animation')
-    if (document.model.kind !== 'animation') {
+    if (document.model.kind !== 'animation' || document.model.format !== 'v1-frames') {
       throw new TypeError('expected animation document model')
     }
     expect(document.model.frames[0]).toMatchObject({ duration: 100 })
@@ -299,7 +299,7 @@ describe('编辑器文档动作回滚', () => {
 
     expect(syncStateFromDocument).toHaveBeenCalledTimes(1)
     expect(document.model.kind).toBe('animation')
-    if (document.model.kind !== 'animation') {
+    if (document.model.kind !== 'animation' || document.model.format !== 'v1-frames') {
       throw new TypeError('expected animation document model')
     }
     expect(document.model.frames[0]).toMatchObject({ duration: 100, ease: 'linear' })
@@ -324,7 +324,7 @@ describe('编辑器文档动作回滚', () => {
 
     expect(undoDocument(context, animationPath).applied).toBe(true)
     expect(getDocumentTextContent(document)).toBe(contentBeforeEdit)
-    if (document.model.kind !== 'animation') {
+    if (document.model.kind !== 'animation' || document.model.format !== 'v1-frames') {
       throw new TypeError('expected animation document model')
     }
     expect(document.model.frames[0]).toStrictEqual({ duration: 100 })
@@ -345,7 +345,7 @@ describe('编辑器文档动作回滚', () => {
 
     expect(syncStateFromDocument).toHaveBeenCalledTimes(1)
     expect(document.model.kind).toBe('animation')
-    if (document.model.kind !== 'animation') {
+    if (document.model.kind !== 'animation' || document.model.format !== 'v1-frames') {
       throw new TypeError('expected animation document model')
     }
     expect(document.model.frames[1]).toMatchObject({
