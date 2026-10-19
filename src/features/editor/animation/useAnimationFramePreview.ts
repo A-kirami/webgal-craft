@@ -444,6 +444,8 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
     () => previewSyncStore.stageSnapshot,
     () => {
       if (isOpen.value) {
+        // 场景重放（例如保存后的 sync）后允许重试失败的 seek
+        seekFailed = false
         scheduleSeek()
       }
     },

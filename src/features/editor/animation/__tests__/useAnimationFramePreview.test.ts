@@ -13,9 +13,16 @@ import type {
   TransformBaselineQueryResult,
 } from '~/features/editor/transform-resolution/baseline-session'
 
-const debugCommanderMock = vi.hoisted(() => ({
-  seekAnimation: vi.fn(async (..._args: unknown[]) => undefined),
-  syncScene: vi.fn(async (..._args: unknown[]) => undefined),
+const { debugCommanderMock, loggerWarnMock } = vi.hoisted(() => ({
+  debugCommanderMock: {
+    seekAnimation: vi.fn(async (..._args: unknown[]) => undefined),
+    syncScene: vi.fn(async (..._args: unknown[]) => undefined),
+  },
+  loggerWarnMock: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/plugin-log', () => ({
+  warn: loggerWarnMock,
 }))
 
 vi.mock('~/services/debug-commander', () => ({
@@ -197,6 +204,7 @@ afterEach(() => {
   preferenceStore.showPreviewPanel = true
   debugCommanderMock.seekAnimation.mockClear()
   debugCommanderMock.syncScene.mockClear()
+  loggerWarnMock.mockClear()
 })
 
 describe('useAnimationFramePreview', () => {
@@ -421,6 +429,27 @@ describe('useAnimationFramePreview', () => {
 
     await vi.waitFor(() => {
       expect(harness.seekAnimation).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('seek 失败后舞台快照变化会重试并清除失败提示', async () => {
+    debugCommanderMock.seekAnimation.mockRejectedValueOnce(new Error('seek failed'))
+    const harness = createTrackedHarness()
+    await openHarness(harness)
+
+    await vi.waitFor(() => {
+      expect(harness.provider.notice).toBe('seek-failed')
+    })
+
+    previewSyncStore.stageSnapshot = {
+      sceneName: 'scene',
+      sentenceId: 7,
+      stageState: {},
+    }
+
+    await vi.waitFor(() => {
+      expect(harness.seekAnimation).toHaveBeenCalledTimes(2)
+      expect(harness.provider.notice).toBeUndefined()
     })
   })
 
