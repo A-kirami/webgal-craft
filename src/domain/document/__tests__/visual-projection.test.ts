@@ -38,6 +38,7 @@ function createSceneModel(
 function createAnimationModel(frames: AnimationFrame[]) {
   return {
     kind: 'animation' as const,
+    format: 'v1-frames' as const,
     frames,
     // eslint-disable-next-line unicorn/text-encoding-identifier-case -- 文档编码元数据沿用项目既有命名
     metadata: { lineEnding: '\n' as const, encoding: 'utf-8' as const },

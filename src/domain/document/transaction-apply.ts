@@ -1,9 +1,10 @@
 import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
 import { AnimationFrame, Point2D } from '~/domain/stage/types'
 
+import { isAnimationFramesDocumentModel } from './document-model'
 import { applyTextContentToDocument, replaceDocumentText } from './text-projection'
 
-import type { AnimationDocumentModel, DocumentModel, SceneDocumentModel } from './document-model'
+import type { AnimationFramesDocumentModel, DocumentModel, SceneDocumentModel } from './document-model'
 import type { AnimationTransaction, SceneTransaction, Transaction } from './transaction'
 
 // ============================================================
@@ -33,7 +34,7 @@ export function applyTransactionToModel(
     case 'animation:delete-frame':
     case 'animation:reorder-frame':
     case 'animation:batch': {
-      return model.kind === 'animation'
+      return isAnimationFramesDocumentModel(model)
         ? applyAnimationTransaction(model, transaction)
         : undefined
     }
@@ -171,9 +172,9 @@ const animationFrameScalarKeys = [
 ] as const satisfies readonly Exclude<keyof AnimationFrame, 'position' | 'scale'>[]
 
 export function applyAnimationTransaction(
-  model: AnimationDocumentModel,
+  model: AnimationFramesDocumentModel,
   transaction: AnimationTransaction,
-): AnimationDocumentModel {
+): AnimationFramesDocumentModel {
   switch (transaction.type) {
     case 'animation:replace-frame': {
       const nextFrames = [...model.frames]

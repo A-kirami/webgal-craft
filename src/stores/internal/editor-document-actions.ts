@@ -1,4 +1,5 @@
 import { isAnimationDocumentTextValid } from '~/domain/document/animation-document-codec'
+import { isAnimationFramesDocumentModel } from '~/domain/document/document-model'
 import { captureSceneSelectionSnapshot, computeLineNumberFromStatementId, createSceneSelectionSnapshot } from '~/domain/document/scene-selection'
 import { applyTransactionToModel } from '~/domain/document/transaction-apply'
 import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
@@ -306,8 +307,10 @@ export function applyAnimationFrameUpdate(
   index: number,
   patch: Partial<AnimationFrame>,
 ): void {
-  const docEntry = context.getDocumentState(path)
-  const currentFrame = docEntry?.model.kind === 'animation' ? docEntry.model.frames[index] : undefined
+  const model = context.getDocumentState(path)?.model
+  const currentFrame = model && isAnimationFramesDocumentModel(model)
+    ? model.frames[index]
+    : undefined
   if (!currentFrame) {
     return
   }

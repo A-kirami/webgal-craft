@@ -61,6 +61,7 @@ function createFileEditorLocalizedI18n() {
             title: '暂无打开文件',
           },
           textEditor: {
+            animationV2ReadOnlyMessage: '当前动画使用 v2 格式，暂不支持可视化编辑，切换到文本模式编辑',
             invalidAnimationVisualMessage: '当前动画文件存在错误，无法在可视化模式下编辑，请切换到文本模式修复',
           },
           editorMode: {
@@ -87,6 +88,58 @@ describe('FileEditor', () => {
     useTabsStoreMock.mockReset()
   })
 
+  it('v2 动画切到可视化会显示只读提示而不是帧编辑器', async () => {
+    const switchEditorMode = vi.fn()
+    const tabsStore = reactive({
+      activeTab: {
+        path: '/game/animation/v2.json',
+      },
+      tabs: [{
+        path: '/game/animation/v2.json',
+      }],
+    })
+
+    useEditorStoreMock.mockReturnValue(reactive({
+      currentState: {
+        format: 'v2-object',
+        kind: 'animation',
+        path: '/game/animation/v2.json',
+        projection: 'visual',
+      },
+      currentTextProjection: {
+        kind: 'animation',
+        path: '/game/animation/v2.json',
+        projection: 'text',
+        syncError: undefined,
+      },
+      currentVisualProjection: {
+        format: 'v2-object',
+        kind: 'animation',
+        path: '/game/animation/v2.json',
+        projection: 'visual',
+      },
+      switchEditorMode,
+    }))
+    useTabsStoreMock.mockReturnValue(tabsStore)
+    useModalStoreMock.mockReturnValue({
+      open: vi.fn(),
+    })
+
+    await renderInBrowser(FileEditor, {
+      global: {
+        plugins: [createFileEditorLocalizedI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByText('当前动画使用 v2 格式，暂不支持可视化编辑，切换到文本模式编辑')).toBeVisible()
+    await expect.element(page.getByText('Visual Editor Animation')).not.toBeInTheDocument()
+
+    await page.getByRole('button', { name: '切换到文本' }).click()
+
+    expect(switchEditorMode).toHaveBeenCalledWith('text')
+  })
+
   it('动画文本无效时切到可视化会显示错误占位而不是状态栏之外的编辑器', async () => {
     const switchEditorMode = vi.fn()
     const tabsStore = reactive({
@@ -111,6 +164,7 @@ describe('FileEditor', () => {
         syncError: 'invalid-animation-json',
       },
       currentVisualProjection: {
+        format: 'v1-frames',
         kind: 'animation',
         path: '/game/animation/broken.json',
         projection: 'visual',

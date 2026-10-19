@@ -854,6 +854,7 @@ edit:
       noStatement: 將游標移到語句行即可編輯
       multipleEditTargets: 同時選中了多個編輯目標，語句編輯已暫停
     invalidAnimationVisualMessage: 目前動畫檔案存在錯誤，無法在視覺化模式下編輯，切換到文字模式修復
+    animationV2ReadOnlyMessage: 目前動畫使用 v2 格式，暫不支援視覺化編輯，切換到文字模式編輯
   scenePanel:
     scene: 場景
     resource: 資源
@@ -965,6 +966,7 @@ edit:
       title: 動畫編輯器
       description: 調整目前動畫各關鍵影格的時長、緩動與變換
       invalidJson: 目前高級動畫內容存在錯誤，無法開啟動畫編輯器，切換到文字模式修復
+      v2ReadOnly: v2 動畫暫不支援視覺化編輯，切換到文字模式編輯
       timelineTitle: 時間軸
       inspectorTitle: 影格屬性
       startFrame: 起始影格

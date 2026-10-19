@@ -42,11 +42,24 @@ const currentUnsupportedState = $computed(() => {
   const state = currentState
   return state && !isEditableEditor(state) && state.view === 'unsupported' ? state : undefined
 })
-const shouldShowInvalidAnimationVisualState = $computed(() =>
-  activeProjection === 'visual'
-  && currentVisualProjection?.kind === 'animation'
-  && currentTextProjection?.syncError === 'invalid-animation-json',
+const currentAnimationFramesProjection = $computed(() =>
+  currentVisualProjection?.kind === 'animation' && currentVisualProjection.format === 'v1-frames'
+    ? currentVisualProjection
+    : undefined,
 )
+const animationVisualError = $computed(() => {
+  if (activeProjection !== 'visual' || currentVisualProjection?.kind !== 'animation') {
+    return
+  }
+
+  if (currentTextProjection?.syncError === 'invalid-animation-json') {
+    return 'invalid' as const
+  }
+
+  if (currentVisualProjection.format === 'v2-object') {
+    return 'v2' as const
+  }
+})
 const hasEditableWorkspace = $computed(() =>
   currentTextProjection !== undefined || currentVisualProjection !== undefined,
 )
@@ -81,19 +94,23 @@ const shouldShowPlaceholder = $computed(() =>
     </KeepAlive>
     <KeepAlive>
       <VisualEditorAnimation
-        v-if="currentVisualProjection?.kind === 'animation' && !shouldShowInvalidAnimationVisualState"
+        v-if="currentAnimationFramesProjection && !animationVisualError"
         v-show="activeProjection === 'visual'"
-        :state="currentVisualProjection"
+        :state="currentAnimationFramesProjection"
       />
     </KeepAlive>
-    <Empty v-if="shouldShowInvalidAnimationVisualState" class="border-0 h-full">
+    <Empty v-if="animationVisualError" class="border-0 h-full">
       <EmptyContent>
         <EmptyHeader>
           <EmptyMedia variant="icon">
             <FileWarning />
           </EmptyMedia>
           <EmptyDescription>
-            {{ $t('edit.textEditor.invalidAnimationVisualMessage') }}
+            {{
+              animationVisualError === 'invalid'
+                ? $t('edit.textEditor.invalidAnimationVisualMessage')
+                : $t('edit.textEditor.animationV2ReadOnlyMessage')
+            }}
           </EmptyDescription>
         </EmptyHeader>
         <Button @click="handleSwitchToTextMode">

@@ -2,7 +2,7 @@ import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capa
 import { buildSceneStatements } from '~/domain/script/sentence'
 import { AnimationFrame } from '~/domain/stage/types'
 
-import { parseAnimationDocument } from './animation-document-codec'
+import { detectAnimationDocumentFormat, parseAnimationDocument } from './animation-document-codec'
 
 import type { EngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 // ============================================================
@@ -35,12 +35,23 @@ export interface SceneDocumentModel {
   metadata: TextMetadata
 }
 
-/** 动画文档：结构化模型，支持可视化编辑（动画编辑器） */
-export interface AnimationDocumentModel {
+/** 动画文档（v1）：关键帧数组，支持帧编辑器 */
+export interface AnimationFramesDocumentModel {
   kind: 'animation'
+  format: 'v1-frames'
   frames: AnimationFrame[]
   metadata: TextMetadata
 }
+
+/** 动画文档（v2）：暂不支持可视化编辑，保留原文按文本编辑与保存 */
+export interface AnimationObjectDocumentModel {
+  kind: 'animation'
+  format: 'v2-object'
+  content: string
+  metadata: TextMetadata
+}
+
+export type AnimationDocumentModel = AnimationFramesDocumentModel | AnimationObjectDocumentModel
 
 /** 模板文档：纯文本模型，不支持可视化编辑 */
 export interface TemplateDocumentModel {
@@ -64,6 +75,12 @@ export type DocumentModel =
 
 /** 文档 kind 字面量联合 */
 export type DocumentKind = DocumentModel['kind']
+
+export function isAnimationFramesDocumentModel(
+  model: DocumentModel,
+): model is AnimationFramesDocumentModel {
+  return model.kind === 'animation' && model.format === 'v1-frames'
+}
 
 function detectTextLineEnding(text: string): TextMetadata['lineEnding'] {
   return text.includes('\r\n') ? '\r\n' : '\n'
@@ -120,9 +137,19 @@ export function createDocumentModel(options: {
       }
     }
     case 'animation': {
+      if (detectAnimationDocumentFormat(content) === 'v1-frames') {
+        return {
+          kind: 'animation',
+          format: 'v1-frames',
+          frames: parseAnimationDocument(content),
+          metadata,
+        }
+      }
+
       return {
         kind: 'animation',
-        frames: parseAnimationDocument(content),
+        format: 'v2-object',
+        content,
         metadata,
       }
     }

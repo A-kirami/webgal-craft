@@ -1307,7 +1307,11 @@ describe('编辑器文本与文档流程', () => {
     editorStore.replaceTextDocumentContent(path, '[{"duration":200}]', { preserveDraftText: true })
 
     expect(editorStore.currentTextProjection?.textContent).toBe('[{"duration":200}]')
-    if (editorStore.currentVisualProjection?.projection === 'visual' && editorStore.currentVisualProjection.kind === 'animation') {
+    if (
+      editorStore.currentVisualProjection?.projection === 'visual'
+      && editorStore.currentVisualProjection.kind === 'animation'
+      && editorStore.currentVisualProjection.format === 'v1-frames'
+    ) {
       expect(editorStore.currentVisualProjection.frames[0]).toMatchObject({ duration: 200 })
     } else {
       throw new TypeError('expected visual animation projection')
@@ -1336,6 +1340,179 @@ describe('编辑器文本与文档流程', () => {
     expect(editorStore.currentTextProjection?.textContent).toBe('[\n  {\n    "duration": 300\n  }\n]')
   })
 
+  it('打开 v2 动画文件时保留原文，帧操作与保存都不改写文档', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/v2.json')
+    const originalContent = [
+      '{',
+      '  "version": 2,',
+      '  "relative": true,',
+      '  "keyframes": [',
+      '    {',
+      '      "time": 0,',
+      '      "alpha": 0',
+      '    }',
+      '  ]',
+      '}',
+    ].join('\n')
+
+    preferenceStoreMock.editorMode = 'text'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode(originalContent))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'v2.json',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load v2 animation projections',
+    )
+
+    const textProjection = editorStore.currentTextProjection
+    if (!textProjection || textProjection.projection !== 'text') {
+      throw new TypeError('expected text projection for v2 animation')
+    }
+
+    expect(textProjection.textContent).toBe(originalContent)
+    expect(textProjection.syncError).toBeUndefined()
+    expect(editorStore.currentVisualProjection).toMatchObject({
+      format: 'v2-object',
+      kind: 'animation',
+    })
+    expect(editorStore.currentVisualProjection).not.toHaveProperty('frames')
+
+    editorStore.setActiveProjection('visual', path)
+    editorStore.applyAnimationFrameUpdate(path, 0, { duration: 999 })
+    expect(editorStore.undoDocument(path).applied).toBe(false)
+
+    // 可视投影下保存仍写原文，不落成空帧数组或 v1
+    await editorStore.saveFile(path)
+
+    const lastWrite = writeDocumentFileMock.mock.calls.at(-1)
+    assertWriteCall(lastWrite)
+    expect(lastWrite[0]).toBe(path)
+    expect(new TextDecoder().decode(lastWrite[1])).toBe(originalContent)
+  })
+
+  it('v2 动画文本编辑、撤销重做与保存都保留 v2 内容', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/v2-edit.json')
+    const firstContent = '{"version":2,"keyframes":[{"time":0,"alpha":0}]}'
+    const secondContent = '{"version":2,"keyframes":[{"time":0,"alpha":1}]}'
+
+    preferenceStoreMock.editorMode = 'text'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode(firstContent))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'v2-edit.json',
+      path,
+      () => editorStore.currentTextProjection !== undefined,
+      'load v2 animation text projection',
+    )
+
+    editorStore.replaceTextDocumentContent(path, secondContent, { preserveDraftText: true })
+
+    expect(editorStore.currentTextProjection?.textContent).toBe(secondContent)
+    expect(editorStore.getDirtyBufferContent(path)).toBe(secondContent)
+
+    await editorStore.saveFile(path)
+    let lastWrite = writeDocumentFileMock.mock.calls.at(-1)
+    assertWriteCall(lastWrite)
+    expect(new TextDecoder().decode(lastWrite[1])).toBe(secondContent)
+
+    expect(editorStore.undoDocument(path).applied).toBe(true)
+    expect(editorStore.currentTextProjection?.textContent).toBe(firstContent)
+
+    expect(editorStore.redoDocument(path).applied).toBe(true)
+    expect(editorStore.currentTextProjection?.textContent).toBe(secondContent)
+
+    await editorStore.saveFile(path)
+    lastWrite = writeDocumentFileMock.mock.calls.at(-1)
+    assertWriteCall(lastWrite)
+    expect(new TextDecoder().decode(lastWrite[1])).toBe(secondContent)
+  })
+
+  it('文本编辑切换动画文档格式后，可视投影会按新格式重建', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/format-switch.json')
+    const v2Content = '{"version":2,"keyframes":[{"time":0,"alpha":0}]}'
+
+    preferenceStoreMock.editorMode = 'text'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('[{"duration":100}]'))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'format-switch.json',
+      path,
+      () => editorStore.currentTextProjection !== undefined && editorStore.currentVisualProjection !== undefined,
+      'load animation projections',
+    )
+
+    editorStore.replaceTextDocumentContent(path, v2Content, { preserveDraftText: true })
+    editorStore.setActiveProjection('visual', path)
+
+    expect(editorStore.currentVisualProjection).toMatchObject({ format: 'v2-object' })
+    expect(editorStore.currentVisualProjection).not.toHaveProperty('frames')
+
+    editorStore.setActiveProjection('text', path)
+    editorStore.replaceTextDocumentContent(path, '[{"duration":200}]', { preserveDraftText: true })
+    editorStore.setActiveProjection('visual', path)
+
+    expect(editorStore.currentVisualProjection).toMatchObject({
+      format: 'v1-frames',
+      frames: [{ duration: 200 }],
+    })
+  })
+
+  it('可视投影下撤销改变动画格式的文本编辑会重建可视投影', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/animation/visual-format-undo.json')
+    const v2Content = '{"version":2,"keyframes":[{"time":0,"alpha":0}]}'
+    const v1Content = '[{"duration":100}]'
+
+    preferenceStoreMock.editorMode = 'text'
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode(v2Content))
+    mimeGetTypeMock.mockReturnValue('application/json')
+
+    const editorStore = useEditorStore()
+
+    await openTabAndWaitFor(
+      tabsStore,
+      'visual-format-undo.json',
+      path,
+      () => editorStore.currentTextProjection !== undefined,
+      'load v2 animation for visual undo',
+    )
+
+    editorStore.replaceTextDocumentContent(path, v1Content, { preserveDraftText: true })
+    editorStore.setActiveProjection('visual', path)
+
+    expect(editorStore.currentVisualProjection).toMatchObject({
+      format: 'v1-frames',
+      frames: [{ duration: 100 }],
+    })
+
+    expect(editorStore.undoDocument(path).applied).toBe(true)
+    expect(editorStore.currentVisualProjection).toMatchObject({ format: 'v2-object' })
+    expect(editorStore.currentVisualProjection).not.toHaveProperty('frames')
+    expect(editorStore.currentTextProjection?.textContent).toBe(v2Content)
+
+    expect(editorStore.redoDocument(path).applied).toBe(true)
+    expect(editorStore.currentVisualProjection).toMatchObject({
+      format: 'v1-frames',
+      frames: [{ duration: 100 }],
+    })
+  })
+
   it('在文本模式撤销重做时恢复有效动画草稿文本', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/animation/undo-redo.json')
@@ -1362,7 +1539,11 @@ describe('编辑器文本与文档流程', () => {
     expect(undoResult.applied).toBe(true)
     expect(editorStore.currentTextProjection?.textContent).toBe('[{"duration":100}]')
     expect(editorStore.currentTextProjection?.textSource).toBe('draft')
-    if (editorStore.currentVisualProjection?.projection === 'visual' && editorStore.currentVisualProjection.kind === 'animation') {
+    if (
+      editorStore.currentVisualProjection?.projection === 'visual'
+      && editorStore.currentVisualProjection.kind === 'animation'
+      && editorStore.currentVisualProjection.format === 'v1-frames'
+    ) {
       expect(editorStore.currentVisualProjection.frames[0]).toMatchObject({ duration: 100 })
     } else {
       throw new TypeError('expected visual animation projection')
@@ -1373,7 +1554,11 @@ describe('编辑器文本与文档流程', () => {
     expect(redoResult.applied).toBe(true)
     expect(editorStore.currentTextProjection?.textContent).toBe('[{"duration":200}]')
     expect(editorStore.currentTextProjection?.textSource).toBe('draft')
-    if (editorStore.currentVisualProjection?.projection === 'visual' && editorStore.currentVisualProjection.kind === 'animation') {
+    if (
+      editorStore.currentVisualProjection?.projection === 'visual'
+      && editorStore.currentVisualProjection.kind === 'animation'
+      && editorStore.currentVisualProjection.format === 'v1-frames'
+    ) {
       expect(editorStore.currentVisualProjection.frames[0]).toMatchObject({ duration: 200 })
     } else {
       throw new TypeError('expected visual animation projection')
@@ -1400,7 +1585,12 @@ describe('编辑器文本与文档流程', () => {
     editorStore.setActiveProjection('visual', path)
 
     const visualProjection = editorStore.currentVisualProjection
-    if (!visualProjection || visualProjection.projection !== 'visual' || visualProjection.kind !== 'animation') {
+    if (
+      !visualProjection
+      || visualProjection.projection !== 'visual'
+      || visualProjection.kind !== 'animation'
+      || visualProjection.format !== 'v1-frames'
+    ) {
       throw new TypeError('expected visual animation projection')
     }
 
@@ -2181,7 +2371,11 @@ describe('编辑器文本与文档流程', () => {
     expect(editorStore.currentTextProjection?.syncError).toBeUndefined()
     expect(editorStore.currentTextProjection?.textContent).toBe('[{"duration":200}]')
     expect(editorStore.canToggleMode).toBe(true)
-    if (editorStore.currentVisualProjection?.projection === 'visual' && editorStore.currentVisualProjection.kind === 'animation') {
+    if (
+      editorStore.currentVisualProjection?.projection === 'visual'
+      && editorStore.currentVisualProjection.kind === 'animation'
+      && editorStore.currentVisualProjection.format === 'v1-frames'
+    ) {
       expect(editorStore.currentVisualProjection.frames[0]).toMatchObject({ duration: 200 })
     } else {
       throw new TypeError('expected visual animation projection')

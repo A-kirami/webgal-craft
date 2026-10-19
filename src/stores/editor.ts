@@ -80,6 +80,8 @@ export {
 } from './internal/editor-session'
 export type { HistoryApplyResult } from './internal/editor-document-actions'
 export type {
+  AnimationFramesVisualProjectionState,
+  AnimationObjectVisualProjectionState,
   AnimationVisualProjectionState,
   AssetPreviewState,
   EditableEditorState,
@@ -326,11 +328,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     const session = getEditableSession(path)
     if (session) {
-      syncProjectionStateFromDocument(
-        session.document,
-        session.textState,
-        session.visualState,
-      )
+      syncProjectionStateFromDocument(session)
     }
 
     syncTabModified(path)

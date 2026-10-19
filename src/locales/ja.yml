@@ -854,6 +854,7 @@ edit:
       noStatement: カーソルをステートメント行に移動すると編集できます
       multipleEditTargets: 複数の編集対象が選択されているため、ステートメント編集は一時停止中です
     invalidAnimationVisualMessage: 現在のアニメーションファイルにはエラーがあるため、ビジュアルモードでは編集できません。テキストモードに切り替えて修正してください
+    animationV2ReadOnlyMessage: 現在のアニメーションは v2 形式のため、まだビジュアルモードでは編集できません。テキストモードに切り替えて編集してください
   scenePanel:
     scene: シーン
     resource: リソース
@@ -965,6 +966,7 @@ edit:
       title: アニメーションエディタ
       description: 現在のアニメーションの各キーフレームの時間、イージング、変形を調整します
       invalidJson: 現在の高度なアニメーション内容にエラーがあるため、アニメーションエディタを開けません。テキストモードに切り替えて修正してください
+      v2ReadOnly: アニメーション v2 はまだビジュアルモードでは編集できません。テキストモードに切り替えて編集してください
       timelineTitle: タイムライン
       inspectorTitle: フレーム属性
       startFrame: 開始フレーム
