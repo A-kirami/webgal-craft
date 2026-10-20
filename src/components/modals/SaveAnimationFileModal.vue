@@ -44,7 +44,7 @@ const schema = z.object({
   ),
 })
 
-const { handleSubmit, setFieldError } = useForm({
+const { handleSubmit, isSubmitting, setFieldError } = useForm({
   validationSchema: schema,
 })
 
@@ -93,7 +93,7 @@ const onSubmit = handleSubmit(async (values) => {
         </FormField>
       </form>
       <DialogFooter>
-        <Button form="save-animation-file-form" type="submit" class="w-full">
+        <Button form="save-animation-file-form" type="submit" class="w-full" :disabled="isSubmitting">
           {{ $t('modals.saveAnimationFile.save') }}
         </Button>
       </DialogFooter>

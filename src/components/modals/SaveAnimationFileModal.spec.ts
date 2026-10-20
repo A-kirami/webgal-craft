@@ -90,6 +90,34 @@ describe('SaveAnimationFileModal', () => {
     expect(syncAnimationTableMock).toHaveBeenCalledWith('/games/demo')
   })
 
+  it('保存进行中禁用按钮，避免重复提交', async () => {
+    let resolveExists: ((value: boolean) => void) | undefined
+    existsMock.mockImplementation(() => new Promise<boolean>((resolve) => {
+      resolveExists = resolve
+    }))
+    saveFileMock.mockResolvedValue(undefined)
+    syncAnimationTableMock.mockResolvedValue(undefined)
+    const { onSaved } = await renderModal()
+
+    await page.getByRole('textbox').fill('walk/fade')
+
+    const saveButton = await page.getByRole('button', { name: '保存' }).element() as HTMLButtonElement
+    saveButton.click()
+    await vi.waitFor(() => {
+      expect(existsMock).toHaveBeenCalledOnce()
+      expect(saveButton.disabled).toBe(true)
+    })
+
+    // 提交进行中再次点击不会发起第二次保存
+    saveButton.click()
+    expect(existsMock).toHaveBeenCalledOnce()
+
+    resolveExists?.(false)
+    await vi.waitFor(() => {
+      expect(onSaved).toHaveBeenCalledOnce()
+    })
+  })
+
   it('空名称显示本地化提示而不是 zod 的默认错误', async () => {
     await renderModal()
 
