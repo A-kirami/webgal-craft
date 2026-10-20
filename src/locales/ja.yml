@@ -594,6 +594,20 @@ modals:
     fileNameRequired: ファイル名は必須です
     fileExists: ファイルは既に存在します
     create: 作成
+  saveAnimationFile:
+    title: アニメーションファイルとして保存
+    description: game/animation からの相対パスを入力します。サブフォルダーは / で区切ります。
+    fileNamePlaceholder: アニメーション名を入力
+    fileNameRequired: アニメーション名は必須です
+    invalidPath: game/animation 内の相対パスを入力してください
+    reservedName: animationTable はアニメーションテーブルの予約名です。アニメーション名には使えません
+    fileExists: 同じ名前のアニメーションファイルが存在します
+    save: 保存
+    saveFailed: アニメーションファイルの保存に失敗しました
+    savedTitle: アニメーションファイルを保存しました
+    rewritePrompt: "このステートメントを「{name}」を呼び出す形に変更しますか？"
+    rewrite: ステートメントを変更
+    keep: このままにする
   settings:
     description: 各設定を調整して、WebGAL Craft を使いやすい状態にできます
     tabs:
@@ -965,6 +979,7 @@ edit:
     animation:
       title: アニメーションエディタ
       description: 現在のアニメーションの各キーフレームの時間、イージング、変形を調整します
+      saveAsFile: アニメーションファイルとして保存
       invalidJson: 現在の高度なアニメーション内容にエラーがあるため、アニメーションエディタを開けません。テキストモードに切り替えて修正してください
       v2ReadOnly: アニメーション v2 はまだビジュアルモードでは編集できません。テキストモードに切り替えて編集してください
       timelineTitle: タイムライン

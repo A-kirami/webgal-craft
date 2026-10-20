@@ -2,16 +2,19 @@ import { computed } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { detectAnimationDocumentFormat } from '~/domain/document/animation-document-codec'
+import { AbsPath } from '~/domain/path'
 import { serializeSentence } from '~/domain/script/serialize'
 import { cloneAnimationFrames } from '~/domain/stage/animation-frame'
 import { useAnimationFramePreview } from '~/features/editor/animation/useAnimationFramePreview'
 import {
   applyAnimationEditorResultToSentence,
+  applyAnimationFileReferenceToSentence,
   parseStatementAnimationFrames,
   STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY,
 } from '~/features/editor/animation/useStatementAnimationEditorBridge'
 import { useStatementAnimationEditorPanel } from '~/features/editor/animation/useStatementAnimationEditorPanel'
 import { useModalStore } from '~/stores/modal'
+import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { AnimationFrame } from '~/domain/stage/types'
@@ -28,13 +31,14 @@ export function useStatementAnimationDialog(options: UseStatementAnimationDialog
   // 每次打开都是一次独立会话，宿主用 sessionId 重建面板实例并重置撤销历史
   let sessionId = $ref(0)
   let previewContext = $ref<AnimationFramePreviewContext>()
-  let applyCallback: ((frames: AnimationFrame[]) => void) | undefined
+  let applyCallback: ((sentence: ISentence) => void) | undefined
   let parsedSentence: ISentence | undefined
   let restoreLineCommandString = ''
   let initialSnapshot = '[]'
 
   const { t } = useI18n()
   const modalStore = useModalStore()
+  const workspaceStore = useWorkspaceStore()
   const controller = useStatementAnimationEditorPanel({
     emitFrames: (frames) => {
       draftFrames = cloneAnimationFrames(frames)
@@ -74,7 +78,7 @@ export function useStatementAnimationDialog(options: UseStatementAnimationDialog
 
   function openDialog(
     parsed: ISentence,
-    onApply: (frames: AnimationFrame[]) => void,
+    onApply: (sentence: ISentence) => void,
     framePreviewContext?: AnimationFramePreviewContext,
   ) {
     if (parsed.command !== commandType.setTempAnimation) {
@@ -110,13 +114,55 @@ export function useStatementAnimationDialog(options: UseStatementAnimationDialog
     isOpen = true
   }
 
-  function handleApply() {
-    const appliedFrames = cloneAnimationFrames(draftFrames)
-    if (parsedSentence) {
-      restoreLineCommandString = serializeSentence(applyAnimationEditorResultToSentence(parsedSentence, appliedFrames))
-    }
-    applyCallback?.(appliedFrames)
+  function applySentence(nextSentence: ISentence): void {
+    restoreLineCommandString = serializeSentence(nextSentence)
+    applyCallback?.(nextSentence)
     isOpen = false
+  }
+
+  function handleApply() {
+    if (!parsedSentence) {
+      isOpen = false
+      return
+    }
+
+    applySentence(applyAnimationEditorResultToSentence(parsedSentence, cloneAnimationFrames(draftFrames)))
+  }
+
+  function openSaveAnimationFileDialog(): void {
+    const gamePath = workspaceStore.CWD
+    if (!parsedSentence || !gamePath) {
+      return
+    }
+
+    // 保存的是点击入口时的草稿快照，与「确认」无关：之后取消面板也不会撤销已创建的文件
+    modalStore.open('SaveAnimationFileModal', {
+      frames: cloneAnimationFrames(draftFrames),
+      gamePath: AbsPath.from(gamePath),
+      onSaved: (animationName: string) => {
+        requestAnimationFileRewrite(animationName)
+      },
+    })
+  }
+
+  function requestAnimationFileRewrite(animationName: string): void {
+    modalStore.open('AlertModal', {
+      title: t('modals.saveAnimationFile.savedTitle'),
+      content: t('modals.saveAnimationFile.rewritePrompt', { name: animationName }),
+      confirmText: t('modals.saveAnimationFile.rewrite'),
+      cancelText: t('modals.saveAnimationFile.keep'),
+      onConfirm: () => {
+        applyAnimationFileReference(animationName)
+      },
+    })
+  }
+
+  function applyAnimationFileReference(animationName: string): void {
+    if (!parsedSentence) {
+      return
+    }
+
+    applySentence(applyAnimationFileReferenceToSentence(parsedSentence, animationName))
   }
 
   function requestClose() {
@@ -149,6 +195,7 @@ export function useStatementAnimationDialog(options: UseStatementAnimationDialog
     controller,
     preview,
     handleApply,
+    openSaveAnimationFileDialog,
     requestClose,
   })
 }

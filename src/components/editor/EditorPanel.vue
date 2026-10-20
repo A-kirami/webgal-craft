@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Save } from '@lucide/vue'
+
 import { ResizablePanel } from '~/components/ui/resizable'
 import { capabilityMinimumVersion } from '~/domain/engine/runtime-capabilities'
 import { useEditorDiagnostics } from '~/features/editor/diagnostics/useEditorDiagnostics'
@@ -361,7 +363,20 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
             :preview-field-value="getTransformOverlayFieldValue"
             @apply="statementAnimationDialog.handleApply"
             @cancel="statementAnimationDialog.requestClose"
-          />
+          >
+            <template #footer-leading>
+              <Button
+                variant="ghost"
+                size="sm"
+                class="text-muted-foreground"
+                data-testid="save-animation-file"
+                @click="statementAnimationDialog.openSaveAnimationFileDialog()"
+              >
+                <Save aria-hidden="true" />
+                {{ $t('edit.visualEditor.animation.saveAsFile') }}
+              </Button>
+            </template>
+          </StatementAnimationEditorPanel>
         </div>
       </EditorDrawer>
     </div>

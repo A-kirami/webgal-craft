@@ -594,6 +594,20 @@ modals:
     fileNameRequired: File name is required
     fileExists: File already exists
     create: Create
+  saveAnimationFile:
+    title: Save as Animation File
+    description: Enter a path relative to game/animation. Use / to separate subdirectories.
+    fileNamePlaceholder: Enter animation name
+    fileNameRequired: Animation name is required
+    invalidPath: Enter a relative path inside game/animation
+    reservedName: animationTable is reserved for the animation table and is not available as an animation name
+    fileExists: An animation file with this name already exists
+    save: Save
+    saveFailed: Failed to save animation file
+    savedTitle: Animation file saved
+    rewritePrompt: 'Change this statement to call "{name}"?'
+    rewrite: Change statement
+    keep: Keep as is
   settings:
     description: Adjust settings to make WebGAL Craft work the way you do
     tabs:
@@ -965,6 +979,7 @@ edit:
     animation:
       title: Animation Editor
       description: Adjust the duration, easing, and transforms of each keyframe in the current animation
+      saveAsFile: Save as Animation File
       invalidJson: The current advanced animation content contains errors and the animation editor cannot be opened. Switch to text mode to fix it
       v2ReadOnly: Animation v2 cannot be edited in visual mode yet. Switch to text mode to edit it
       timelineTitle: Timeline

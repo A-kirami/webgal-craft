@@ -333,12 +333,34 @@ describe('StatementAnimationEditorPanel', () => {
         controller,
         showFooter: false,
       },
+      slots: {
+        'footer-leading': () => h('button', { type: 'button' }, 'footer-leading-action'),
+      },
       global: {
         stubs: globalStubs,
       },
     })
 
     await expect.element(page.getByRole('button', { name: 'common.confirm' })).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'footer-leading-action' })).not.toBeInTheDocument()
+  })
+
+  it('抽屉宿主可以往页脚左侧放入自己的动作', async () => {
+    const { controller } = createController([{ duration: 200 }])
+    await renderInBrowser(StatementAnimationEditorPanel, {
+      props: {
+        controller,
+      },
+      slots: {
+        'footer-leading': () => h('button', { type: 'button' }, 'footer-leading-action'),
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'footer-leading-action' })).toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: 'common.confirm' })).toBeInTheDocument()
   })
 
   it('抽屉场景下响应撤销、重做与删除帧快捷键', async () => {
