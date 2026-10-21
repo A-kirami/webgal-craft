@@ -84,8 +84,9 @@ export function useReferencedAnimationEditor() {
   let draftFrames = $ref<AnimationFrame[]>()
   let fileMetadata = $ref<TextMetadata>()
   const savedFrames = shallowRef<AnimationFrame[]>()
-  // 每次打开/加载/关闭递增：异步读取完成时据此判断草稿是否已被新的打开/加载替代
+  // 每次打开/加载/关闭递增：异步读取/保存完成时据此判断草稿是否已被新的打开/加载替代
   let sessionToken = 0
+  let saveTask: { promise: Promise<boolean>, token: number } | undefined
 
   // 延迟创建 workspace store：抽屉未打开时不应因为渲染标题而触发工作区初始化
   function readGamePath(): AbsPath | undefined {
@@ -275,7 +276,23 @@ export function useReferencedAnimationEditor() {
     draftFrames = frames
   }
 
-  async function save(): Promise<boolean> {
+  function save(): Promise<boolean> {
+    // 同一草稿的保存串行化；会话已更换时不复用上一会话的写盘任务
+    if (saveTask?.token === sessionToken) {
+      return saveTask.promise
+    }
+
+    const token = sessionToken
+    const task = runSave(token).finally(() => {
+      if (saveTask?.token === token) {
+        saveTask = undefined
+      }
+    })
+    saveTask = { promise: task, token }
+    return task
+  }
+
+  async function runSave(token: number): Promise<boolean> {
     const current = binding
     const frames = draftFrames
     if (!current || !frames || !isDirty) {
@@ -310,6 +327,10 @@ export function useReferencedAnimationEditor() {
           animationName: current.animationName,
           filePath: current.filePath,
         }, frames, fileMetadata)
+      }
+      // 写入期间抽屉可能已关闭/重开；旧会话不能改写新草稿的保存基线
+      if (token !== sessionToken) {
+        return false
       }
       savedFrames.value = cloneAnimationFrames(frames)
       return true

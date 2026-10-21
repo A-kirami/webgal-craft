@@ -323,6 +323,28 @@ describe('useReferencedAnimationEditor', () => {
     expect(controller.isDirty).toBe(false)
   })
 
+  it('并发保存复用同一次写盘', async () => {
+    const controller = mountHarness()
+    openAnimation(controller)
+    await waitForStatus(controller, 'ready')
+
+    createDirtyDraft(controller)
+    let resolveWrite!: () => void
+    saveAnimationFileMock.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveWrite = resolve
+    }))
+
+    const first = controller.save()
+    const second = controller.save()
+
+    expect(saveAnimationFileMock).toHaveBeenCalledTimes(1)
+
+    resolveWrite()
+    await expect(first).resolves.toBe(true)
+    await expect(second).resolves.toBe(true)
+    expect(controller.isDirty).toBe(false)
+  })
+
   it('替换标签页内容失败时不保存且保留草稿', async () => {
     const controller = mountHarness()
     openAnimation(controller)
