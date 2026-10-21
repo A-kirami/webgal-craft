@@ -1,14 +1,13 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
-import { AbsPath } from '~/domain/path'
+import { AbsPath, RelPath } from '~/domain/path'
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
-import { resolveAnimationReference } from '~/features/editor/animation/animation-reference'
+import { ANIMATION_FILE_SUFFIX, resolveAnimationReference } from '~/features/editor/animation/animation-reference'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
-import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
@@ -21,6 +20,8 @@ import { useStatementEditorScrub } from '~/features/editor/statement-editor/useS
 import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
 import { useStatementFileRoots } from '~/features/editor/statement-editor/useStatementFileRoots'
 import { statementMetaKey, useStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
+import { createAssetKeyForType } from '~/services/resource-index/keys'
+import { useResourceIndex } from '~/services/resource-index/service'
 import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
@@ -87,6 +88,7 @@ export function isStatementInteractiveTarget(target: EventTarget | null): boolea
 
 export function useStatementEditor(options: UseStatementEditorOptions) {
   useEditorDynamicOptionsBootstrap()
+  const resourceIndex = useResourceIndex()
 
   const entry = computed(() => toValue(options.entry))
   const supportsSceneSemantics = computed(() => toValue(options.runtimeCapabilities)?.sceneSemantics ?? true)
@@ -342,18 +344,16 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       return false
     }
 
-    const key = contentField.value?.field.type === 'choice'
-      ? contentField.value.field.dynamicOptionsKey
-      : undefined
-    const table = key
-      ? resolveDynamicOptions(key, { content, gamePath })
-      : undefined
-    // 动画表加载中或不可用时不据此禁用，避免把索引故障变成不可点击
-    if (!table || table.loading || table.options.length === 0) {
+    // 索引未就绪时保持可用；动画表可能滞后，不能作为文件存在性的来源
+    if (resourceIndex.status.value !== 'ready') {
       return false
     }
 
-    return !table.options.some(option => option.value === resolution.reference.animationName)
+    const key = createAssetKeyForType(
+      'animation',
+      RelPath.from(`${resolution.reference.animationName}${ANIMATION_FILE_SUFFIX}`),
+    )
+    return !resourceIndex.hasAssetKey(key)
   })
   const effectEditorAtTop = computed(() => showEffectEditorButton.value && parsed.value?.command === commandType.setTransform)
   const paramRendererSharedProps = computed(() => ({
