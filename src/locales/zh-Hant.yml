@@ -1006,6 +1006,30 @@ edit:
         previewUnavailable: 預覽尚未就緒，影格預覽和拖曳暫不可用
         seekFailed: 影格預覽請求失敗，切換影格或儲存場景後重試
         v2Overrides: 該語句使用相對或繼承動畫參數，影格預覽和拖曳暫不支援
+      referenced:
+        title: 引用動畫：{name}
+        titleFallback: 引用動畫
+        description: 直接編輯這個動畫檔案。儲存後會寫入檔案，並影響引用該動畫的語句
+        descriptionWithCount: 直接編輯這個動畫檔案。儲存後會寫入檔案，並影響引用該動畫的 {count} 條語句
+        loading: 正在載入動畫檔案……
+        retry: 重試
+        loadFailedTitle: 無法開啟動畫檔案
+        loadFailedDescription: 確認檔案存在且引擎可用後重試
+        readOnlyTitle: 暫不支援視覺化編輯
+        v2ReadOnlyDescription: 目前動畫檔案使用 v2 格式。
+        invalidTitle: 動畫內容有誤
+        invalidDescription: 目前檔案無法解析為動畫文件。
+        openInTextMode: 以文字模式開啟
+        tabDirty: 該動畫檔案在分頁中有未儲存的變更，請先處理分頁中的變更。
+        unresolvedTitle: 無法解析動畫名稱
+        unresolved:
+          empty: 語句還沒有填寫動畫名稱
+          dynamicName: 動畫名稱包含變數，執行時才能確定，無法在編輯器中開啟
+          invalidPath: 動畫名稱不是有效的檔案路徑
+          reservedName: animationTable 是動畫表的保留名稱，不能直接編輯
+        removed: 動畫檔案已被刪除，動畫編輯器已關閉
+        renamed: 動畫檔案已重新命名，動畫編輯器已跟隨到新路徑
+        saveFailed: 儲存動畫檔案失敗
       summary:
         currentFrameWithId: 第 {id} 影格
     commandPanel:

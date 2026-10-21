@@ -1,15 +1,17 @@
 import sanitize from 'sanitize-filename'
 
 import { serializeAnimationFrames } from '~/domain/document/animation-document-codec'
+import { encodeTextFile } from '~/domain/document/file-codec'
 import { AbsPath, RelPath } from '~/domain/path'
 import { syncAnimationTable } from '~/services/animation-table-sync'
 import { gameFs } from '~/services/game-fs'
 import { gameAssetDir } from '~/services/platform/app-paths'
 
+import { ANIMATION_FILE_SUFFIX, ANIMATION_TABLE_STEM } from './animation-reference'
+
+import type { TextMetadata } from '~/domain/document/document-model'
 import type { AnimationFrame } from '~/domain/stage/types'
 
-const ANIMATION_FILE_SUFFIX = '.json'
-const ANIMATION_TABLE_STEM = 'animationTable'
 const ILLEGAL_FILENAME_REPLACEMENT = '_'
 
 export type AnimationFileTargetError = 'empty' | 'invalid-path' | 'reserved-name'
@@ -98,8 +100,12 @@ export async function saveAnimationFile(
   gamePath: AbsPath,
   target: AnimationFileTarget,
   frames: readonly AnimationFrame[],
+  metadata?: TextMetadata,
 ): Promise<void> {
-  await gameFs.writeFile(target.filePath, serializeAnimationFrames(frames))
+  const content = serializeAnimationFrames(frames)
+  await (metadata
+    ? gameFs.writeDocumentFile(target.filePath, encodeTextFile(content, metadata))
+    : gameFs.writeFile(target.filePath, content))
 
   try {
     await syncAnimationTable(gamePath)

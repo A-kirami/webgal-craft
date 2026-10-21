@@ -58,6 +58,7 @@ export const effectEntries: CommandEntry[] = [
     description: t => t('edit.visualEditor.commandDescriptions.setAnimation'),
     icon: 'i-lucide-file-video',
     category: 'effect',
+    hasAnimationFileEditor: true,
     fields: [
       content({ key: 'animation', label: t => t('edit.visualEditor.params.animationName'), type: 'choice', resourceReference: ANIMATION_RESOURCE_REFERENCE, variant: 'combobox', placeholder: t => t('edit.visualEditor.placeholder.searchAnimation'), dynamicOptionsKey: 'animationTableEntries', grouping: { mode: 'path' }, options: [] }),
       arg(TARGET),

@@ -1,4 +1,5 @@
 import { computeStatementIdFromLineNumber } from '~/domain/document/scene-selection'
+import { useReferencedAnimationEditor } from '~/features/editor/animation/useReferencedAnimationEditor'
 import { useStatementAnimationDialog } from '~/features/editor/animation/useStatementAnimationDialog'
 import { flipTransformScaleAxis } from '~/features/editor/effect-editor/transform-flip'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
@@ -55,6 +56,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
 
   const effectEditorProvider = useEffectEditorProvider()
   const statementAnimationDialog = useStatementAnimationDialog({ enableFramePreview: true })
+  const referencedAnimationEditor = useReferencedAnimationEditor()
 
   const sidebarPanel = useSidebarPanelProvider()
   const commandPanelBridge = useCommandPanelBridgeProvider()
@@ -258,6 +260,35 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     },
   )
 
+  watch(
+    () => referencedAnimationEditor.isOpen,
+    (isOpen, wasOpen) => {
+      if (wasOpen && !isOpen) {
+        requestEditorSurfaceFocus()
+      }
+    },
+  )
+
+  // 抽屉绑定的是打开时的那条语句；活动标签页或选中语句一变，旧上下文就不再成立
+  watch(
+    () => ({
+      activePath: tabsStore.activeTab?.path,
+      statementId: selectedStatement.value?.id,
+    }),
+    (context) => {
+      const binding = referencedAnimationEditor.binding
+      if (!referencedAnimationEditor.isOpen || !binding) {
+        return
+      }
+
+      if (context.activePath === binding.scenePath && context.statementId === binding.statementId) {
+        return
+      }
+
+      referencedAnimationEditor.requestClose()
+    },
+  )
+
   async function closeEffectEditor(): Promise<void> {
     const closed = await effectEditorProvider.close()
     if (closed) {
@@ -317,6 +348,7 @@ export function useEditorPanelShell(options: UseEditorPanelShellOptions) {
     selectedStatementPreviousSpeaker,
     selectedStatementUpdateTarget,
     statementAnimationDialog,
+    referencedAnimationEditor,
     closeEffectEditor,
     expandCommandPanel,
     handleEffectApply,

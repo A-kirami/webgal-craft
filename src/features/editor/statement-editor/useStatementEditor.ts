@@ -1,10 +1,12 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { AbsPath, RelPath } from '~/domain/path'
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
+import { ANIMATION_FILE_SUFFIX, resolveAnimationReference } from '~/features/editor/animation/animation-reference'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
@@ -18,6 +20,9 @@ import { useStatementEditorScrub } from '~/features/editor/statement-editor/useS
 import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
 import { useStatementFileRoots } from '~/features/editor/statement-editor/useStatementFileRoots'
 import { statementMetaKey, useStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
+import { createAssetKeyForType } from '~/services/resource-index/keys'
+import { useResourceIndex } from '~/services/resource-index/service'
+import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TransactionSource } from '~/domain/document/transaction'
@@ -83,6 +88,7 @@ export function isStatementInteractiveTarget(target: EventTarget | null): boolea
 
 export function useStatementEditor(options: UseStatementEditorOptions) {
   useEditorDynamicOptionsBootstrap()
+  const resourceIndex = useResourceIndex()
 
   const entry = computed(() => toValue(options.entry))
   const supportsSceneSemantics = computed(() => toValue(options.runtimeCapabilities)?.sceneSemantics ?? true)
@@ -276,6 +282,11 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return !!parsed.value && !!config.value.hasAnimationEditor
   })
 
+  // 与 hasAnimationEditor 分开：后者会隐藏 content 字段，而 setAnimation 的 content 是动画名 combobox
+  const hasAnimationFileEditor = computed(() => {
+    return !!parsed.value && !!config.value.hasAnimationFileEditor
+  })
+
   // ─── 视图层派生计算 ───
 
   const specialContentMode = computed(() => resolveStatementSpecialContentMode(parsed.value))
@@ -310,6 +321,40 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
   const showEffectEditorButton = computed(() => statementType.value === 'command' && hasEffectEditor.value)
   const showAnimationEditorButton = computed(() => statementType.value === 'command' && hasAnimationEditor.value)
+  // 入口常驻占位，没有可打开的文件时禁用：隐藏会让按钮行高度变化，把后面的参数控件整体推走
+  const showAnimationFileEditorButton = computed(() => statementType.value === 'command' && hasAnimationFileEditor.value)
+  const animationFileEditorDisabled = computed(() => {
+    if (!hasAnimationFileEditor.value) {
+      return false
+    }
+
+    const content = parsed.value?.content.trim() ?? ''
+    if (content === '') {
+      return true
+    }
+
+    const gamePath = useWorkspaceStore().CWD
+    if (!gamePath) {
+      return false
+    }
+
+    const resolution = resolveAnimationReference(AbsPath.from(gamePath), content)
+    // 变量、非法路径和保留名不是“文件不存在”，保留入口让抽屉说明原因
+    if (!resolution.ok) {
+      return false
+    }
+
+    // 索引未就绪时保持可用；动画表可能滞后，不能作为文件存在性的来源
+    if (resourceIndex.status.value !== 'ready') {
+      return false
+    }
+
+    const key = createAssetKeyForType(
+      'animation',
+      RelPath.from(`${resolution.reference.animationName}${ANIMATION_FILE_SUFFIX}`),
+    )
+    return !resourceIndex.hasAssetKey(key)
+  })
   const effectEditorAtTop = computed(() => showEffectEditorButton.value && parsed.value?.command === commandType.setTransform)
   const paramRendererSharedProps = computed(() => ({
     ...fieldBindings.paramRenderer.sharedProps.value,
@@ -458,6 +503,8 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       basicRenderFields,
       showEffectEditorButton,
       showAnimationEditorButton,
+      showAnimationFileEditorButton,
+      animationFileEditorDisabled,
       effectEditorAtTop,
     },
   }

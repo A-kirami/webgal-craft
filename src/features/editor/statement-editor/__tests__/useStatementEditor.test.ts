@@ -3,10 +3,11 @@ import '~/__tests__/mocks/router'
 import '~/__tests__/mocks/tauri-fs'
 import '~/__tests__/mocks/modal-store'
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { RelPath } from '~/domain/path'
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
 import {
@@ -22,11 +23,25 @@ import {
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { registerDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
+import { createAssetKeyForType } from '~/services/resource-index/keys'
 
 import type { ArgField } from '~/features/editor/command-registry/schema'
 
+const { resourceIndexMock } = vi.hoisted(() => ({
+  resourceIndexMock: {
+    hasAssetKey: vi.fn(),
+    status: { value: 'idle' as 'idle' | 'building' | 'ready' | 'degraded' },
+  },
+}))
+
+vi.mock('~/services/resource-index/service', () => ({
+  useResourceIndex: () => resourceIndexMock,
+}))
+
 beforeEach(() => {
   resetStatementEditorRuntime()
+  resourceIndexMock.status.value = 'idle'
+  resourceIndexMock.hasAssetKey.mockReset()
 })
 
 describe('useStatementEditor', () => {
@@ -172,6 +187,76 @@ describe('useStatementEditor', () => {
     expect(editor.view.showAnimationEditorButton.value).toBe(true)
     expect(editor.view.basicRenderFields.value.some(field => field.storage === 'content')).toBe(false)
     expect(editor.view.commandRenderFields.value.some(field => field.storage === 'content')).toBe(false)
+  })
+
+  it('setAnimation 语句显示引用动画编辑按钮并保留动画名 combobox', () => {
+    const { editor } = createHarness('setAnimation: bounce -target=fig-left;')
+
+    expect(editor.view.showAnimationFileEditorButton.value).toBe(true)
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(editor.view.showAnimationEditorButton.value).toBe(false)
+    expect(editor.view.commandRenderFields.value.some(field => field.storage === 'content')).toBe(true)
+  })
+
+  it('setAnimation 还没有动画名时按钮常驻但禁用', () => {
+    const { editor } = createHarness('setAnimation: -target=fig-left;')
+
+    expect(editor.parsed.value?.command).toBe(commandType.setAnimation)
+    expect(editor.parsed.value?.content.trim()).toBe('')
+    expect(editor.view.showAnimationFileEditorButton.value).toBe(true)
+    expect(editor.view.animationFileEditorDisabled.value).toBe(true)
+  })
+
+  it('资源索引确认存在时启用引用动画按钮', () => {
+    workspaceStoreState.CWD = '/game'
+    resourceIndexMock.status.value = 'ready'
+    resourceIndexMock.hasAssetKey.mockReturnValue(true)
+    const { editor } = createHarness('setAnimation: bounce -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(resourceIndexMock.hasAssetKey).toHaveBeenCalledWith(
+      createAssetKeyForType('animation', RelPath.from('bounce.json')),
+    )
+  })
+
+  it('动画名带 .json 后缀时按动画名匹配资源索引', () => {
+    workspaceStoreState.CWD = '/game'
+    resourceIndexMock.status.value = 'ready'
+    resourceIndexMock.hasAssetKey.mockReturnValue(true)
+    const { editor } = createHarness('setAnimation: bounce.json -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(resourceIndexMock.hasAssetKey).toHaveBeenCalledWith(
+      createAssetKeyForType('animation', RelPath.from('bounce.json')),
+    )
+  })
+
+  it('资源索引确认不存在时禁用引用动画按钮', () => {
+    workspaceStoreState.CWD = '/game'
+    resourceIndexMock.status.value = 'ready'
+    resourceIndexMock.hasAssetKey.mockReturnValue(false)
+    const { editor } = createHarness('setAnimation: ghost -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(true)
+  })
+
+  it('资源索引未就绪时不禁用引用动画按钮', () => {
+    workspaceStoreState.CWD = '/game'
+    resourceIndexMock.status.value = 'building'
+    const { editor } = createHarness('setAnimation: ghost -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(resourceIndexMock.hasAssetKey).not.toHaveBeenCalled()
+  })
+
+  it('变量或非法动画名不禁用引用动画按钮，交给抽屉解释', () => {
+    workspaceStoreState.CWD = '/game'
+    resourceIndexMock.status.value = 'ready'
+    resourceIndexMock.hasAssetKey.mockReturnValue(false)
+
+    expect(createHarness('setAnimation: {{name}} -target=fig-left;').editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(createHarness('setAnimation: ../outside -target=fig-left;').editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(resourceIndexMock.hasAssetKey).not.toHaveBeenCalled()
   })
 
   it('say 位置语法糖在编辑器中显示为运行时目标 ID，修改后写入 figureId', () => {

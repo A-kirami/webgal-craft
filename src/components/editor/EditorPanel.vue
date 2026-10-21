@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Save } from '@lucide/vue'
 
+import ReferencedAnimationDrawer from '~/components/editor/ReferencedAnimationDrawer.vue'
 import { ResizablePanel } from '~/components/ui/resizable'
-import { capabilityMinimumVersion } from '~/domain/engine/runtime-capabilities'
+import { REFERENCED_ANIMATION_PREVIEW_KEY } from '~/features/editor/animation/referenced-animation-editor-context'
+import { useAnimationFramePreviewNotice } from '~/features/editor/animation/useAnimationFramePreviewNotice'
 import { useEditorDiagnostics } from '~/features/editor/diagnostics/useEditorDiagnostics'
 import { useEditorPanelShell } from '~/features/editor/shell/useEditorPanelShell'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
@@ -10,7 +12,7 @@ import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContex
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 
-import type { AnimationFramePreviewNotice } from '~/features/editor/animation/useAnimationFramePreview'
+import type { TransformOverlayProvider } from '~/features/editor/transform-overlay/provider'
 
 const commandPanelRef = useTemplateRef<InstanceType<typeof ResizablePanel>>('commandPanel')
 const editorPanelRef = $(useTemplateRef('editorPanel'))
@@ -26,34 +28,6 @@ const TRANSFORM_OVERLAY_FIELD_PATHS = new Set([
   'scale.y',
   'rotation',
 ])
-
-function resolveAnimationFramePreviewNotice(notice: AnimationFramePreviewNotice | undefined): string | undefined {
-  switch (notice) {
-    case 'baseline-unavailable': {
-      return t('edit.visualEditor.animation.framePreview.baselineUnavailable')
-    }
-    case 'engine-unsupported': {
-      return t('edit.visualEditor.animation.framePreview.engineUnsupported', {
-        version: capabilityMinimumVersion('seekAnimation'),
-      })
-    }
-    case 'live-preview-disabled': {
-      return t('edit.visualEditor.animation.framePreview.livePreviewDisabled')
-    }
-    case 'preview-unavailable': {
-      return t('edit.visualEditor.animation.framePreview.previewUnavailable')
-    }
-    case 'seek-failed': {
-      return t('edit.visualEditor.animation.framePreview.seekFailed')
-    }
-    case 'v2-overrides': {
-      return t('edit.visualEditor.animation.framePreview.v2Overrides')
-    }
-    default: {
-      return undefined
-    }
-  }
-}
 
 const {
   binding,
@@ -79,15 +53,32 @@ const {
   selectedStatementPreviousSpeaker,
   selectedStatementUpdateTarget,
   statementAnimationDialog,
+  referencedAnimationEditor,
   toggleCommandPanel,
 } = useEditorPanelShell({
   commandPanelRef,
   transformOverlayBridge,
 })
 
-// 动画抽屉的帧会话是预览面板拖拽的另一个写入端；注册到与效果编辑器同一个浮层桥，
-// 由桥按会话是否活跃切换驱动源。
-transformOverlayBridge?.setAnimationProvider(statementAnimationDialog.preview)
+// 预览面板拖拽的动画写入端有两个：语句临时动画抽屉与引用动画文件抽屉。
+// 两者不会同时打开，由面板注册、桥按会话是否活跃切换驱动源；没有动画会话时回退到效果编辑器。
+const referencedAnimationPreview = shallowRef<TransformOverlayProvider>()
+provide(REFERENCED_ANIMATION_PREVIEW_KEY, {
+  register(provider: TransformOverlayProvider) {
+    referencedAnimationPreview.value = provider
+  },
+  unregister(provider: TransformOverlayProvider) {
+    if (referencedAnimationPreview.value === provider) {
+      referencedAnimationPreview.value = undefined
+    }
+  },
+})
+const activeAnimationPreview = computed(() =>
+  referencedAnimationPreview.value ?? statementAnimationDialog.preview,
+)
+watch(activeAnimationPreview, (provider) => {
+  transformOverlayBridge?.setAnimationProvider(provider)
+}, { immediate: true })
 onScopeDispose(() => {
   transformOverlayBridge?.setAnimationProvider(undefined)
 })
@@ -99,9 +90,7 @@ provide(sceneAutocompleteOptionsKey, sceneAutocompleteOptions)
 const editorDrawerInteractiveRegionSelector = $computed(() =>
   transformOverlayBridge?.enabled.value === true ? DRAWER_INTERACTIVE_REGION_SELECTOR : undefined,
 )
-const animationFramePreviewNotice = $computed(() =>
-  resolveAnimationFramePreviewNotice(statementAnimationDialog.preview?.notice),
-)
+const animationFramePreviewNotice = useAnimationFramePreviewNotice(() => statementAnimationDialog.preview?.notice)
 
 function handleAnimationEditorDrawerOpenChange(nextOpen: boolean): void {
   if (!nextOpen) {
@@ -379,6 +368,13 @@ defineExpose({ expandCommandPanel, toggleCommandPanel })
           </StatementAnimationEditorPanel>
         </div>
       </EditorDrawer>
+
+      <ReferencedAnimationDrawer
+        :anchor="editorPanelRef ?? undefined"
+        :controller="referencedAnimationEditor"
+        :interactive-region-selector="editorDrawerInteractiveRegionSelector"
+        :preview-field-value="getTransformOverlayFieldValue"
+      />
     </div>
   </div>
 </template>

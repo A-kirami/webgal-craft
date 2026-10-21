@@ -15,6 +15,8 @@ const props = defineProps<{
   /** 更新目标定位，默认使用 entry.id 作为语句 id */
   updateTarget?: StatementUpdateTarget
   runtimeCapabilities?: EngineRuntimeCapabilities
+  /** 宿主是否提供引用动画抽屉；模态宿主没有，入口不应出现 */
+  canOpenAnimationFileEditor?: boolean
 }>()
 
 provide(statementEditorSurfaceKey, 'inline')
@@ -22,6 +24,7 @@ provide(statementEditorSurfaceKey, 'inline')
 const emit = defineEmits<{
   update: [payload: StatementUpdatePayload]
   openAnimationEditor: []
+  openAnimationFileEditor: []
   openEffectEditor: []
 }>()
 
@@ -65,6 +68,7 @@ const showCommandFieldsSection = $computed(() => {
   if (currentType === 'command') {
     return view.basicRenderFields.value.length > 0
       || view.showAnimationEditorButton.value
+      || (view.showAnimationFileEditorButton.value && props.canOpenAnimationFileEditor)
       || view.showEffectEditorButton.value
       || !!view.specialContentMode.value
   }
@@ -131,6 +135,8 @@ function handleBlankDblClick(e: MouseEvent) {
         :basic-render-fields="view.basicRenderFields.value"
         :special-content-mode="view.specialContentMode.value"
         :show-animation-editor-button="view.showAnimationEditorButton.value"
+        :show-animation-file-editor-button="view.showAnimationFileEditorButton.value && props.canOpenAnimationFileEditor"
+        :animation-file-editor-disabled="view.animationFileEditorDisabled.value"
         :show-effect-editor-button="view.showEffectEditorButton.value"
         :effect-editor-at-top="view.effectEditorAtTop.value"
         :special-content="content.specialContent"
@@ -142,6 +148,7 @@ function handleBlankDblClick(e: MouseEvent) {
         :call-scene-parameters="params.callSceneParameters.value"
         :on-update-call-scene-parameters="params.handleCallSceneParametersChange"
         @open-animation-editor="emit('openAnimationEditor')"
+        @open-animation-file-editor="emit('openAnimationFileEditor')"
         @open-effect-editor="emit('openEffectEditor')"
       />
     </div>

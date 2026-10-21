@@ -1,4 +1,4 @@
-import { reactive, toValue, watch } from 'vue'
+import { computed, reactive, toValue, watch } from 'vue'
 
 import { cloneAnimationFrame, cloneAnimationFrames } from '~/domain/stage/animation-frame'
 import {
@@ -27,8 +27,11 @@ interface UseStatementAnimationEditorPanelOptions {
 
 export function useStatementAnimationEditorPanel(options: UseStatementAnimationEditorPanelOptions) {
   const session = useAnimationEditorSession(() => toValue(options.frames))
-  const undoStack: AnimationFrame[][] = []
-  const redoStack: AnimationFrame[][] = []
+  // 栈需要响应式：引用动画抽屉把它当作可保存状态渲染撤销/重做按钮
+  const undoStack = reactive<AnimationFrame[][]>([])
+  const redoStack = reactive<AnimationFrame[][]>([])
+  const canUndo = computed(() => undoStack.length > 0)
+  const canRedo = computed(() => redoStack.length > 0)
   // 剪贴板跟着这份草稿走：抽屉与模态框各自持有独立面板，互不污染对方的帧列表
   let frameClipboard: AnimationFrame | undefined
 
@@ -251,6 +254,8 @@ export function useStatementAnimationEditorPanel(options: UseStatementAnimationE
   }
 
   return reactive({
+    canRedo,
+    canUndo,
     session,
     handleAddFrame,
     handleCopyFrame,

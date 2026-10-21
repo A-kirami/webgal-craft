@@ -831,12 +831,14 @@ export const useEditorStore = defineStore('editor', () => {
     syncActiveScenePreview(path)
   }
 
+  function disposeDocumentSession(path: AbsPath): void {
+    cancelAutoSave(path)
+    saveHooks.delete(path)
+    sessions.delete(path)
+  }
+
   // 监听标签页关闭，清理编辑器状态
-  useTabsWatcher((closedPath) => {
-    cancelAutoSave(closedPath)
-    saveHooks.delete(closedPath)
-    sessions.delete(closedPath)
-  })
+  useTabsWatcher(disposeDocumentSession)
 
   // 监听文件重命名事件，更新编辑器状态
   fileSystemEvents.on('file:renamed', (event) => {

@@ -101,15 +101,25 @@ function handleOpenEffectEditor() {
   openEffectEditor()
 }
 
-const { openAnimationEditor } = useStatementAnimationEditorBridge({
+const {
+  canOpenAnimationFileEditor,
+  openAnimationEditor,
+  openAnimationFileEditor,
+} = useStatementAnimationEditorBridge({
   updateTarget: () => createStatementIdTarget(props.entry.id),
   parsed: () => parsed.value,
   emitUpdate: payload => emit('update', payload),
+  entryId: () => props.entry.id,
 })
 
 function handleOpenAnimationEditor() {
   emit('select', props.entry.id)
   openAnimationEditor()
+}
+
+function handleOpenAnimationFileEditor() {
+  emit('select', props.entry.id)
+  openAnimationFileEditor()
 }
 
 function paramBadgeClass(param: StatementCardPreviewParam): string {
@@ -264,9 +274,11 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             :previous-speaker="previousSpeaker"
             :runtime-capabilities="runtimeCapabilities"
             :update-target="createStatementIdTarget(entry.id)"
+            :can-open-animation-file-editor="canOpenAnimationFileEditor"
             ::show-inline-comment="showInlineComment"
             @update="emit('update', $event)"
             @open-animation-editor="handleOpenAnimationEditor"
+            @open-animation-file-editor="handleOpenAnimationFileEditor"
             @open-effect-editor="handleOpenEffectEditor"
           />
         </CollapsibleContent>

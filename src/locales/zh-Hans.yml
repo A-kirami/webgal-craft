@@ -1006,6 +1006,30 @@ edit:
         previewUnavailable: 预览尚未就绪，帧级预览和拖拽暂不可用
         seekFailed: 帧级预览请求失败，切换帧或保存场景后重试
         v2Overrides: 该语句使用相对或继承动画参数，帧级预览和拖拽暂不支持
+      referenced:
+        title: 引用动画：{name}
+        titleFallback: 引用动画
+        description: 直接编辑这个动画文件。保存后会写入文件，并影响引用该动画的语句
+        descriptionWithCount: 直接编辑这个动画文件。保存后会写入文件，并影响引用该动画的 {count} 条语句
+        loading: 正在加载动画文件……
+        retry: 重试
+        loadFailedTitle: 无法打开动画文件
+        loadFailedDescription: 确认文件存在且引擎可用后重试
+        readOnlyTitle: 暂不支持可视化编辑
+        v2ReadOnlyDescription: 当前动画文件使用 v2 格式。
+        invalidTitle: 动画内容有误
+        invalidDescription: 当前文件无法解析为动画文档。
+        openInTextMode: 在文本模式打开
+        tabDirty: 该动画文件在标签页中有未保存的修改，请先处理标签页中的修改。
+        unresolvedTitle: 无法解析动画名
+        unresolved:
+          empty: 语句还没有填写动画名
+          dynamicName: 动画名包含变量，运行时才能确定，无法在编辑器中打开
+          invalidPath: 动画名不是有效的文件路径
+          reservedName: animationTable 是动画表的保留名称，不能直接编辑
+        removed: 动画文件已被删除，动画编辑器已关闭
+        renamed: 动画文件已重命名，动画编辑器已跟随到新路径
+        saveFailed: 保存动画文件失败
       summary:
         currentFrameWithId: 第 {id} 帧
     commandPanel:

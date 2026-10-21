@@ -80,6 +80,21 @@ const {
   toggleNarrationMode,
 } = say
 
+const {
+  canOpenAnimationFileEditor,
+  openAnimationEditor,
+  openAnimationFileEditor,
+} = useStatementAnimationEditorBridge({
+  updateTarget: () => props.updateTarget,
+  parsed: () => parsed.value,
+  emitUpdate,
+  entryId: () => props.entry.id,
+})
+
+const showAnimationFileEditorButton = $computed(() =>
+  view.showAnimationFileEditorButton.value && canOpenAnimationFileEditor,
+)
+
 const showCommandFieldsSection = $computed(() => {
   const currentType = toValue(statementType)
   if (currentType === 'say') {
@@ -89,18 +104,13 @@ const showCommandFieldsSection = $computed(() => {
     return view.basicRenderFields.value.length > 0
       || view.showEffectEditorButton.value
       || view.showAnimationEditorButton.value
+      || showAnimationFileEditorButton
       || !!view.specialContentMode.value
   }
   return false
 })
 
 const { openEffectEditor } = useStatementEffectEditorBridge({
-  updateTarget: () => props.updateTarget,
-  parsed: () => parsed.value,
-  emitUpdate,
-})
-
-const { openAnimationEditor } = useStatementAnimationEditorBridge({
   updateTarget: () => props.updateTarget,
   parsed: () => parsed.value,
   emitUpdate,
@@ -302,6 +312,8 @@ useShortcutContext({
           :basic-render-fields="view.basicRenderFields.value"
           :special-content-mode="view.specialContentMode.value"
           :show-animation-editor-button="view.showAnimationEditorButton.value"
+          :show-animation-file-editor-button="showAnimationFileEditorButton"
+          :animation-file-editor-disabled="view.animationFileEditorDisabled.value"
           :show-effect-editor-button="view.showEffectEditorButton.value"
           :effect-editor-at-top="view.effectEditorAtTop.value"
           :special-content="content.specialContent"
@@ -314,6 +326,7 @@ useShortcutContext({
           :call-scene-parameters="params.callSceneParameters.value"
           :on-update-call-scene-parameters="params.handleCallSceneParametersChange"
           @open-animation-editor="openAnimationEditor"
+          @open-animation-file-editor="openAnimationFileEditor"
           @open-effect-editor="openEffectEditor"
         />
 

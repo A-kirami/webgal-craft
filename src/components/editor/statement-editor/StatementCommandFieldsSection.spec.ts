@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
@@ -57,6 +57,8 @@ describe('StatementCommandFieldsSection', () => {
         statementType: 'command',
         basicRenderFields: [],
         showAnimationEditorButton: false,
+        showAnimationFileEditorButton: false,
+        animationFileEditorDisabled: false,
         showEffectEditorButton: false,
         effectEditorAtTop: true,
         specialContent: createSpecialContentBindings(),
@@ -81,6 +83,8 @@ describe('StatementCommandFieldsSection', () => {
         statementType: 'command',
         basicRenderFields: [],
         showAnimationEditorButton: false,
+        showAnimationFileEditorButton: false,
+        animationFileEditorDisabled: false,
         showEffectEditorButton: true,
         effectEditorAtTop: true,
         specialContent: createSpecialContentBindings(),
@@ -96,5 +100,64 @@ describe('StatementCommandFieldsSection', () => {
     })
 
     await expect.element(page.getByRole('button', { name: 'edit.visualEditor.effectEditor' })).toBeInTheDocument()
+  })
+})
+describe('StatementCommandFieldsSection 引用动画入口', () => {
+  it('引用动画按钮受 showAnimationFileEditorButton 控制并转发打开事件', async () => {
+    const onOpenAnimationFileEditor = vi.fn()
+    await renderInBrowser(StatementCommandFieldsSection, {
+      props: {
+        surface: 'inline',
+        statementType: 'command',
+        basicRenderFields: [],
+        showAnimationEditorButton: false,
+        showAnimationFileEditorButton: true,
+        animationFileEditorDisabled: false,
+        showEffectEditorButton: false,
+        effectEditorAtTop: true,
+        specialContent: createSpecialContentBindings(),
+        sceneRootPath: '',
+        paramRendererSharedProps: createParamRendererSharedProps(),
+        onUpdateValue: () => { /* no-op */ },
+        onUpdateSelect: () => { /* no-op */ },
+        onLabelPointerDown: () => { /* no-op */ },
+        onOpenAnimationFileEditor,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    const button = page.getByRole('button', { name: 'edit.visualEditor.animation.title' })
+    await expect.element(button).toBeInTheDocument()
+    await button.click()
+
+    expect(onOpenAnimationFileEditor).toHaveBeenCalledTimes(1)
+  })
+
+  it('没有动画名时按钮常驻但禁用，避免入口行高度变化', async () => {
+    await renderInBrowser(StatementCommandFieldsSection, {
+      props: {
+        surface: 'inline',
+        statementType: 'command',
+        basicRenderFields: [],
+        showAnimationEditorButton: false,
+        showAnimationFileEditorButton: true,
+        animationFileEditorDisabled: true,
+        showEffectEditorButton: false,
+        effectEditorAtTop: true,
+        specialContent: createSpecialContentBindings(),
+        sceneRootPath: '',
+        paramRendererSharedProps: createParamRendererSharedProps(),
+        onUpdateValue: () => { /* no-op */ },
+        onUpdateSelect: () => { /* no-op */ },
+        onLabelPointerDown: () => { /* no-op */ },
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await expect.element(page.getByRole('button', { name: 'edit.visualEditor.animation.title' })).toBeDisabled()
   })
 })

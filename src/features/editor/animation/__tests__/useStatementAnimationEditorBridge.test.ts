@@ -7,6 +7,7 @@ import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capa
 import { serializeSentence } from '~/domain/script/serialize'
 import { createSentence } from '~/features/editor/__tests__/statement-editor-test-utils'
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
+import { REFERENCED_ANIMATION_EDITOR_OPEN_KEY } from '~/features/editor/animation/referenced-animation-editor-context'
 import {
   applyAnimationEditorResultToSentence,
   applyAnimationFileReferenceToSentence,
@@ -16,6 +17,7 @@ import {
 
 import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TestNode } from '~/features/editor/__tests__/utils/createTestRenderer'
+import type { ReferencedAnimationEditorOpenContext } from '~/features/editor/animation/referenced-animation-editor-context'
 import type { AnimationFramePreviewContext } from '~/features/editor/animation/useAnimationFramePreview'
 import type { StatementUpdatePayload } from '~/features/editor/statement-editor/useStatementEditor'
 
@@ -46,6 +48,8 @@ function mountBridgeHarness() {
   let capturedParsed: ISentence | undefined
   let capturedOnApply: ((sentence: ISentence) => void) | undefined
   let capturedPreviewContext: AnimationFramePreviewContext | undefined
+  let capturedFileParsed: ISentence | undefined
+  let capturedFileContext: ReferencedAnimationEditorOpenContext | undefined
 
   const Consumer = defineComponent({
     setup() {
@@ -53,6 +57,7 @@ function mountBridgeHarness() {
         parsed,
         updateTarget,
         emitUpdate,
+        entryId: () => 7,
       })
 
       return () => h('div')
@@ -65,6 +70,10 @@ function mountBridgeHarness() {
         capturedParsed = currentParsed
         capturedOnApply = onApply
         capturedPreviewContext = previewContext
+      })
+      provide(REFERENCED_ANIMATION_EDITOR_OPEN_KEY, (currentParsed, context) => {
+        capturedFileParsed = currentParsed
+        capturedFileContext = context
       })
 
       return () => h(Consumer)
@@ -82,6 +91,8 @@ function mountBridgeHarness() {
 
   return {
     bridge,
+    capturedFileContext: () => capturedFileContext,
+    capturedFileParsed: () => capturedFileParsed,
     capturedOnApply: () => capturedOnApply,
     capturedParsed: () => capturedParsed,
     capturedPreviewContext: () => capturedPreviewContext,
@@ -223,5 +234,48 @@ describe('useStatementAnimationEditorBridge', () => {
       source: 'visual',
     }))
     expect(emitUpdate).toHaveBeenCalledTimes(1)
+  })
+
+  it('引用动画文件入口只处理 setAnimation 并带上当前语句身份', () => {
+    const {
+      bridge,
+      capturedFileContext,
+      capturedFileParsed,
+      parsed,
+    } = mountBridgeHarness()
+
+    parsed.value = createSentence({
+      command: commandType.setAnimation,
+      content: 'walk/fade',
+    })
+    bridge.openAnimationFileEditor()
+
+    expect(capturedFileParsed()?.content).toBe('walk/fade')
+    expect(capturedFileContext()).toEqual({
+      framePreview: {
+        command: commandType.setAnimation,
+        hasAnimationOverrides: false,
+        lineCommandString: 'setAnimation:walk/fade;',
+        runtimeCapabilities: LATEST_ENGINE_RUNTIME_CAPABILITIES,
+        scenePath: '/game/scene/start.txt',
+        sentenceId: 12,
+        target: '',
+        writeMode: {
+          transformFrom: 'current',
+          writeDefault: false,
+          writeFullEffect: false,
+        },
+      },
+      scenePath: '/game/scene/start.txt',
+      statementId: 7,
+    })
+
+    parsed.value = createSentence({
+      command: commandType.setTempAnimation,
+      content: '[{"duration":120}]',
+    })
+    bridge.openAnimationFileEditor()
+
+    expect(capturedFileParsed()?.content).toBe('walk/fade')
   })
 })

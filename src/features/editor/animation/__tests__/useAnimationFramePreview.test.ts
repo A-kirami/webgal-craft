@@ -109,6 +109,7 @@ function createBaselineClient(options: {
 
 interface HarnessOptions {
   baselineClient?: ReturnType<typeof createBaselineClient>
+  deferRestoreToAutoSave?: boolean
   frames?: AnimationFrame[]
   hasAnimationOverrides?: boolean
   runtimeCapabilities?: typeof LATEST_ENGINE_RUNTIME_CAPABILITIES
@@ -143,10 +144,18 @@ function createHarness(options: HarnessOptions = {}) {
     selectedFrameTransform.value = transform
   })
   const baselineClient = options.baselineClient ?? createBaselineClient()
+  // 真实编辑器里抽屉打开时当前活动文档就是场景；恢复 sync 只在场景仍活跃时发送
+  editorStore.currentState = {
+    isDirty: false,
+    kind: 'scene',
+    path: '/game/scene.txt',
+    projection: 'visual',
+  }
 
   const provider = scope.run(() => useAnimationFramePreview({
     baselineClient,
     commitSelectedFrameTransform,
+    deferRestoreToAutoSave: options.deferRestoreToAutoSave,
     context,
     frames,
     getRestoreLineCommandString: () => 'setTempAnimation:[{"duration":120,"position":{"x":10}}];',
@@ -501,6 +510,24 @@ describe('useAnimationFramePreview', () => {
     await nextTick()
 
     expect(harness.restoreScene).not.toHaveBeenCalled()
+  })
+
+  it('草稿宿主关闭时即使自动保存开启也恢复真实状态', async () => {
+    const harness = createTrackedHarness({ deferRestoreToAutoSave: false })
+    editSettings.autoSave = true
+    await openHarness(harness)
+    await vi.waitFor(() => expect(harness.seekAnimation).toHaveBeenCalledTimes(1))
+
+    editorStore.currentState = {
+      isDirty: true,
+      kind: 'scene',
+      path: '/game/scene.txt',
+      projection: 'visual',
+    }
+    harness.isOpen.value = false
+    await nextTick()
+
+    await vi.waitFor(() => expect(harness.restoreScene).toHaveBeenCalledOnce())
   })
 
   it('关闭会话会等待进行中的 seek 完成后才恢复', async () => {

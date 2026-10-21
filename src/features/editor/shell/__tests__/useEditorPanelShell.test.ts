@@ -44,6 +44,7 @@ const {
   effectEditorProviderMock,
   sidebarPanelMock,
   statementAnimationDialogMock,
+  referencedAnimationEditorMock,
   useShortcutMock,
   useEditorStoreMock,
   useEditorDiagnosticsStoreMock,
@@ -86,6 +87,11 @@ const {
     isOpen: false,
     requestClose: vi.fn(),
   },
+  referencedAnimationEditorMock: {
+    binding: undefined as { filePath: string, scenePath: string, statementId: number } | undefined,
+    isOpen: false,
+    requestClose: vi.fn(),
+  },
   useShortcutMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useEditorDiagnosticsStoreMock: vi.fn(),
@@ -102,6 +108,12 @@ const statementAnimationDialogState = reactive(statementAnimationDialogMock)
 
 vi.mock('~/features/editor/animation/useStatementAnimationDialog', () => ({
   useStatementAnimationDialog: () => statementAnimationDialogState,
+}))
+
+const referencedAnimationEditorState = reactive(referencedAnimationEditorMock)
+
+vi.mock('~/features/editor/animation/useReferencedAnimationEditor', () => ({
+  useReferencedAnimationEditor: () => referencedAnimationEditorState,
 }))
 
 vi.mock('~/features/editor/effect-editor/useEffectEditorProvider', () => ({
@@ -139,6 +151,7 @@ function createFixture(options: {
 } = {}) {
   const sceneStatements = options.sceneStatements ?? []
   const tabsStore = {
+    activeTab: undefined as { path: string } | undefined,
     shouldFocusEditor: false,
   }
   const editorStore = {
@@ -241,6 +254,9 @@ describe('useEditorPanelShell', () => {
     statementAnimationDialogMock.controller.handlePasteFrame.mockClear()
     statementAnimationDialogMock.controller.handleRedo.mockClear()
     statementAnimationDialogMock.controller.handleUndo.mockClear()
+    referencedAnimationEditorMock.binding = undefined
+    referencedAnimationEditorMock.isOpen = false
+    referencedAnimationEditorMock.requestClose.mockClear()
     useShortcutMock.mockReset()
     useEditorStoreMock.mockReset()
     useEditorDiagnosticsStoreMock.mockReset()
@@ -274,6 +290,32 @@ describe('useEditorPanelShell', () => {
 
     shell.toggleCommandPanel()
     expect(shell.isCommandPanelCollapsed.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('选中语句变化时会请求关闭引用动画抽屉', async () => {
+    const entryState = reactive({
+      entry: buildSingleStatement('setAnimation:walk/fade;', 5),
+    })
+    sidebarPanelMock.activeBinding.value = {
+      enableFocusStatement: false,
+      getEntry: () => entryState.entry,
+      onUpdate: vi.fn(),
+    }
+    referencedAnimationEditorMock.isOpen = true
+    referencedAnimationEditorMock.binding = {
+      filePath: '/project/game/animation/walk/fade.json',
+      scenePath: '',
+      statementId: 5,
+    }
+
+    const { scope } = createFixture()
+
+    entryState.entry = buildSingleStatement('setAnimation:other;', 6)
+    await nextTick()
+
+    expect(referencedAnimationEditorMock.requestClose).toHaveBeenCalledTimes(1)
 
     scope.stop()
   })
