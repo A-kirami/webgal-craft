@@ -279,7 +279,14 @@ export function useReferencedAnimationEditor() {
   function save(): Promise<boolean> {
     // 同一草稿的保存串行化；会话已更换时不复用上一会话的写盘任务
     if (saveTask?.token === sessionToken) {
-      return saveTask.promise
+      const pending = saveTask.promise
+      // 写盘期间可能继续编辑；当前任务完成后把最新草稿再写一次，避免关闭时丢掉新改动
+      return pending.then(async (ok) => {
+        if (!ok || !isDirty) {
+          return ok
+        }
+        return save()
+      })
     }
 
     const token = sessionToken

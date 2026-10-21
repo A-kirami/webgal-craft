@@ -323,6 +323,36 @@ describe('useReferencedAnimationEditor', () => {
     expect(controller.isDirty).toBe(false)
   })
 
+  it('写盘期间的新草稿会在当前保存完成后继续保存', async () => {
+    const controller = mountHarness()
+    openAnimation(controller)
+    await waitForStatus(controller, 'ready')
+
+    createDirtyDraft(controller)
+    let resolveFirst!: () => void
+    saveAnimationFileMock.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveFirst = resolve
+    }))
+
+    const first = controller.save()
+    const latestFrames: AnimationFrame[] = [
+      { duration: 0 },
+      { duration: 450, position: { x: 90 } },
+    ]
+    controller.updateDraftFrames(latestFrames)
+    const second = controller.save()
+
+    expect(saveAnimationFileMock).toHaveBeenCalledTimes(1)
+
+    resolveFirst()
+    await expect(first).resolves.toBe(true)
+    await expect(second).resolves.toBe(true)
+
+    expect(saveAnimationFileMock).toHaveBeenCalledTimes(2)
+    expect(saveAnimationFileMock.mock.calls[1]?.[2]).toEqual(latestFrames)
+    expect(controller.isDirty).toBe(false)
+  })
+
   it('并发保存复用同一次写盘', async () => {
     const controller = mountHarness()
     openAnimation(controller)
