@@ -1012,10 +1012,6 @@ edit:
         description: 直接编辑这个动画文件。保存后会写入文件，并影响引用该动画的语句
         descriptionWithCount: 直接编辑这个动画文件。保存后会写入文件，并影响引用该动画的 {count} 条语句
         loading: 正在加载动画文件……
-        missingTitle: 动画文件不存在
-        missingDescription: "{name} 不存在。可以先创建一个只含起始帧的空动画"
-        create: 创建该动画文件
-        createFailed: 创建动画文件失败
         retry: 重试
         loadFailedTitle: 无法打开动画文件
         loadFailedDescription: 确认文件存在且引擎可用后重试

@@ -1012,10 +1012,6 @@ edit:
         description: 直接編輯這個動畫檔案。儲存後會寫入檔案，並影響引用該動畫的語句
         descriptionWithCount: 直接編輯這個動畫檔案。儲存後會寫入檔案，並影響引用該動畫的 {count} 條語句
         loading: 正在載入動畫檔案……
-        missingTitle: 動畫檔案不存在
-        missingDescription: "{name} 不存在。可以先建立一個只含起始畫格的空白動畫"
-        create: 建立該動畫檔案
-        createFailed: 建立動畫檔案失敗
         retry: 重試
         loadFailedTitle: 無法開啟動畫檔案
         loadFailedDescription: 確認檔案存在且引擎可用後重試

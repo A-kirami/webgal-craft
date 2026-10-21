@@ -192,6 +192,67 @@ describe('useStatementEditor', () => {
     expect(editor.view.animationFileEditorDisabled.value).toBe(true)
   })
 
+  it('动画表确认存在时启用引用动画按钮', () => {
+    workspaceStoreState.CWD = '/game'
+    registerDynamicOptions('animationTableEntries', () => ({
+      options: [{ label: 'bounce', value: 'bounce' }],
+      loading: false,
+    }))
+    const { editor } = createHarness('setAnimation: bounce -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+  })
+
+  it('动画名带 .json 后缀时按动画名匹配动画表', () => {
+    workspaceStoreState.CWD = '/game'
+    registerDynamicOptions('animationTableEntries', () => ({
+      options: [{ label: 'bounce', value: 'bounce' }],
+      loading: false,
+    }))
+    const { editor } = createHarness('setAnimation: bounce.json -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+  })
+
+  it('动画表确认不存在时禁用引用动画按钮', () => {
+    workspaceStoreState.CWD = '/game'
+    registerDynamicOptions('animationTableEntries', () => ({
+      options: [{ label: 'bounce', value: 'bounce' }],
+      loading: false,
+    }))
+    const { editor } = createHarness('setAnimation: ghost -target=fig-left;')
+
+    expect(editor.view.animationFileEditorDisabled.value).toBe(true)
+  })
+
+  it('动画表加载中或不可用时不禁用引用动画按钮', () => {
+    workspaceStoreState.CWD = '/game'
+    registerDynamicOptions('animationTableEntries', () => ({
+      options: [],
+      loading: true,
+    }))
+    const loadingEditor = createHarness('setAnimation: ghost -target=fig-left;').editor
+    expect(loadingEditor.view.animationFileEditorDisabled.value).toBe(false)
+
+    registerDynamicOptions('animationTableEntries', () => ({
+      options: [],
+      loading: false,
+    }))
+    const unavailableEditor = createHarness('setAnimation: ghost -target=fig-left;').editor
+    expect(unavailableEditor.view.animationFileEditorDisabled.value).toBe(false)
+  })
+
+  it('变量或非法动画名不禁用引用动画按钮，交给抽屉解释', () => {
+    workspaceStoreState.CWD = '/game'
+    registerDynamicOptions('animationTableEntries', () => ({
+      options: [{ label: 'bounce', value: 'bounce' }],
+      loading: false,
+    }))
+
+    expect(createHarness('setAnimation: {{name}} -target=fig-left;').editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(createHarness('setAnimation: ../outside -target=fig-left;').editor.view.animationFileEditorDisabled.value).toBe(false)
+  })
+
   it('say 位置语法糖在编辑器中显示为运行时目标 ID，修改后写入 figureId', () => {
     const { editor, updates } = createHarness('Alice: hello -left;')
     const associatedFigureField = requireArgField(editor, 'figureId')

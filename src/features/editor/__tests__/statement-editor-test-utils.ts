@@ -26,7 +26,7 @@ const {
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
   fileSystemEventsOnMock: vi.fn(),
-  gameAssetDirMock: vi.fn(async (_cwd: string, assetType: string): Promise<string> => `/mock/${assetType}`),
+  gameAssetDirMock: vi.fn((_cwd: string, assetType: string): string | Promise<string> => `/mock/${assetType}`),
   gameSceneDirMock: vi.fn(async (_cwd: string): Promise<string> => '/mock/scene'),
   loggerDebugMock: vi.fn(),
   loggerErrorMock: vi.fn(),
@@ -68,7 +68,7 @@ export function resetStatementEditorRuntime() {
   workspaceStoreState.CWD = undefined
 
   gameAssetDirMock.mockReset()
-  gameAssetDirMock.mockImplementation(async (_cwd: string, assetType: string): Promise<string> => `/mock/${assetType}`)
+  gameAssetDirMock.mockImplementation((_cwd: string, assetType: string): string => `/mock/${assetType}`)
 
   gameSceneDirMock.mockReset()
   gameSceneDirMock.mockImplementation(async (_cwd: string): Promise<string> => '/mock/scene')

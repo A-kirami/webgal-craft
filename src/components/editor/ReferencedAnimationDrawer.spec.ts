@@ -80,7 +80,6 @@ function createController(overrides: ControllerOverrides = {}) {
   const controller = {
     animationName: overrides.animationName ?? 'walk/fade',
     binding: overrides.binding,
-    createFile: vi.fn(),
     draftFrames: overrides.draftFrames,
     isDirty: overrides.isDirty ?? false,
     isOpen: true,
@@ -201,14 +200,14 @@ describe('ReferencedAnimationDrawer', () => {
     await expect.element(page.getByRole('button', { name: '关闭' })).not.toBeInTheDocument()
   })
 
-  it('文件不存在时提供创建入口', async () => {
-    const controller = createController({ status: 'missing' })
+  it('读取失败时只提供重试', async () => {
+    const controller = createController({ status: 'load-failed' })
 
     await renderDrawer(controller)
 
-    await expect.element(page.getByText('动画文件不存在')).toBeInTheDocument()
-    await page.getByRole('button', { name: '创建该动画文件' }).click()
-    expect(controller.createFile).toHaveBeenCalledTimes(1)
+    await expect.element(page.getByText('无法打开动画文件')).toBeInTheDocument()
+    await page.getByRole('button', { name: '重试' }).click()
+    expect(controller.retry).toHaveBeenCalledTimes(1)
   })
 
   it('v2 动画只读并提供在文本模式打开的出口', async () => {

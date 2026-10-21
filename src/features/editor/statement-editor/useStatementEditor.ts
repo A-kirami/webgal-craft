@@ -1,11 +1,14 @@
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { AbsPath } from '~/domain/path'
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
 import { readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
+import { resolveAnimationReference } from '~/features/editor/animation/animation-reference'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
+import { resolveDynamicOptions } from '~/features/editor/dynamic-options/dynamic-options'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
 import { sceneAutocompleteOptionsKey } from '~/features/editor/statement-editor/scene-autocomplete-context'
 import { StatementEditorSurface } from '~/features/editor/statement-editor/surface-context'
@@ -18,6 +21,7 @@ import { useStatementEditorScrub } from '~/features/editor/statement-editor/useS
 import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
 import { useStatementFileRoots } from '~/features/editor/statement-editor/useStatementFileRoots'
 import { statementMetaKey, useStatementMeta } from '~/features/editor/statement-editor/useStatementMeta'
+import { useWorkspaceStore } from '~/stores/workspace'
 
 import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
 import type { TransactionSource } from '~/domain/document/transaction'
@@ -315,9 +319,42 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
   const showEffectEditorButton = computed(() => statementType.value === 'command' && hasEffectEditor.value)
   const showAnimationEditorButton = computed(() => statementType.value === 'command' && hasAnimationEditor.value)
-  // 入口常驻占位，没有动画名时禁用：隐藏会让按钮行高度变化，把后面的参数控件整体推走
+  // 入口常驻占位，没有可打开的文件时禁用：隐藏会让按钮行高度变化，把后面的参数控件整体推走
   const showAnimationFileEditorButton = computed(() => statementType.value === 'command' && hasAnimationFileEditor.value)
-  const animationFileEditorDisabled = computed(() => (parsed.value?.content.trim() ?? '') === '')
+  const animationFileEditorDisabled = computed(() => {
+    if (!hasAnimationFileEditor.value) {
+      return false
+    }
+
+    const content = parsed.value?.content.trim() ?? ''
+    if (content === '') {
+      return true
+    }
+
+    const gamePath = useWorkspaceStore().CWD
+    if (!gamePath) {
+      return false
+    }
+
+    const resolution = resolveAnimationReference(AbsPath.from(gamePath), content)
+    // 变量、非法路径和保留名不是“文件不存在”，保留入口让抽屉说明原因
+    if (!resolution.ok) {
+      return false
+    }
+
+    const key = contentField.value?.field.type === 'choice'
+      ? contentField.value.field.dynamicOptionsKey
+      : undefined
+    const table = key
+      ? resolveDynamicOptions(key, { content, gamePath })
+      : undefined
+    // 动画表加载中或不可用时不据此禁用，避免把索引故障变成不可点击
+    if (!table || table.loading || table.options.length === 0) {
+      return false
+    }
+
+    return !table.options.some(option => option.value === resolution.reference.animationName)
+  })
   const effectEditorAtTop = computed(() => showEffectEditorButton.value && parsed.value?.command === commandType.setTransform)
   const paramRendererSharedProps = computed(() => ({
     ...fieldBindings.paramRenderer.sharedProps.value,

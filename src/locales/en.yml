@@ -1012,10 +1012,6 @@ edit:
         description: Edit this animation file directly. Saving writes it to the file and affects the statements that reference this animation
         descriptionWithCount: Edit this animation file directly. Saving writes it to the file and affects the {count} statements that reference this animation
         loading: Loading animation file…
-        missingTitle: Animation File Not Found
-        missingDescription: "{name} was not found. Create an empty animation with just a start frame to begin"
-        create: Create This Animation File
-        createFailed: Failed to create the animation file
         retry: Retry
         loadFailedTitle: Cannot Open the Animation File
         loadFailedDescription: Make sure the file exists and the engine is available, then retry

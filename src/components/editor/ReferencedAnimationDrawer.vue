@@ -98,9 +98,6 @@ const description = $computed(() =>
 
 const stateTitle = $computed(() => {
   switch (props.controller.status) {
-    case 'missing': {
-      return t('edit.visualEditor.animation.referenced.missingTitle')
-    }
     case 'unresolved': {
       return t('edit.visualEditor.animation.referenced.unresolvedTitle')
     }
@@ -118,11 +115,6 @@ const stateTitle = $computed(() => {
 
 const stateMessage = $computed(() => {
   switch (props.controller.status) {
-    case 'missing': {
-      return t('edit.visualEditor.animation.referenced.missingDescription', {
-        name: props.controller.animationName,
-      })
-    }
     case 'unresolved': {
       switch (props.controller.unresolvedReason) {
         case 'dynamic-name': {
@@ -245,14 +237,7 @@ useShortcut({
             </EmptyHeader>
             <div class="flex flex-wrap gap-2 justify-center">
               <Button
-                v-if="props.controller.status === 'missing'"
-                data-testid="create-referenced-animation-file"
-                @click="props.controller.createFile()"
-              >
-                {{ $t('edit.visualEditor.animation.referenced.create') }}
-              </Button>
-              <Button
-                v-if="props.controller.status === 'missing' || props.controller.status === 'load-failed'"
+                v-if="props.controller.status === 'load-failed'"
                 variant="outline"
                 @click="props.controller.retry()"
               >

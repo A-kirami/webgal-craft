@@ -37,7 +37,6 @@ function createSentence(overrides: Partial<ISentence> = {}): ISentence {
 }
 
 const {
-  existsMock,
   fileEventHandlers,
   findTabIndexMock,
   getStateMock,
@@ -46,14 +45,11 @@ const {
   openTabMock,
   readTextDocumentFileMock,
   replaceTextDocumentContentMock,
-  resolveAnimationFileTargetMock,
-  resolveFilePathMock,
   saveAnimationFileMock,
   saveFileMock,
   toastInfoMock,
   toastWarningMock,
 } = vi.hoisted(() => ({
-  existsMock: vi.fn(),
   fileEventHandlers: new Map<string, (event: Record<string, unknown>) => void>(),
   findTabIndexMock: vi.fn(),
   getStateMock: vi.fn(),
@@ -62,8 +58,6 @@ const {
   openTabMock: vi.fn(),
   readTextDocumentFileMock: vi.fn(),
   replaceTextDocumentContentMock: vi.fn(),
-  resolveAnimationFileTargetMock: vi.fn(),
-  resolveFilePathMock: vi.fn(async (path: string) => path),
   saveAnimationFileMock: vi.fn(),
   saveFileMock: vi.fn(),
   toastInfoMock: vi.fn(),
@@ -93,12 +87,6 @@ vi.mock('~/stores/editor', () => ({
   }),
 }))
 
-vi.mock('~/stores/file', () => ({
-  useFileStore: () => ({
-    resolveFilePath: resolveFilePathMock,
-  }),
-}))
-
 vi.mock('~/stores/modal', () => ({
   useModalStore: () => modalStoreMock,
 }))
@@ -125,12 +113,7 @@ vi.mock('~/services/resource-index/service', () => ({
 }))
 
 vi.mock('~/features/editor/animation/animation-file', () => ({
-  resolveAnimationFileTarget: resolveAnimationFileTargetMock,
   saveAnimationFile: saveAnimationFileMock,
-}))
-
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  exists: existsMock,
 }))
 
 vi.mock('~/utils/error-handler', () => ({
@@ -203,16 +186,12 @@ function setEditableState(isDirty: boolean): void {
 beforeEach(() => {
   workspaceState.CWD = '/games/demo'
   fileEventHandlers.clear()
-  existsMock.mockReset()
-  existsMock.mockResolvedValue(true)
   findTabIndexMock.mockReset()
   findTabIndexMock.mockReturnValue(-1)
   getStateMock.mockReset()
   readTextDocumentFileMock.mockReset()
   readTextDocumentFileMock.mockResolvedValue({ content: DEFAULT_CONTENT, metadata: METADATA, ok: true })
   replaceTextDocumentContentMock.mockReset()
-  resolveAnimationFileTargetMock.mockReset()
-  resolveFilePathMock.mockClear()
   saveAnimationFileMock.mockReset()
   saveAnimationFileMock.mockResolvedValue(undefined)
   saveFileMock.mockReset()
@@ -252,31 +231,6 @@ describe('useReferencedAnimationEditor', () => {
 
     expect(controller.unresolvedReason).toBe('dynamic-name')
     expect(readTextDocumentFileMock).not.toHaveBeenCalled()
-  })
-
-  it('文件不存在时可通过创建动作写入起始帧并加载成草稿', async () => {
-    const controller = mountHarness()
-
-    existsMock.mockResolvedValueOnce(false)
-    resolveAnimationFileTargetMock.mockReturnValue({
-      ok: true,
-      target: { animationName: 'walk/fade', filePath: PATH },
-    })
-    readTextDocumentFileMock.mockResolvedValueOnce({ content: '[{"duration":0}]', metadata: METADATA, ok: true })
-
-    openAnimation(controller)
-    await waitForStatus(controller, 'missing')
-    expect(readTextDocumentFileMock).not.toHaveBeenCalled()
-
-    await controller.createFile()
-
-    expect(saveAnimationFileMock).toHaveBeenCalledWith(
-      '/games/demo',
-      { animationName: 'walk/fade', filePath: PATH },
-      [{ duration: 0 }],
-    )
-    await waitForStatus(controller, 'ready')
-    expect(controller.draftFrames).toEqual([{ duration: 0 }])
   })
 
   it('读取失败进入可重试的失败态并上报错误', async () => {

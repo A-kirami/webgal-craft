@@ -1,4 +1,3 @@
-import { exists } from '@tauri-apps/plugin-fs'
 import { shallowRef } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
@@ -14,13 +13,12 @@ import { cloneAnimationFrames } from '~/domain/stage/animation-frame'
 import { createAssetKeyForType } from '~/services/resource-index/keys'
 import { useResourceIndex } from '~/services/resource-index/service'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
-import { useFileStore } from '~/stores/file'
 import { useModalStore } from '~/stores/modal'
 import { useTabsStore } from '~/stores/tabs'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
-import { resolveAnimationFileTarget, saveAnimationFile } from './animation-file'
+import { saveAnimationFile } from './animation-file'
 import {
   ANIMATION_FILE_SUFFIX,
   resolveAnimationNameFromPath,
@@ -49,13 +47,10 @@ type ReferencedAnimationEditorStatus =
   | 'ready'
   | 'v2-read-only'
   | 'invalid-json'
-  | 'missing'
   | 'load-failed'
   | 'unresolved'
 
-type OpeningPhase = 'idle' | 'opening' | 'opened' | 'missing' | 'load-failed' | 'unresolved'
-
-type AnimationFileAvailability = 'exists' | 'missing' | 'unknown'
+type OpeningPhase = 'idle' | 'opening' | 'opened' | 'load-failed' | 'unresolved'
 
 type AnimationFileFormat = 'v1-frames' | 'v2-object' | 'invalid'
 
@@ -106,9 +101,6 @@ export function useReferencedAnimationEditor() {
     switch (phase) {
       case 'opening': {
         return 'loading'
-      }
-      case 'missing': {
-        return 'missing'
       }
       case 'load-failed': {
         return 'load-failed'
@@ -162,16 +154,6 @@ export function useReferencedAnimationEditor() {
     savedFrames.value = undefined
     fileFormat = undefined
     fileMetadata = undefined
-  }
-
-  async function probeAnimationFile(path: AbsPath): Promise<AnimationFileAvailability> {
-    try {
-      const physicalPath = await useFileStore().resolveFilePath(path)
-      return await exists(physicalPath) ? 'exists' : 'missing'
-    } catch {
-      // 文件视图不可用时无法判定存在性，交给读取链路给出失败态
-      return 'unknown'
-    }
   }
 
   async function loadDraft(token: number): Promise<void> {
@@ -269,16 +251,6 @@ export function useReferencedAnimationEditor() {
     }
 
     binding = nextBinding
-
-    const availability = await probeAnimationFile(nextBinding.filePath)
-    if (token !== sessionToken) {
-      return
-    }
-    if (availability === 'missing') {
-      setPhase('missing')
-      return
-    }
-
     await loadDraft(token)
   }
 
@@ -370,31 +342,6 @@ export function useReferencedAnimationEditor() {
 
   async function retry(): Promise<void> {
     if (!binding || phase === 'opened') {
-      return
-    }
-
-    await loadDraft(++sessionToken)
-  }
-
-  /** 缺失文件的“创建”动作：写入一个只含起始帧的 v1 动画，再按普通文件加载成草稿 */
-  async function createFile(): Promise<void> {
-    const gamePath = readGamePath()
-    const name = animationName
-    if (!gamePath || !binding || !name) {
-      return
-    }
-
-    const resolution = resolveAnimationFileTarget(gamePath, name)
-    if (!resolution.ok) {
-      unresolvedReason = resolution.error
-      setPhase('unresolved')
-      return
-    }
-
-    try {
-      await saveAnimationFile(gamePath, resolution.target, [{ duration: 0 }])
-    } catch (error) {
-      handleError(error, { context: t('edit.visualEditor.animation.referenced.createFailed') })
       return
     }
 
@@ -494,7 +441,6 @@ export function useReferencedAnimationEditor() {
       unresolvedReason,
     }),
     close,
-    createFile,
     open,
     openInTextMode,
     requestClose,
