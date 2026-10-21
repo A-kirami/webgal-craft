@@ -276,6 +276,11 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return !!parsed.value && !!config.value.hasAnimationEditor
   })
 
+  // 与 hasAnimationEditor 分开：后者会隐藏 content 字段，而 setAnimation 的 content 是动画名 combobox
+  const hasAnimationFileEditor = computed(() => {
+    return !!parsed.value && !!config.value.hasAnimationFileEditor
+  })
+
   // ─── 视图层派生计算 ───
 
   const specialContentMode = computed(() => resolveStatementSpecialContentMode(parsed.value))
@@ -310,6 +315,9 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
 
   const showEffectEditorButton = computed(() => statementType.value === 'command' && hasEffectEditor.value)
   const showAnimationEditorButton = computed(() => statementType.value === 'command' && hasAnimationEditor.value)
+  // 入口常驻占位，没有动画名时禁用：隐藏会让按钮行高度变化，把后面的参数控件整体推走
+  const showAnimationFileEditorButton = computed(() => statementType.value === 'command' && hasAnimationFileEditor.value)
+  const animationFileEditorDisabled = computed(() => (parsed.value?.content.trim() ?? '') === '')
   const effectEditorAtTop = computed(() => showEffectEditorButton.value && parsed.value?.command === commandType.setTransform)
   const paramRendererSharedProps = computed(() => ({
     ...fieldBindings.paramRenderer.sharedProps.value,
@@ -458,6 +466,8 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
       basicRenderFields,
       showEffectEditorButton,
       showAnimationEditorButton,
+      showAnimationFileEditorButton,
+      animationFileEditorDisabled,
       effectEditorAtTop,
     },
   }

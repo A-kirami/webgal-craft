@@ -1006,6 +1006,34 @@ edit:
         previewUnavailable: プレビューの準備ができていないため、フレームプレビューとドラッグは一時的に利用できません
         seekFailed: フレームプレビューのリクエストに失敗しました。フレームを切り替えるかシーンを保存して再試行してください
         v2Overrides: このステートメントは相対または継承アニメーション引数を使用しているため、フレームプレビューとドラッグには未対応です
+      referenced:
+        title: "参照アニメーション：{name}"
+        titleFallback: 参照アニメーション
+        description: このアニメーションファイルを直接編集します。保存するとファイルに書き込まれ、このアニメーションを参照するステートメントに反映されます
+        descriptionWithCount: このアニメーションファイルを直接編集します。保存するとファイルに書き込まれ、このアニメーションを参照する {count} 件のステートメントに反映されます
+        loading: アニメーションファイルを読み込み中…
+        missingTitle: アニメーションファイルが見つかりません
+        missingDescription: "{name} が見つかりません。開始フレームだけの空のアニメーションを作成できます"
+        create: このアニメーションファイルを作成
+        createFailed: アニメーションファイルの作成に失敗しました
+        retry: 再試行
+        loadFailedTitle: アニメーションファイルを開けません
+        loadFailedDescription: ファイルが存在し、エンジンが利用できることを確認して再試行してください
+        readOnlyTitle: ビジュアル編集は利用できません
+        v2ReadOnlyDescription: このアニメーションファイルは v2 形式です。
+        invalidTitle: アニメーション内容にエラーがあります
+        invalidDescription: このファイルはアニメーションドキュメントとして解析できません。
+        openInTextMode: テキストモードで開く
+        tabDirty: このアニメーションファイルにはタブに未保存の変更があります。先にタブの変更を処理してください。
+        unresolvedTitle: アニメーション名を解決できません
+        unresolved:
+          empty: ステートメントにアニメーション名が入力されていません
+          dynamicName: アニメーション名に変数が含まれているため実行時まで確定せず、エディターで開けません
+          invalidPath: アニメーション名が有効なファイルパスではありません
+          reservedName: animationTable はアニメーションテーブルの予約名のため、直接編集できません
+        removed: アニメーションファイルが削除されたため、アニメーションエディターを閉じました
+        renamed: アニメーションファイルが名前変更されたため、アニメーションエディターを新しいパスに切り替えました
+        saveFailed: アニメーションファイルの保存に失敗しました
       summary:
         currentFrameWithId: "{id} フレーム目"
     commandPanel:

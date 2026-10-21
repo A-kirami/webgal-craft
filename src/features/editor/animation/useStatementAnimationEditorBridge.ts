@@ -6,6 +6,7 @@ import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capa
 import { resolveTransformWriteMode } from '~/domain/engine/transform-args'
 import { readSentenceArgString } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
+import { REFERENCED_ANIMATION_EDITOR_OPEN_KEY } from '~/features/editor/animation/referenced-animation-editor-context'
 import { createStatementIdTarget, StatementUpdatePayload, StatementUpdateTarget } from '~/features/editor/statement-editor/useStatementEditor'
 import { isEditableEditor, useEditorStore } from '~/stores/editor'
 
@@ -17,6 +18,8 @@ interface UseStatementAnimationEditorBridgeOptions {
   updateTarget?: MaybeRefOrGetter<StatementUpdateTarget | undefined>
   parsed: MaybeRefOrGetter<ISentence | undefined>
   emitUpdate: (payload: StatementUpdatePayload) => void
+  /** 语句在场景中的稳定身份，引用动画抽屉据此判断选中语句是否仍然有效 */
+  entryId?: MaybeRefOrGetter<number | undefined>
 }
 
 export type StatementAnimationEditorOpenOverride = (
@@ -114,6 +117,7 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
   const updateTarget = computed(() => toValue(options.updateTarget))
   const parsed = computed(() => toValue(options.parsed))
   const overriddenOpen = inject(STATEMENT_ANIMATION_EDITOR_OPEN_OVERRIDE_KEY, undefined)
+  const overriddenFileOpen = inject(REFERENCED_ANIMATION_EDITOR_OPEN_KEY, undefined)
 
   function emitAnimationEditorResult(
     target: StatementUpdateTarget,
@@ -146,7 +150,39 @@ export function useStatementAnimationEditorBridge(options: UseStatementAnimation
     logger.warn('未注入高级动画编辑器 provider，无法打开高级动画编辑器')
   }
 
+  function openAnimationFileEditor() {
+    const currentParsed = parsed.value
+    if (!currentParsed || currentParsed.command !== commandType.setAnimation) {
+      return
+    }
+
+    const state = useEditorStore().currentState
+    if (!state || !isEditableEditor(state) || state.kind !== 'scene') {
+      return
+    }
+
+    const statementId = toValue(options.entryId)
+    if (statementId === undefined) {
+      logger.warn('缺少语句身份，无法打开引用动画文件')
+      return
+    }
+
+    if (overriddenFileOpen) {
+      overriddenFileOpen(currentParsed, {
+        framePreview: createFramePreviewContext(currentParsed, updateTarget.value),
+        scenePath: state.path,
+        statementId,
+      })
+      return
+    }
+
+    logger.warn('未注入引用动画文件编辑器 provider，无法打开动画文件')
+  }
+
   return {
+    // 模态宿主（命令默认值、语句组）没有引用动画抽屉，用来隐藏无处可去的入口
+    canOpenAnimationFileEditor: overriddenFileOpen !== undefined,
     openAnimationEditor,
+    openAnimationFileEditor,
   }
 }

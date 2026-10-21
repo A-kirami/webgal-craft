@@ -19,6 +19,8 @@ interface Props {
   basicRenderFields: EditorField[]
   specialContentMode?: StatementSpecialContentMode
   showAnimationEditorButton: boolean
+  showAnimationFileEditorButton: boolean
+  animationFileEditorDisabled: boolean
   showEffectEditorButton: boolean
   effectEditorAtTop: boolean
   specialContent: StatementSpecialContentBindings
@@ -41,6 +43,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   openAnimationEditor: []
+  openAnimationFileEditor: []
   openEffectEditor: []
 }>()
 
@@ -64,6 +67,10 @@ function handleOpenAnimationEditor() {
   emit('openAnimationEditor')
 }
 
+function handleOpenAnimationFileEditor() {
+  emit('openAnimationFileEditor')
+}
+
 function handleOpenEffectEditor() {
   emit('openEffectEditor')
 }
@@ -80,6 +87,17 @@ function handleOpenEffectEditor() {
       size="xs"
       class="btn-animation-editor rounded-md group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full"
       @click="handleOpenAnimationEditor"
+    >
+      <div class="i-lucide-clapperboard size-3 group-data-[surface=panel]:size-3.5" />
+      {{ $t('edit.visualEditor.animation.title') }}
+    </Button>
+    <Button
+      v-if="isCommand && props.showAnimationFileEditorButton"
+      variant="outline"
+      size="xs"
+      class="btn-animation-editor rounded-md group-data-[surface=panel]:h-7 group-data-[surface=panel]:w-full"
+      :disabled="props.animationFileEditorDisabled"
+      @click="handleOpenAnimationFileEditor"
     >
       <div class="i-lucide-clapperboard size-3 group-data-[surface=panel]:size-3.5" />
       {{ $t('edit.visualEditor.animation.title') }}

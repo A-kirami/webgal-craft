@@ -2,6 +2,7 @@ import { computed, reactive, toValue, watch } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { cloneAnimationFrame } from '~/domain/stage/animation-frame'
+import { resolveAnimationFramePreviewNotice } from '~/features/editor/animation/useAnimationFramePreviewNotice'
 import { resolveTransformBaselineSession } from '~/features/editor/transform-resolution/baseline-session'
 import { debugCommander } from '~/services/debug-commander'
 import { useEditSettingsStore } from '~/stores/edit-settings'
@@ -42,6 +43,8 @@ export interface AnimationFramePreviewContext {
 interface UseAnimationFramePreviewOptions {
   baselineClient?: TransformBaselineSessionClient
   commitSelectedFrameTransform: (transform: Transform) => void
+  /** 编辑文档的宿主的保存链路会自行重放场景；草稿宿主必须始终恢复，不能把恢复让给保存 */
+  deferRestoreToAutoSave?: boolean
   context: MaybeRefOrGetter<AnimationFramePreviewContext | undefined>
   frames: MaybeRefOrGetter<readonly AnimationFrame[]>
   getRestoreLineCommandString: () => string
@@ -157,36 +160,18 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
     }
   })
 
-  function resolveFramePreviewNotice(): AnimationFramePreviewNotice | undefined {
-    const currentContext = context.value
-    // 预览面板关闭时用户没有帧预览意图，不展示任何帧预览降级提示。
-    if (!isOpen.value || !currentContext || !preferenceStore.showPreviewPanel) {
-      return
-    }
-    if (!currentContext.runtimeCapabilities.seekAnimation) {
-      return 'engine-unsupported'
-    }
-    if (currentContext.hasAnimationOverrides) {
-      return 'v2-overrides'
-    }
-    if (!target.value || !hasFrame.value) {
-      return
-    }
-    if (!editSettings.enableLivePreview) {
-      return 'live-preview-disabled'
-    }
-    if (seekFailed) {
-      return 'seek-failed'
-    }
-    if (!previewSyncStore.isPreviewReady) {
-      return 'preview-unavailable'
-    }
-    if (baselineResolved && baselineSource === 'unknown') {
-      return 'baseline-unavailable'
-    }
-  }
-
-  const notice = computed(resolveFramePreviewNotice)
+  // 预览面板关闭时用户没有帧预览意图，不展示任何帧预览降级提示。
+  const notice = computed(() => resolveAnimationFramePreviewNotice({
+    baselineResolved,
+    baselineSource,
+    context: context.value,
+    enableLivePreview: editSettings.enableLivePreview,
+    hasFrame: hasFrame.value,
+    isOpen: isOpen.value,
+    previewReady: previewSyncStore.isPreviewReady,
+    seekFailed,
+    showPreviewPanel: preferenceStore.showPreviewPanel,
+  }))
 
   const canSeek = computed(() => (
     canUseFramePreview.value
@@ -354,11 +339,24 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
     const currentContext = context.value
     const shouldRestore = touchedPreview
     touchedPreview = false
+    const shouldDefer = options.deferRestoreToAutoSave !== false
+      && currentContext !== undefined
+      && defersRestoreToAutoSave(currentContext)
     if (
       !shouldRestore
       || !currentContext
       || !previewSyncStore.isPreviewReady
-      || defersRestoreToAutoSave(currentContext)
+      || shouldDefer
+    ) {
+      return
+    }
+
+    // 抽屉可能因为切换标签页/选中语句而关闭：此时预览已经属于新的上下文，不能再把它拉回旧场景
+    const activeState = editorStore.currentState
+    if (
+      !activeState
+      || !isEditableEditor(activeState)
+      || activeState.path !== currentContext.scenePath
     ) {
       return
     }
@@ -423,6 +421,8 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
         startSession()
       }
     },
+    // 引用动画面板随抽屉打开才挂载：创建时已是打开态，必须立即开始会话
+    { immediate: true },
   )
 
   watch(
@@ -506,6 +506,7 @@ export function useAnimationFramePreview(options: UseAnimationFramePreviewOption
 
   return reactive({
     cancelPreview,
+    close: closeSession,
     notice,
     requestPreview,
     session,

@@ -17,6 +17,7 @@ import type { StatementEntry } from '~/domain/script/sentence'
 const {
   buildStatementPreviewParamsMock,
   openAnimationEditorMock,
+  openAnimationFileEditorMock,
   openEffectEditorMock,
   provideStatementMetaMock,
   useStatementAnimationEditorBridgeMock,
@@ -24,6 +25,7 @@ const {
 } = vi.hoisted(() => ({
   buildStatementPreviewParamsMock: vi.fn((): { label: string, status?: string, value: string, color?: string }[] => []),
   openAnimationEditorMock: vi.fn(),
+  openAnimationFileEditorMock: vi.fn(),
   openEffectEditorMock: vi.fn(),
   provideStatementMetaMock: vi.fn(),
   useStatementAnimationEditorBridgeMock: vi.fn(),
@@ -108,7 +110,7 @@ const globalStubs = {
   Separator: createBrowserContainerStub('StubSeparator'),
   StatementEditorInline: defineComponent({
     name: 'StubStatementEditorInline',
-    emits: ['openAnimationEditor', 'openEffectEditor', 'update'],
+    emits: ['openAnimationEditor', 'openAnimationFileEditor', 'openEffectEditor', 'update'],
     setup(_, { emit }) {
       return () => h('div', [
         h('button', {
@@ -119,6 +121,10 @@ const globalStubs = {
           type: 'button',
           onClick: () => emit('openAnimationEditor'),
         }, 'Animation Editor'),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('openAnimationFileEditor'),
+        }, 'Animation File Editor'),
       ])
     },
   }),
@@ -127,6 +133,7 @@ const globalStubs = {
 describe('VisualEditorStatementCard', () => {
   beforeEach(() => {
     openAnimationEditorMock.mockReset()
+    openAnimationFileEditorMock.mockReset()
     buildStatementPreviewParamsMock.mockReset()
     openEffectEditorMock.mockReset()
     provideStatementMetaMock.mockReset()
@@ -137,6 +144,7 @@ describe('VisualEditorStatementCard', () => {
     buildStatementPreviewParamsMock.mockReturnValue([])
     useStatementAnimationEditorBridgeMock.mockReturnValue({
       openAnimationEditor: openAnimationEditorMock,
+      openAnimationFileEditor: openAnimationFileEditorMock,
     })
     useStatementEffectEditorBridgeMock.mockReturnValue({
       openEffectEditor: openEffectEditorMock,
@@ -198,6 +206,35 @@ describe('VisualEditorStatementCard', () => {
     await page.getByRole('button', { name: 'Animation Editor' }).click()
 
     expect(events.slice(0, 2)).toEqual(['select', 'openAnimationEditor'])
+    expect(onSelect).toHaveBeenCalledWith(7)
+  })
+
+  it('打开引用动画文件前会先选中当前语句', async () => {
+    const events: string[] = []
+    const entry = createStatementEntry(7, 'setAnimation:walk/fade;')
+    const onSelect = vi.fn(() => {
+      events.push('select')
+    })
+    openAnimationFileEditorMock.mockImplementation(() => {
+      events.push('openAnimationFileEditor')
+    })
+
+    await renderInBrowser(VisualEditorStatementCard, {
+      props: {
+        collapsed: false,
+        entry,
+        index: 0,
+        selected: false,
+        onSelect,
+      },
+      global: {
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'Animation File Editor' }).click()
+
+    expect(events.slice(0, 2)).toEqual(['select', 'openAnimationFileEditor'])
     expect(onSelect).toHaveBeenCalledWith(7)
   })
 

@@ -28,6 +28,7 @@ const {
   loggerInfoMock,
   loggerWarnMock,
   openAnimationEditorMock,
+  openAnimationFileEditorMock,
   handleSpeakerChangeMock,
   openEffectEditorMock,
   toggleNarrationModeMock,
@@ -49,6 +50,7 @@ const {
   loggerInfoMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   openAnimationEditorMock: vi.fn(),
+  openAnimationFileEditorMock: vi.fn(),
   handleSpeakerChangeMock: vi.fn(),
   openEffectEditorMock: vi.fn(),
   toggleNarrationModeMock: vi.fn(),
@@ -195,6 +197,8 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
       commandRenderFields: computed(() => []),
       effectEditorAtTop: computed(() => true),
       showAnimationEditorButton: computed(() => false),
+      showAnimationFileEditorButton: computed(() => false),
+      animationFileEditorDisabled: computed(() => false),
       showEffectEditorButton: computed(() => true),
       specialContentMode: computed(() => undefined),
     },
@@ -284,7 +288,7 @@ const globalStubs = {
   }),
   StatementCommandFieldsSection: defineComponent({
     name: 'StubStatementCommandFieldsSection',
-    emits: ['openAnimationEditor', 'openEffectEditor'],
+    emits: ['openAnimationEditor', 'openAnimationFileEditor', 'openEffectEditor'],
     setup(_, { emit }) {
       return () => h('div', [
         h('div', {
@@ -298,6 +302,10 @@ const globalStubs = {
           type: 'button',
           onClick: () => emit('openAnimationEditor'),
         }, 'Animation Editor'),
+        h('button', {
+          type: 'button',
+          onClick: () => emit('openAnimationFileEditor'),
+        }, 'Animation File Editor'),
       ])
     },
   }),
@@ -328,6 +336,7 @@ describe('StatementEditorPanel', () => {
     handleRawTextChangeMock.mockReset()
     handleSpeakerChangeMock.mockReset()
     openAnimationEditorMock.mockReset()
+    openAnimationFileEditorMock.mockReset()
     openEffectEditorMock.mockReset()
     toggleNarrationModeMock.mockReset()
     gameAssetDirMock.mockReset()
@@ -355,7 +364,9 @@ describe('StatementEditorPanel', () => {
       openEffectEditor: openEffectEditorMock,
     })
     useStatementAnimationEditorBridgeMock.mockReturnValue({
+      canOpenAnimationFileEditor: true,
       openAnimationEditor: openAnimationEditorMock,
+      openAnimationFileEditor: openAnimationFileEditorMock,
     })
     useFileSystemEventsMock.mockReturnValue({
       on: vi.fn(),
@@ -379,6 +390,8 @@ describe('StatementEditorPanel', () => {
         commandRenderFields: computed(() => []),
         effectEditorAtTop: computed(() => false),
         showAnimationEditorButton: computed(() => false),
+        showAnimationFileEditorButton: computed(() => false),
+        animationFileEditorDisabled: computed(() => false),
         showEffectEditorButton: computed(() => true),
         specialContentMode: computed(() => undefined),
       },
@@ -406,6 +419,8 @@ describe('StatementEditorPanel', () => {
         commandRenderFields: computed(() => []),
         effectEditorAtTop: computed(() => false),
         showAnimationEditorButton: computed(() => false),
+        showAnimationFileEditorButton: computed(() => false),
+        animationFileEditorDisabled: computed(() => false),
         showEffectEditorButton: computed(() => false),
         specialContentMode: computed(() => undefined),
       },
@@ -428,6 +443,8 @@ describe('StatementEditorPanel', () => {
         commandRenderFields: computed(() => []),
         effectEditorAtTop: computed(() => false),
         showAnimationEditorButton: computed(() => false),
+        showAnimationFileEditorButton: computed(() => false),
+        animationFileEditorDisabled: computed(() => false),
         showEffectEditorButton: computed(() => false),
         specialContentMode: computed(() => undefined),
       },
@@ -451,6 +468,8 @@ describe('StatementEditorPanel', () => {
         commandRenderFields: computed(() => []),
         effectEditorAtTop: computed(() => false),
         showAnimationEditorButton: computed(() => true),
+        showAnimationFileEditorButton: computed(() => false),
+        animationFileEditorDisabled: computed(() => false),
         showEffectEditorButton: computed(() => false),
         specialContentMode: computed(() => undefined),
       },
@@ -463,6 +482,31 @@ describe('StatementEditorPanel', () => {
     await page.getByRole('button', { name: 'Animation Editor' }).click()
 
     expect(openAnimationEditorMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('setAnimation 语句显示引用动画文件按钮并触发桥接打开', async () => {
+    useStatementEditorMock.mockReturnValue(createEditorReturn({
+      statementType: 'command',
+      view: {
+        basicRenderFields: computed(() => []),
+        commandRenderFields: computed(() => []),
+        effectEditorAtTop: computed(() => false),
+        showAnimationEditorButton: computed(() => false),
+        showAnimationFileEditorButton: computed(() => true),
+        animationFileEditorDisabled: computed(() => false),
+        showEffectEditorButton: computed(() => false),
+        specialContentMode: computed(() => undefined),
+      },
+    }))
+
+    await renderStatementEditorPanel({
+      entry: createStatementEntry(13, 'setAnimation: walk/fade;'),
+    })
+
+    await page.getByRole('button', { name: 'Animation File Editor' }).click()
+
+    expect(openAnimationFileEditorMock).toHaveBeenCalledTimes(1)
+    expect(openAnimationEditorMock).not.toHaveBeenCalled()
   })
 
   it('say 语句支持动态说话人建议、自由输入与旁白切换', async () => {
@@ -498,6 +542,8 @@ describe('StatementEditorPanel', () => {
         commandRenderFields: computed(() => []),
         effectEditorAtTop: computed(() => false),
         showAnimationEditorButton: computed(() => true),
+        showAnimationFileEditorButton: computed(() => false),
+        animationFileEditorDisabled: computed(() => false),
         showEffectEditorButton: computed(() => true),
         specialContentMode: computed(() => undefined),
       },
@@ -550,6 +596,8 @@ describe('StatementEditorPanel', () => {
         commandRenderFields: computed(() => []),
         effectEditorAtTop: computed(() => false),
         showAnimationEditorButton: computed(() => false),
+        showAnimationFileEditorButton: computed(() => false),
+        animationFileEditorDisabled: computed(() => false),
         showEffectEditorButton: computed(() => false),
         specialContentMode: computed(() => undefined),
       },

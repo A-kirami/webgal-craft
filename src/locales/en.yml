@@ -1006,6 +1006,34 @@ edit:
         previewUnavailable: The preview is not ready yet, so frame preview and dragging are temporarily unavailable
         seekFailed: The frame preview request failed. Switch frames or save the scene to retry
         v2Overrides: This statement uses relative or inherit animation arguments, which do not support frame preview or dragging yet
+      referenced:
+        title: "Referenced Animation: {name}"
+        titleFallback: Referenced Animation
+        description: Edit this animation file directly. Saving writes it to the file and affects the statements that reference this animation
+        descriptionWithCount: Edit this animation file directly. Saving writes it to the file and affects the {count} statements that reference this animation
+        loading: Loading animation file…
+        missingTitle: Animation File Not Found
+        missingDescription: "{name} was not found. Create an empty animation with just a start frame to begin"
+        create: Create This Animation File
+        createFailed: Failed to create the animation file
+        retry: Retry
+        loadFailedTitle: Cannot Open the Animation File
+        loadFailedDescription: Make sure the file exists and the engine is available, then retry
+        readOnlyTitle: Visual Editing Is Unavailable
+        v2ReadOnlyDescription: This animation file uses v2 format.
+        invalidTitle: Animation Content Error
+        invalidDescription: This file cannot be parsed as an animation document.
+        openInTextMode: Open in Text Mode
+        tabDirty: This animation file has unsaved changes in a tab. Resolve them first.
+        unresolvedTitle: Cannot Resolve the Animation Name
+        unresolved:
+          empty: The statement does not specify an animation name
+          dynamicName: The animation name contains variables and is only resolved at runtime, so it cannot be opened in the editor
+          invalidPath: The animation name is not a valid file path
+          reservedName: animationTable is reserved for the animation table and cannot be edited directly
+        removed: The animation file was deleted and the animation editor closed
+        renamed: The animation file was renamed and the animation editor followed the new path
+        saveFailed: Failed to save the animation file
       summary:
         currentFrameWithId: "Frame {id}"
     commandPanel:

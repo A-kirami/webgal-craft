@@ -174,6 +174,24 @@ describe('useStatementEditor', () => {
     expect(editor.view.commandRenderFields.value.some(field => field.storage === 'content')).toBe(false)
   })
 
+  it('setAnimation 语句显示引用动画编辑按钮并保留动画名 combobox', () => {
+    const { editor } = createHarness('setAnimation: bounce -target=fig-left;')
+
+    expect(editor.view.showAnimationFileEditorButton.value).toBe(true)
+    expect(editor.view.animationFileEditorDisabled.value).toBe(false)
+    expect(editor.view.showAnimationEditorButton.value).toBe(false)
+    expect(editor.view.commandRenderFields.value.some(field => field.storage === 'content')).toBe(true)
+  })
+
+  it('setAnimation 还没有动画名时按钮常驻但禁用', () => {
+    const { editor } = createHarness('setAnimation: -target=fig-left;')
+
+    expect(editor.parsed.value?.command).toBe(commandType.setAnimation)
+    expect(editor.parsed.value?.content.trim()).toBe('')
+    expect(editor.view.showAnimationFileEditorButton.value).toBe(true)
+    expect(editor.view.animationFileEditorDisabled.value).toBe(true)
+  })
+
   it('say 位置语法糖在编辑器中显示为运行时目标 ID，修改后写入 figureId', () => {
     const { editor, updates } = createHarness('Alice: hello -left;')
     const associatedFigureField = requireArgField(editor, 'figureId')
