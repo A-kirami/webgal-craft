@@ -47,6 +47,7 @@ const {
   replaceTextDocumentContentMock,
   saveAnimationFileMock,
   saveFileMock,
+  toastErrorMock,
   toastInfoMock,
   toastWarningMock,
 } = vi.hoisted(() => ({
@@ -60,6 +61,7 @@ const {
   replaceTextDocumentContentMock: vi.fn(),
   saveAnimationFileMock: vi.fn(),
   saveFileMock: vi.fn(),
+  toastErrorMock: vi.fn(),
   toastInfoMock: vi.fn(),
   toastWarningMock: vi.fn(),
 }))
@@ -122,6 +124,7 @@ vi.mock('~/utils/error-handler', () => ({
 
 vi.mock('vue-sonner', () => ({
   toast: {
+    error: toastErrorMock,
     info: toastInfoMock,
     warning: toastWarningMock,
   },
@@ -192,12 +195,14 @@ beforeEach(() => {
   readTextDocumentFileMock.mockReset()
   readTextDocumentFileMock.mockResolvedValue({ content: DEFAULT_CONTENT, metadata: METADATA, ok: true })
   replaceTextDocumentContentMock.mockReset()
+  replaceTextDocumentContentMock.mockReturnValue(true)
   saveAnimationFileMock.mockReset()
   saveAnimationFileMock.mockResolvedValue(undefined)
   saveFileMock.mockReset()
   saveFileMock.mockResolvedValue(undefined)
   modalOpenMock.mockReset()
   openTabMock.mockReset()
+  toastErrorMock.mockReset()
   toastInfoMock.mockReset()
   toastWarningMock.mockReset()
   handleErrorMock.mockReset()
@@ -316,6 +321,24 @@ describe('useReferencedAnimationEditor', () => {
     expect(saveFileMock).toHaveBeenCalledWith(PATH)
     expect(saveAnimationFileMock).not.toHaveBeenCalled()
     expect(controller.isDirty).toBe(false)
+  })
+
+  it('替换标签页内容失败时不保存且保留草稿', async () => {
+    const controller = mountHarness()
+    openAnimation(controller)
+    await waitForStatus(controller, 'ready')
+
+    findTabIndexMock.mockReturnValue(0)
+    setEditableState(false)
+    createDirtyDraft(controller)
+    replaceTextDocumentContentMock.mockReturnValue(false)
+
+    await expect(controller.save()).resolves.toBe(false)
+
+    expect(saveFileMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledWith('edit.visualEditor.animation.referenced.saveFailed')
+    expect(controller.isDirty).toBe(true)
+    expect(controller.isOpen).toBe(true)
   })
 
   it('标签页有未保存修改时拒绝保存并保留草稿', async () => {

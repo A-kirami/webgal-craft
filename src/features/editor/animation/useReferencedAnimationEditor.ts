@@ -292,7 +292,14 @@ export function useReferencedAnimationEditor() {
       const tabState = tabOpen ? editableTabState(current.filePath) : undefined
       if (tabState) {
         // 标签页持有时把草稿作为一次替换事务写回，保存仍由该会话完成，历史与脏状态留在标签页
-        editorStore.replaceTextDocumentContent(current.filePath, serializeAnimationFrames(frames))
+        const replaced = editorStore.replaceTextDocumentContent(
+          current.filePath,
+          serializeAnimationFrames(frames),
+        )
+        if (!replaced) {
+          toast.error(t('edit.visualEditor.animation.referenced.saveFailed'))
+          return false
+        }
         await editorStore.saveFile(current.filePath)
       } else {
         const gamePath = readGamePath()
