@@ -27,12 +27,19 @@ export type GameConfigDefaultLanguage = (typeof GAME_CONFIG_DEFAULT_LANGUAGES)[n
 
 const BUILT_IN_GAME_CONFIG_RAW_KEY_SET: ReadonlySet<string> = new Set(BUILT_IN_GAME_CONFIG_RAW_KEYS)
 
+/** 未解锁节点展示策略的取值；引擎侧按字符串处理 */
+export const FLOWCHART_LOCKED_NODE_VISIBILITY_VALUES = ['all', 'node', 'none'] as const
+
+export const DEFAULT_FLOWCHART_LOCKED_NODE_VISIBILITY = 'node'
+
 export interface GameConfigFormValues {
   customConfig: GameConfigEntry[]
   defaultLanguage: string
   description: string
   enableAppreciation: boolean
   enableContinue: boolean
+  enableFlowchart: boolean
+  flowchartLockedNodeVisibility: string
   gameKey: string
   gameName: string
   gameLogo: string[]
@@ -52,6 +59,8 @@ const EMPTY_GAME_CONFIG_FORM_VALUES = {
   description: '',
   enableAppreciation: false,
   enableContinue: true,
+  enableFlowchart: false,
+  flowchartLockedNodeVisibility: DEFAULT_FLOWCHART_LOCKED_NODE_VISIBILITY,
   gameKey: '',
   gameName: '',
   gameLogo: [],
@@ -295,6 +304,8 @@ export function createGameConfigSchema(t: I18nT) {
     description: createConfigValueSchema(t),
     enableAppreciation: z.boolean(),
     enableContinue: z.boolean(),
+    enableFlowchart: z.boolean(),
+    flowchartLockedNodeVisibility: createConfigValueSchema(t),
     gameKey: createConfigValueSchema(t),
     gameName: createRequiredGameNameSchema(t),
     gameLogo: z.array(createConfigValueSchema(t)),
@@ -322,6 +333,9 @@ export function parseGameConfigFormValues(config: GameConfigReadResult): GameCon
     description: readEntryValue(entryValueMap, 'Description') ?? '',
     enableAppreciation: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Appreciation'), false),
     enableContinue: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Continue'), true),
+    enableFlowchart: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_flowchart'), false),
+    flowchartLockedNodeVisibility:
+      readEntryValue(entryValueMap, 'Flowchart_Locked_Node_Visibility') || DEFAULT_FLOWCHART_LOCKED_NODE_VISIBILITY,
     gameKey: readEntryValue(entryValueMap, 'Game_key') ?? '',
     gameName: readEntryValue(entryValueMap, 'Game_name') ?? '',
     gameLogo: parseGameLogoImages(readEntryValue(entryValueMap, 'Game_Logo') ?? ''),
@@ -375,6 +389,14 @@ export function serializeGameConfigEntries(values: GameConfigFormValues): GameCo
     {
       key: 'Enable_Continue',
       value: String(values.enableContinue),
+    },
+    {
+      key: 'Enable_flowchart',
+      value: String(values.enableFlowchart),
+    },
+    {
+      key: 'Flowchart_Locked_Node_Visibility',
+      value: values.flowchartLockedNodeVisibility,
     },
     {
       key: 'Legacy_Expression_Blend_Mode',

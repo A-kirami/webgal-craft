@@ -4,6 +4,7 @@ import { page, userEvent } from 'vitest/browser'
 import { defineComponent, h, nextTick, reactive } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
+import { useDragSession } from '~/composables/useDragSession'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 
@@ -497,6 +498,7 @@ describe('FileTree', () => {
   })
 
   afterEach(() => {
+    useDragSession().cancel()
     vi.clearAllMocks()
     vi.useRealTimers()
   })
@@ -538,6 +540,39 @@ describe('FileTree', () => {
     })
 
     await expect.element(page.getByRole('status', { name: 'common.loading' })).toBeInTheDocument()
+  })
+
+  it.each([
+    { label: '默认不启动拖拽', props: {}, canDrag: false, canMove: false },
+    { label: '单独开启拖拽源时不接收放置', props: { enableDragSource: true }, canDrag: true, canMove: false },
+    { label: '开启拖拽传输时默认同时开启源与目标', props: { enableDragTransfer: true }, canDrag: true, canMove: true },
+    { label: '显式关闭拖拽源优先于传输开关', props: { enableDragTransfer: true, enableDragSource: false }, canDrag: false, canMove: false },
+  ])('拖拽开关：$label', async ({ props, canDrag, canMove }) => {
+    vi.useFakeTimers()
+    await renderFileTree({
+      ...props,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [
+        { name: 'scene.txt', path: '/project/scene.txt' },
+        { name: 'target', path: '/project/target', children: [] },
+      ],
+      rootPath: '/project',
+    })
+    const source = document.querySelector<HTMLElement>('[data-file-tree-path="/project/scene.txt"]')!
+    const target = document.querySelector<HTMLElement>('[data-file-tree-path="/project/target"]')!
+    const finishDrag = await hoverDragTarget(source, target)
+    expect(useDragSession().state.value.isActive).toBe(canDrag)
+    await finishDrag()
+
+    if (canMove) {
+      expect(pathOperationPerformMock).toHaveBeenCalledExactlyOnceWith({
+        kind: 'move',
+        sourcePath: '/project/scene.txt',
+        target: { type: 'directory', directory: '/project/target' },
+      }, expect.any(Function))
+    } else {
+      expect(pathOperationPerformMock).not.toHaveBeenCalled()
+    }
   })
 
   it('外部文件拖拽到目录子层级时会高亮目标目录及其子树', async () => {

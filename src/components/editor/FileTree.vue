@@ -37,6 +37,8 @@ interface Props {
   openCreatedFileInTab?: boolean
   sortBy?: FileViewerSortBy
   sortOrder?: FileViewerSortOrder
+  /** 是否作为拖拽源；默认跟随 enableDragTransfer，可单独开启（如流程图场景浮层只拖不收） */
+  enableDragSource?: boolean
   enableDragTransfer?: boolean
   externalDropTargetPath?: AbsPath
   rootPath?: string
@@ -60,6 +62,8 @@ const {
   openCreatedFileInTab = false,
   sortBy = 'name',
   sortOrder = 'asc',
+  // eslint-disable-next-line unicorn/no-useless-undefined -- Vue Boolean prop 缺省需保持 undefined，才能跟随 enableDragTransfer
+  enableDragSource = undefined,
   enableDragTransfer = false,
   externalDropTargetPath,
   rootPath,
@@ -628,8 +632,10 @@ function setFileTreeItemElement(
   registerDropTarget(renderItem.fileItem.path, resolveHTMLElement(value), renderItem.dropTarget)
 }
 
+const isDragSourceEnabled = $computed(() => enableDragSource ?? enableDragTransfer)
+
 function getFileTreeDragSourceProps(item: FlattenedItem<T>) {
-  return enableDragTransfer && !isRenaming(item)
+  return isDragSourceEnabled && !isRenaming(item)
     ? fileDragSource.sourceProps()
     : {} as FileTreeDragSourceHandlers
 }

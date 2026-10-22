@@ -564,6 +564,8 @@ describe('EditHeader', () => {
           ],
           enableAppreciation: false,
           enableContinue: false,
+          enableFlowchart: false,
+          flowchartLockedNodeVisibility: 'node',
           gameKey: 'demo-key',
           gameLogo: ['opening.webp', 'enter.webp'],
           gameName: '测试游戏',

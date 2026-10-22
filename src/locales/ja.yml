@@ -442,6 +442,16 @@ modals:
       enableContinue:
         label: 続きからボタン
         description: タイトル画面に「続きから」ボタンを表示します
+      enableFlowchart:
+        description: このゲームのフローチャートを有効にし、フローチャート表示で編集します
+        label: フローチャート
+      flowchartLockedNodeVisibility:
+        description: ゲーム内フローチャートでの未解放ノードの表示方法
+        label: 未解放ノードの表示
+        options:
+          all: 未解放ノードを名前付きですべて表示
+          node: 未解放ノードを名前なしで表示
+          none: 未解放ノードを表示しない
       showPanic:
         label: 緊急回避
         description: 有効にすると、Esc キーで緊急回避画面を表示します
@@ -769,6 +779,71 @@ edit:
     gameSettings: ゲーム設定
     missingPreviewUrl: プレビューURLがありません。先にプレビューを起動してください。
     openFailed: テストウィンドウを開けませんでした
+    viewMode:
+      scene: シーン
+      flowchart: フローチャート
+  flowchart:
+    canvas:
+      addNode: ノードを追加
+      fitView: 全体を表示
+      redo: やり直す
+      undo: 元に戻す
+      zoomIn: 拡大
+      zoomOut: 縮小
+    defaults:
+      branchName: "支線ストーリー{index}"
+      mainFlowchartName: メインストーリー
+      nodeTitle: ノード
+      rootNodeTitle: 開始地点
+    disabled:
+      description: フローチャートはゲーム設定で有効にする必要があります。有効にすると、ここでメインと支線のフローチャートを編集できます。
+      enable: フローチャートを有効にする
+      title: このゲームではフローチャートが無効です
+    errors:
+      cycle: この接続は循環になります
+      duplicateEdge: この接続はすでに存在します
+      flowchartNotFound: フローチャートはすでに存在しません
+      invalidName: 名前を空にすることはできません
+      mainProtected: メインのフローチャートは削除できません
+      nodeNotFound: ノードはすでに存在しません
+      rootProtected: 開始ノードは削除できません
+      selfLoop: ノードを自身に接続することはできません
+    enableFailed: フローチャートを有効にできませんでした
+    loadFailedDescription: game/flowchart.json を読み込めませんでした。ファイルは変更されていません。内容を修正して再試行してください。
+    loadFailedTitle: フローチャートを読み込めませんでした
+    loading: フローチャートを読み込み中……
+    manager:
+      createBranch: 支線フローチャートを新規作成
+      delete: "{name}を削除"
+      deleteDescription: 「{name}」とそのすべてのノード・接続を削除します。この編集セッション内であれば元に戻せます。
+      deleteTitle: 支線フローチャートを削除しますか？
+      kindBranch: "支線"
+      kindMain: "メイン"
+      labelPrefix: "フローチャート："
+      listLabel: フローチャート一覧
+      rename: "{name}の名前を変更"
+      renameInputLabel: フローチャート名
+      triggerLabel: "現在のフローチャート：{name}"
+    node:
+      bindScene: シーンファイルを選択
+      delete: ノードを削除
+      editTitle: ダブルクリックしてノード名を変更
+      rename: ノード名を変更
+      replaceScene: シーンファイルを置き換え
+      rootBadge: 開始
+      scenePickerTitle: シーンファイルを選択
+      titleInputLabel: ノード名
+      unboundScene: シーン未設定
+    retry: 再試行
+    saveFailed: フローチャートを保存できませんでした
+    sceneDock:
+      collapse: シーン一覧をたたむ
+      collapseAll: すべてたたむ
+      empty: シーンがありません
+      expand: シーン一覧を展開
+      loading: シーンを読み込み中……
+      refresh: 更新
+      title: シーン
   empty:
     title: 開いているファイルがありません
     description: 左側のファイルリストからファイルを選択して編集を開始するか、新しいシーンファイルを作成してください
@@ -1675,6 +1750,25 @@ tour:
     previewDrag:
       title: プレビューでドラッグ
       description: プレビュー上の立ち絵や背景を直接ドラッグして調整できます。ドラッグで移動、角をドラッグで拡大縮小、回転ハンドルで回転します。
+  flowchart:
+    manager:
+      title: フローチャートを管理
+      description: ここでメインと支線のフローチャートを切り替えます。支線の新規作成、名前の変更、削除もできます。
+    addNode:
+      title: ノードを追加
+      description: ここをクリックしてノードを追加し、ストーリーの流れを整理します。新しいノードは既存のノードと重ならない位置に配置されます。
+    node:
+      title: ノードを操作
+      description: タイトルバーをドラッグするとノードを移動できます。名前をダブルクリックすると変更できます。ノードにカーソルを合わせるか選択すると、右上に名前の変更と削除ボタンが表示されます。開始ノードは名前を変更できますが、削除はできません。
+    scenes:
+      title: シーンを関連付け
+      description: シーンファイルをキャンバスの空白部分にドロップするとノードを作成できます。既存のノードにドロップするとシーンを関連付けたり差し替えたりでき、対象のノードが強調表示されます。ノード内のシーン欄をクリックしてファイルを選ぶこともできます。
+    connect:
+      title: ノードを接続
+      description: ノード下部の接続点から別のノードの上部へドラッグすると接続できます。ノードを自身に接続したり、循環する接続を作成したりすることはできません。
+    canvas:
+      title: 表示の操作と元に戻す
+      description: キャンバスの空白部分をドラッグすると移動でき、マウスホイールで拡大・縮小できます。「全体を表示」でフローチャート全体を確認できます。変更は元に戻したりやり直したりでき、自動で保存されます。
   resourceSwitch:
     statusBar:
       title: エンジンとテンプレートの切り替え

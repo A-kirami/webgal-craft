@@ -5,6 +5,7 @@ import { defineComponent, nextTick, reactive, ref } from 'vue'
 
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
 
+import { createTourConfig } from '../tour'
 import { createEnginesTourSteps, useEnginesTour } from '../useEnginesTour'
 
 import type { TourDriverOptions } from '../tour'
@@ -116,6 +117,6 @@ describe('useEnginesTour', () => {
     await nextTick()
 
     expect(driverMock.drive).toHaveBeenCalledTimes(1)
-    expect(lastDriverOptions().overrides).toBeUndefined()
+    expect(createTourConfig(lastDriverOptions()).overlayClickBehavior).toBeTypeOf('function')
   })
 })

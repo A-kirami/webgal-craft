@@ -4,6 +4,7 @@ import { onBackButtonPress } from '@tauri-apps/api/app'
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
 import { windowCmds } from '~/commands/window'
+import { EDITOR_LEAVE_HOOK_KEY } from '~/features/editor/leave-hook'
 import { parseGameConfigFormValues } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { gameAssetDir } from '~/services/platform/app-paths'
@@ -16,6 +17,19 @@ import { handleError } from '~/utils/error-handler'
 
 import type { UnlistenFn } from '@tauri-apps/api/event'
 import type { AbsPath } from '~/domain/path'
+import type { EditorViewMode } from '~/features/editor/view-mode'
+
+interface Props {
+  viewMode?: EditorViewMode
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  viewMode: 'scene',
+})
+
+const emit = defineEmits<{
+  'update:viewMode': [mode: EditorViewMode]
+}>()
 
 const router = useRouter()
 
@@ -25,6 +39,7 @@ const editorStore = useEditorStore()
 const workspaceStore = useWorkspaceStore()
 const previewSessionStore = usePreviewSessionStore()
 const modalStore = useModalStore()
+const leaveHook = inject(EDITOR_LEAVE_HOOK_KEY, undefined)
 const isDesktop = isDesktopRuntime()
 const isAndroid = isAndroidRuntime()
 
@@ -96,6 +111,7 @@ async function saveBeforeBackground() {
   }
 
   try {
+    await leaveHook?.flush()
     await saveDirtyDocumentsUnder(currentGamePath)
   } catch (error) {
     handleError(error)
@@ -259,6 +275,10 @@ async function closeTestWindow() {
   }
 }
 
+function handleViewModeChange(value: unknown) {
+  emit('update:viewMode', value === 'flowchart' ? 'flowchart' : 'scene')
+}
+
 onBeforeUnmount(() => {
   isUnmounted = true
   void closeTestWindow()
@@ -268,13 +288,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <header class="px-4 border-b bg-card flex h-12 items-center justify-between">
-    <div class="flex gap-2 items-center">
-      <Button variant="ghost" size="icon" class="[&_svg]:size-5" @click="void handleBack()">
+  <header class="px-4 border-b bg-card shrink-0 gap-2 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] h-12 items-center">
+    <div class="flex gap-2 min-w-0 items-center">
+      <Button variant="ghost" size="icon" class="shrink-0 [&_svg]:size-5" @click="void handleBack()">
         <ArrowLeft />
         <span class="sr-only">{{ $t('common.back') }}</span>
       </Button>
-      <div class="flex gap-2 items-center">
+      <div class="flex gap-2 min-w-0 items-center">
         <AssetImage
           :path="workspaceStore.currentGame?.previewAssets.icon.path"
           :root-path="workspaceStore.CWD"
@@ -283,21 +303,39 @@ onBeforeUnmount(() => {
           :cache-version="workspaceStore.currentGame?.previewAssets.icon.cacheVersion"
           :thumbnail="HEADER_ICON_THUMBNAIL"
           fallback-image="/placeholder.svg"
-          class="rounded-md size-6"
+          class="rounded-md shrink-0 size-6"
         />
-        <span class="font-medium">{{ workspaceStore.currentGame?.metadata.name }}</span>
+        <span class="font-medium truncate">{{ workspaceStore.currentGame?.metadata.name }}</span>
       </div>
       <Button
         v-if="canOpenGameConfig"
         variant="ghost"
         size="icon"
+        class="shrink-0"
         @click="handleOpenGameConfig"
       >
         <Settings2 />
         <span class="sr-only">{{ $t('edit.header.gameSettings') }}</span>
       </Button>
     </div>
-    <div class="flex gap-2 items-center">
+
+    <div class="justify-self-center">
+      <Tabs
+        :model-value="props.viewMode"
+        @update:model-value="handleViewModeChange"
+      >
+        <TabsList>
+          <TabsTrigger value="scene" class="text-xs h-full w-18">
+            {{ $t('edit.header.viewMode.scene') }}
+          </TabsTrigger>
+          <TabsTrigger value="flowchart" class="text-xs h-full w-18">
+            {{ $t('edit.header.viewMode.flowchart') }}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
+
+    <div class="flex gap-2 items-center justify-end">
       <Button
         v-if="isDesktop"
         :variant="isTestWindowActive ? 'outline' : 'default'"

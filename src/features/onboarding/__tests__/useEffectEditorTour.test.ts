@@ -5,6 +5,7 @@ import { defineComponent, nextTick, reactive, ref } from 'vue'
 
 import { createTestRenderer } from '~/features/editor/__tests__/utils/createTestRenderer'
 
+import { createTourConfig } from '../tour'
 import { TOUR_PERSISTENCE } from '../tour-version'
 import { useEffectEditorTour } from '../useEffectEditorTour'
 
@@ -77,7 +78,7 @@ function lastDriverOptions(): TourDriverOptions {
   return options
 }
 
-/** 真实 driver.js 的 destroy 会同步触发 onDestroyed，mock 保持同样行为 */
+/** 模拟高亮动画完成后 driver.js 的同步销毁回调。 */
 function destroyDriver(): void {
   lastDriverOptions().onDestroyed?.(
     undefined,
@@ -133,7 +134,9 @@ describe('useEffectEditorTour', () => {
       },
     ])
     // 情境引导只收紧淡入；遮罩点击行为沿用共享配置，不接受逐引导覆盖
-    expect(lastDriverOptions().overrides).toEqual({ duration: 150 })
+    const config = createTourConfig(lastDriverOptions())
+    expect(config.duration).toBe(150)
+    expect(config.overlayClickBehavior).toBeTypeOf('function')
   })
 
   it('变换浮层未激活时不启动引导', async () => {

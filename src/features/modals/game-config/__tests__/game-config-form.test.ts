@@ -20,6 +20,8 @@ function createFormValues(overrides: Partial<GameConfigFormValues> = {}): GameCo
     description: '',
     enableAppreciation: false,
     enableContinue: true,
+    enableFlowchart: false,
+    flowchartLockedNodeVisibility: 'node',
     gameKey: '',
     gameName: 'Demo',
     legacyExpressionBlendMode: false,
@@ -63,6 +65,14 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Continue',
           value: 'false',
+        },
+        {
+          key: 'Enable_flowchart',
+          value: 'true',
+        },
+        {
+          key: 'Flowchart_Locked_Node_Visibility',
+          value: 'all',
         },
         {
           key: 'Game_key',
@@ -141,6 +151,8 @@ describe('gameConfigForm', () => {
       ],
       enableAppreciation: true,
       enableContinue: false,
+      enableFlowchart: true,
+      flowchartLockedNodeVisibility: 'all',
       gameKey: 'demo-key',
       gameName: 'Demo',
       legacyExpressionBlendMode: false,
@@ -504,6 +516,14 @@ describe('gameConfigForm', () => {
           value: 'false',
         },
         {
+          key: 'Enable_flowchart',
+          value: 'false',
+        },
+        {
+          key: 'Flowchart_Locked_Node_Visibility',
+          value: 'node',
+        },
+        {
           key: 'Legacy_Expression_Blend_Mode',
           value: 'false',
         },
@@ -532,6 +552,30 @@ describe('gameConfigForm', () => {
           value: 'enabled',
         },
       ],
+    })
+  })
+
+  it('Enable_flowchart 按字符串 true/false 读写，默认关闭', () => {
+    expect(parseGameConfigFormValues(createReadResult()).enableFlowchart).toBe(false)
+    expect(parseGameConfigFormValues(createReadResult({
+      entries: [{ key: 'Enable_flowchart', value: 'TRUE' }],
+    })).enableFlowchart).toBe(true)
+    expect(serializeGameConfigEntries(createFormValues({ enableFlowchart: true })).entries).toContainEqual({
+      key: 'Enable_flowchart',
+      value: 'true',
+    })
+  })
+
+  it('Flowchart_Locked_Node_Visibility 默认 node，并保留引擎新增的取值', () => {
+    expect(parseGameConfigFormValues(createReadResult()).flowchartLockedNodeVisibility).toBe('node')
+
+    const parsed = parseGameConfigFormValues(createReadResult({
+      entries: [{ key: 'Flowchart_Locked_Node_Visibility', value: 'future_mode' }],
+    }))
+    expect(parsed.flowchartLockedNodeVisibility).toBe('future_mode')
+    expect(serializeGameConfigEntries(parsed).entries).toContainEqual({
+      key: 'Flowchart_Locked_Node_Visibility',
+      value: 'future_mode',
     })
   })
 
@@ -573,6 +617,14 @@ describe('gameConfigForm', () => {
         {
           key: 'Enable_Continue',
           value: 'true',
+        },
+        {
+          key: 'Enable_flowchart',
+          value: 'false',
+        },
+        {
+          key: 'Flowchart_Locked_Node_Visibility',
+          value: 'node',
         },
         {
           key: 'Legacy_Expression_Blend_Mode',
