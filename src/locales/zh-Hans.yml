@@ -461,6 +461,10 @@ modals:
       legacyExpressionBlendMode:
         label: Live2D 旧版表情混合模式
         description: 旧版 Live2D 表情混合的兼容选项，表情显示异常时可以开启
+      cubismMemoryReservedSize:
+        label: Live2D 预留内存
+        unit: MiB
+        description: 提前预留 Cubism 内存，减少加载多个模型时的显示异常
       maxLine:
         description: 文本框同时显示的最大行数
         label: 文本框最大行数
@@ -469,6 +473,7 @@ modals:
         label: 文本框行高
     validation:
       gameNameRequired: 游戏名称不能为空
+      cubismMemoryReservedSizeInvalid: Live2D 预留内存必须是正数，或留空
       maxLineInvalid: 文本框最大显示行数必须是正整数，或留空
       lineHeightInvalid: 文本框行高必须是正数，或留空
       packageNameInvalid: 包名必须使用小写点分标识，例如 org.example.demo，或留空

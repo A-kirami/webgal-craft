@@ -13,6 +13,7 @@ export const BUILT_IN_GAME_CONFIG_RAW_KEYS = [
   'Enable_flowchart',
   'Flowchart_Locked_Node_Visibility',
   'Legacy_Expression_Blend_Mode',
+  'Cubism_Memory_Reserved_Size_MB',
   'Steam_AppID',
   'Default_Language',
   'Show_panic',

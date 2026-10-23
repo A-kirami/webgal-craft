@@ -593,6 +593,7 @@ describe('EditHeader', () => {
         }),
         gamePath: '/games/test',
         initialValues: {
+          cubismMemoryReservedSize: '',
           defaultLanguage: 'zh_CN',
           description: 'Intro',
           customConfig: [

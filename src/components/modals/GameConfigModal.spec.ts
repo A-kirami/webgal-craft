@@ -55,6 +55,7 @@ const preparedModalProps = {
   bgmRootPath: '/games/demo/game/bgm',
   gamePath: '/games/demo',
   initialValues: {
+    cubismMemoryReservedSize: '',
     defaultLanguage: 'zh_CN',
     description: 'An introductory story',
     customConfig: [],
@@ -401,6 +402,55 @@ describe('GameConfigModal', () => {
     await page.getByTestId('game-config-steam-app-id').click()
 
     await expect.element(page.getByText('modals.gameConfig.validation.packageNameInvalid')).toBeVisible()
+  })
+
+  it.each([
+    { initialValue: '' as const, nextValue: '64.5', expectedValue: '64.5' },
+    { initialValue: 64, nextValue: '', expectedValue: undefined },
+  ])('Cubism 预留内存从 $initialValue 改为 $nextValue 后保存对应配置', async ({ initialValue, nextValue, expectedValue }) => {
+    await renderInBrowser(GameConfigModal, {
+      browser: { i18nMode: 'lite' },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+        'initialValues': {
+          ...preparedModalProps.initialValues,
+          cubismMemoryReservedSize: initialValue,
+        },
+      },
+      global: { stubs: globalStubs },
+    })
+
+    const input = page.getByTestId('game-config-cubism-memory-reserved-size')
+    await expect.element(input).toHaveDisplayValue(String(initialValue))
+    await input.fill(nextValue)
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledTimes(1)
+      const savedEntries = setConfigMock.mock.calls[0][1].entries
+      expect(savedEntries.filter((entry: { key: string }) => entry.key === 'Cubism_Memory_Reserved_Size_MB'))
+        .toEqual(expectedValue === undefined ? [] : [{ key: 'Cubism_Memory_Reserved_Size_MB', value: expectedValue }])
+    })
+  })
+
+  it('Cubism 预留内存为零时显示校验信息并阻止保存', async () => {
+    await renderInBrowser(GameConfigModal, {
+      browser: { i18nMode: 'lite' },
+      props: {
+        'open': true,
+        'onUpdate:open': vi.fn(),
+        ...preparedModalProps,
+      },
+      global: { stubs: globalStubs },
+    })
+
+    await page.getByTestId('game-config-cubism-memory-reserved-size').fill('0')
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await expect.element(page.getByText('modals.gameConfig.validation.cubismMemoryReservedSizeInvalid')).toBeVisible()
+    expect(setConfigMock).not.toHaveBeenCalled()
   })
 
   it('多行简介会在输入阶段被压成单行后再保存', async () => {
