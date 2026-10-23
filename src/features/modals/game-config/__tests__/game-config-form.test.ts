@@ -16,6 +16,7 @@ const t = ((key: string) => key) as unknown as I18nT
 
 function createFormValues(overrides: Partial<GameConfigFormValues> = {}): GameConfigFormValues {
   return {
+    cubismMemoryReservedSize: '',
     defaultLanguage: '',
     description: '',
     enableAppreciation: false,
@@ -47,6 +48,57 @@ function createReadResult(overrides: Partial<GameConfigReadResult> = {}): GameCo
 }
 
 describe('gameConfigForm', () => {
+  it('Cubism 预留内存从已有配置读入专用字段并按原始键写回', () => {
+    const parsed = parseGameConfigFormValues(createReadResult({
+      entries: [
+        { key: 'Game_name', value: 'Demo' },
+        { key: 'Cubism_Memory_Reserved_Size_MB', value: '64.5' },
+        { key: 'Custom_flag', value: 'enabled' },
+      ],
+    }))
+
+    expect(parsed.cubismMemoryReservedSize).toBe(64.5)
+    expect(parsed.customConfig).toEqual([{ key: 'Custom_flag', value: 'enabled' }])
+    expect(serializeGameConfigEntries(parsed).entries).toContainEqual({
+      key: 'Cubism_Memory_Reserved_Size_MB',
+      value: '64.5',
+    })
+  })
+
+  it('Cubism 预留内存缺省或清空时不写入配置，沿用引擎默认值', () => {
+    const parsed = parseGameConfigFormValues(createReadResult())
+    expect(parsed.cubismMemoryReservedSize).toBe('')
+    expect(serializeGameConfigEntries(createFormValues()).entries.map(entry => entry.key))
+      .not.toContain('Cubism_Memory_Reserved_Size_MB')
+
+    const existing = parseGameConfigFormValues(createReadResult({
+      entries: [{ key: 'Cubism_Memory_Reserved_Size_MB', value: '64' }],
+    }))
+    existing.cubismMemoryReservedSize = ''
+    expect(serializeGameConfigEntries(existing).entries.map(entry => entry.key))
+      .not.toContain('Cubism_Memory_Reserved_Size_MB')
+  })
+
+  it.each<'' | number>(['', 0.5, 32, 64.5])('Cubism 预留内存允许留空或正数：%s', (value) => {
+    expect(createGameConfigSchema(t).safeParse(createFormValues({
+      cubismMemoryReservedSize: value,
+    })).success).toBe(true)
+  })
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('Cubism 预留内存拒绝非正数和非有限数值：%s', (value) => {
+    const result = createGameConfigSchema(t).safeParse(createFormValues({ cubismMemoryReservedSize: value }))
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ['cubismMemoryReservedSize'] }))
+    }
+  })
+
+  it('Cubism 预留内存不能再作为同名自定义项重复提交', () => {
+    expect(createGameConfigSchema(t).safeParse(createFormValues({
+      customConfig: [{ key: 'Cubism_Memory_Reserved_Size_MB', value: '64' }],
+    })).success).toBe(false)
+  })
+
   it('parseGameConfigFormValues 会把原始条目解析成表单可编辑值，并保留自定义项', () => {
     expect(parseGameConfigFormValues(createReadResult({
       entries: [

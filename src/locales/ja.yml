@@ -461,6 +461,10 @@ modals:
       legacyExpressionBlendMode:
         label: Live2D 旧式表情ブレンドモード
         description: 旧版 Live2D 表情ブレンドの互換オプションです。表情の表示が崩れる場合に有効にしてください。
+      cubismMemoryReservedSize:
+        label: Live2D 予約メモリ
+        unit: MiB
+        description: Cubism のメモリを事前に確保し、複数モデルの読み込み時の表示異常を軽減します。
       maxLine:
         description: テキストボックスに同時に表示する最大行数です
         label: テキストボックス最大行数
@@ -469,6 +473,7 @@ modals:
         label: テキストボックス行高
     validation:
       gameNameRequired: ゲーム名は空にできません
+      cubismMemoryReservedSizeInvalid: Live2D 予約メモリは正の数値にするか、空欄にしてください
       maxLineInvalid: テキストボックスの最大行数は正の整数にするか、空欄にしてください
       lineHeightInvalid: テキスト行の高さは正の数値にするか、空欄にしてください
       packageNameInvalid: パッケージ名は org.example.demo のような小文字のドット区切り識別子にするか、空欄にしてください

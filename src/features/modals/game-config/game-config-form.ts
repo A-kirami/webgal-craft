@@ -33,6 +33,7 @@ export const FLOWCHART_LOCKED_NODE_VISIBILITY_VALUES = ['all', 'node', 'none'] a
 export const DEFAULT_FLOWCHART_LOCKED_NODE_VISIBILITY = 'node'
 
 export interface GameConfigFormValues {
+  cubismMemoryReservedSize: '' | number
   customConfig: GameConfigEntry[]
   defaultLanguage: string
   description: string
@@ -54,6 +55,7 @@ export interface GameConfigFormValues {
 }
 
 const EMPTY_GAME_CONFIG_FORM_VALUES = {
+  cubismMemoryReservedSize: '',
   customConfig: [],
   defaultLanguage: '',
   description: '',
@@ -99,10 +101,10 @@ function createRequiredGameNameSchema(t: I18nT) {
     .min(1, { error: t('modals.gameConfig.validation.gameNameRequired') })
 }
 
-function createOptionalPositiveNumberSchema(t: I18nT) {
+function createOptionalPositiveNumberSchema(errorMessage: string) {
   return z.literal('').or(z.number()).refine(
     value => value === '' || isPositiveFiniteNumber(value),
-    { error: t('modals.gameConfig.validation.lineHeightInvalid') },
+    { error: errorMessage },
   ) satisfies z.ZodType<'' | number>
 }
 
@@ -299,6 +301,7 @@ export function createGameConfigKey(): string {
 
 export function createGameConfigSchema(t: I18nT) {
   return z.object({
+    cubismMemoryReservedSize: createOptionalPositiveNumberSchema(t('modals.gameConfig.validation.cubismMemoryReservedSizeInvalid')),
     customConfig: createCustomConfigSchema(t),
     defaultLanguage: createConfigValueSchema(t),
     description: createConfigValueSchema(t),
@@ -310,7 +313,7 @@ export function createGameConfigSchema(t: I18nT) {
     gameName: createRequiredGameNameSchema(t),
     gameLogo: z.array(createConfigValueSchema(t)),
     legacyExpressionBlendMode: z.boolean(),
-    lineHeight: createOptionalPositiveNumberSchema(t),
+    lineHeight: createOptionalPositiveNumberSchema(t('modals.gameConfig.validation.lineHeightInvalid')),
     maxLine: createOptionalPositiveIntegerSchema(t),
     packageName: createOptionalPackageNameSchema(t),
     showPanic: z.boolean(),
@@ -329,6 +332,7 @@ export function parseGameConfigFormValues(config: GameConfigReadResult): GameCon
   return {
     ...createEmptyGameConfigFormValues(),
     customConfig,
+    cubismMemoryReservedSize: parseOptionalNumberValue(readEntryValue(entryValueMap, 'Cubism_Memory_Reserved_Size_MB'), isPositiveFiniteNumber),
     defaultLanguage: readEntryValue(entryValueMap, 'Default_Language') ?? '',
     description: readEntryValue(entryValueMap, 'Description') ?? '',
     enableAppreciation: parseBooleanValue(readEntryValue(entryValueMap, 'Enable_Appreciation'), false),
@@ -409,6 +413,7 @@ export function serializeGameConfigEntries(values: GameConfigFormValues): GameCo
   )
   appendOptionalNumberEntry(entries, 'Max_line', values.maxLine)
   appendOptionalNumberEntry(entries, 'Line_height', values.lineHeight)
+  appendOptionalNumberEntry(entries, 'Cubism_Memory_Reserved_Size_MB', values.cubismMemoryReservedSize)
   appendOptionalStringEntry(entries, 'Steam_AppID', values.steamAppId)
   appendOptionalStringEntry(entries, 'Package_name', values.packageName)
   appendOptionalStringEntry(entries, 'Game_key', values.gameKey)

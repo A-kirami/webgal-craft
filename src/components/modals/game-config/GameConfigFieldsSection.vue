@@ -516,6 +516,41 @@ function scrollCustomAddButtonIntoView() {
 
       <FormField
         v-slot="{ handleChange, value }"
+        name="cubismMemoryReservedSize"
+        :validate-on-model-update="false"
+      >
+        <FormItem class="gap-x-2 gap-y-1 grid grid-cols-[1fr_auto] items-center">
+          <div class="flex flex-col gap-1">
+            <FormLabel for="game-config-cubism-memory-reserved-size">
+              {{ $t('modals.gameConfig.fields.cubismMemoryReservedSize.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.cubismMemoryReservedSize.description') }}
+            </FormDescription>
+          </div>
+          <FormControl>
+            <InputGroup class="w-26">
+              <InputGroupInput
+                id="game-config-cubism-memory-reserved-size"
+                data-testid="game-config-cubism-memory-reserved-size"
+                type="number"
+                step="any"
+                placeholder="32"
+                :model-value="value === '' ? '' : String(value ?? '')"
+                class="text-xs"
+                @update:model-value="handleOptionalNumberChange(handleChange, $event)"
+              />
+              <InputGroupAddon align="inline-end" class="text-xs">
+                {{ $t('modals.gameConfig.fields.cubismMemoryReservedSize.unit') }}
+              </InputGroupAddon>
+            </InputGroup>
+          </FormControl>
+          <FormMessage class="text-xs col-span-2" />
+        </FormItem>
+      </FormField>
+
+      <FormField
+        v-slot="{ handleChange, value }"
         name="maxLine"
         :validate-on-model-update="false"
       >
