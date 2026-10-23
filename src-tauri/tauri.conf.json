@@ -39,7 +39,17 @@
       "nsis": {
         "languages": ["English", "Japanese", "SimpChinese", "TradChinese"],
         "displayLanguageSelector": true,
-        "installerIcon": "icons/icon.ico"
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/installer/header.bmp",
+        "sidebarImage": "icons/installer/sidebar.bmp"
+      }
+    },
+    "macOS": {
+      "dmg": {
+        "background": "icons/installer/dmg-background.png",
+        "windowSize": { "width": 660, "height": 400 },
+        "appPosition": { "x": 174, "y": 196 },
+        "applicationFolderPosition": { "x": 486, "y": 196 }
       }
     },
     "createUpdaterArtifacts": true
