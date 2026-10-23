@@ -986,7 +986,7 @@ tryOnUnmounted(() => {
     </Tree>
   </ScrollArea>
 
-  <DragOverlay :visible="activeFileTreePayload !== undefined" :overlay-style="dragOverlayStyle">
+  <DragOverlay :visible="fileDragSource.isDragging.value && activeFileTreePayload !== undefined" :overlay-style="dragOverlayStyle">
     <div class="text-popover-foreground px-2 py-1.5 border border-border/70 rounded bg-popover flex gap-2 max-w-72 min-w-36 shadow-lg items-center" data-testid="file-tree-drag-preview">
       <div class="shrink-0 size-5 relative">
         <LucideFile

@@ -575,6 +575,32 @@ describe('FileTree', () => {
     }
   })
 
+  it('多个文件树保持挂载时只由拖拽源显示预览', async () => {
+    vi.useFakeTimers()
+    const hiddenTree = await renderFileTree({
+      enableDragTransfer: true,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [{ name: 'hidden.txt', path: '/project/hidden.txt' }],
+      rootPath: '/project',
+    })
+    hiddenTree.container.style.display = 'none'
+    await renderFileTree({
+      enableDragSource: true,
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [{ name: 'scene.txt', path: '/project/scene.txt' }],
+      rootPath: '/project',
+    })
+    const source = document.querySelector<HTMLElement>('[data-file-tree-path="/project/scene.txt"]')!
+    const finishDrag = await hoverDragTarget(source, document.body)
+
+    expect(useDragSession().state.value.isActive).toBe(true)
+    expect(page.getByTestId('file-tree-drag-preview').elements()).toHaveLength(1)
+    expect(page.getByTestId('file-tree-drag-preview').element().textContent).toContain('scene.txt')
+
+    await finishDrag()
+    expect(page.getByTestId('file-tree-drag-preview').elements()).toHaveLength(0)
+  })
+
   it('外部文件拖拽到目录子层级时会高亮目标目录及其子树', async () => {
     await renderFileTree({
       externalDropTargetPath: '/project/chapter',

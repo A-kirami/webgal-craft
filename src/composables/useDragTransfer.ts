@@ -22,6 +22,7 @@ export interface UseDragSourceOptions<TPayload extends DragPayload> {
 }
 
 export interface UseDragSourceReturn {
+  isDragging: Readonly<Ref<boolean>>
   sourceProps: () => {
     onClickCapture: (event: MouseEvent) => void
     onPointerdown: (event: PointerEvent) => void
@@ -215,6 +216,7 @@ export function useDragSource<TPayload extends DragPayload>(
   })
 
   return {
+    isDragging: pointerDrag.isDragging,
     sourceProps() {
       return {
         onClickCapture: (event: MouseEvent) => {
