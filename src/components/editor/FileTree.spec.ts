@@ -9,6 +9,9 @@ import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContex
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 
 const {
+  deleteFileMock,
+  isDesktopRuntimeMock,
+  preferenceStore,
   gameFsCopyFileMock,
   handleErrorMock,
   pathOperationPerformMock,
@@ -17,6 +20,9 @@ const {
   useTabsStoreMock,
   useWorkspaceStoreMock,
 } = vi.hoisted(() => ({
+  deleteFileMock: vi.fn(),
+  isDesktopRuntimeMock: vi.fn(),
+  preferenceStore: { skipDeleteFileConfirm: false },
   gameFsCopyFileMock: vi.fn(),
   handleErrorMock: vi.fn(),
   pathOperationPerformMock: vi.fn(),
@@ -28,10 +34,19 @@ const {
 
 vi.mock('~/services/game-fs', () => ({
   gameFs: {
+    deleteFile: deleteFileMock,
     copyFile: gameFsCopyFileMock,
     createFile: vi.fn(),
     createFolder: vi.fn(),
   },
+}))
+
+vi.mock(import('~/services/platform/runtime'), () => ({
+  isDesktopRuntime: isDesktopRuntimeMock,
+}))
+
+vi.mock(import('~/stores/preference'), () => ({
+  usePreferenceStore: Object.assign(vi.fn().mockReturnValue(preferenceStore), { $id: 'preference' as const }),
 }))
 
 vi.mock('~/services/path-operation', () => ({
@@ -504,6 +519,9 @@ describe('FileTree', () => {
   })
 
   beforeEach(() => {
+    deleteFileMock.mockReset().mockResolvedValue(undefined)
+    isDesktopRuntimeMock.mockReturnValue(true)
+    preferenceStore.skipDeleteFileConfirm = false
     vi.restoreAllMocks()
     gameFsCopyFileMock.mockReset()
     handleErrorMock.mockReset()
@@ -1070,6 +1088,50 @@ describe('FileTree', () => {
       sourcePath: '/project/second.txt',
       target: { type: 'name', name: 'renamed-second.txt' },
     }, expect.any(Function))
+  })
+
+  it.each([true, false])('启用跳过确认后 Delete 快捷键遵循平台限制（桌面端：%s）', async (isDesktop) => {
+    preferenceStore.skipDeleteFileConfirm = true
+    isDesktopRuntimeMock.mockReturnValue(isDesktop)
+    const modalStore = { open: vi.fn() }
+    useModalStoreMock.mockReturnValue(modalStore)
+    await renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [{ name: 'scene.txt', path: '/project/scene.txt' }],
+    })
+    await page.getByRole('treeitem').first().click()
+    await userEvent.keyboard('{Delete}')
+
+    if (isDesktop) {
+      await vi.waitFor(() => {
+        expect(deleteFileMock).toHaveBeenCalledWith('/project/scene.txt', false)
+      })
+      expect(modalStore.open).not.toHaveBeenCalled()
+    } else {
+      expect(modalStore.open).toHaveBeenCalledWith('DeleteFileModal', {
+        file: expect.objectContaining({ path: '/project/scene.txt' }),
+      })
+      expect(deleteFileMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it('跳过确认后快捷键删除失败会显示错误提示', async () => {
+    preferenceStore.skipDeleteFileConfirm = true
+    const error = new Error('delete failed')
+    deleteFileMock.mockRejectedValueOnce(error)
+    const modalStore = { open: vi.fn() }
+    useModalStoreMock.mockReturnValue(modalStore)
+    await renderFileTree({
+      getKey: (item: Record<string, unknown>) => String(item.path),
+      items: [{ name: 'scene.txt', path: '/project/scene.txt' }],
+    })
+    await page.getByRole('treeitem').first().click()
+    await userEvent.keyboard('{Delete}')
+
+    await vi.waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(error, { context: 'edit.fileTree.deleteFailed' })
+    })
+    expect(modalStore.open).not.toHaveBeenCalled()
   })
 
   it('按 Delete 会打开删除文件确认弹窗', async () => {

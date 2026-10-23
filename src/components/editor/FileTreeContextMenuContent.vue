@@ -19,7 +19,9 @@ import { backupManager } from '~/services/backup-manager'
 import { gameFs } from '~/services/game-fs'
 import { pathOperation } from '~/services/path-operation'
 import { createPathOperationRewriteConfirm } from '~/services/path-operation-confirm'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { useModalStore } from '~/stores/modal'
+import { usePreferenceStore } from '~/stores/preference'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { settleBatch } from '~/utils/batch'
 import { handleError } from '~/utils/error-handler'
@@ -60,6 +62,7 @@ const {
 
 const { clipboard, operationType, canPaste, setClipboard, clearClipboard } = $(useFileClipboard(clipboardKey))
 const modalStore = useModalStore()
+const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()
 const { t } = useI18n()
 const confirmPathOperationRewrite = createPathOperationRewriteConfirm(t)
@@ -154,7 +157,16 @@ function handleRename(): void {
   onRename?.(item)
 }
 
-function handleDelete(): void {
+async function handleDelete(): Promise<void> {
+  if (isDesktopRuntime() && preferenceStore.skipDeleteFileConfirm) {
+    try {
+      await gameFs.deleteFile(AbsPath.from(item.path), false)
+    } catch (error) {
+      handleError(error, { context: t('edit.fileTree.deleteFailed') })
+    }
+    return
+  }
+
   modalStore.open('DeleteFileModal', {
     file: item,
   })

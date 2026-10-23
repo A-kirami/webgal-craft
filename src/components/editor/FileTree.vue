@@ -10,7 +10,10 @@ import { normalizeFileTreeTransferItems } from '~/features/editor/file-tree/file
 import { useFileTreeController } from '~/features/editor/file-tree/useFileTreeController'
 import { useShortcut } from '~/features/editor/shortcut/useShortcut'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
+import { gameFs } from '~/services/game-fs'
+import { isDesktopRuntime } from '~/services/platform/runtime'
 import { useModalStore } from '~/stores/modal'
+import { usePreferenceStore } from '~/stores/preference'
 import { FileViewerSortBy, FileViewerSortOrder } from '~/types/file-viewer'
 import { handleError } from '~/utils/error-handler'
 
@@ -84,6 +87,7 @@ const emit = defineEmits<{
 
 const selectedItem = defineModel<T>('selectedItem')
 const modalStore = useModalStore()
+const preferenceStore = usePreferenceStore()
 const dragSession = useDragSession()
 const dropRegistry = useDroppableRegistry()
 
@@ -746,13 +750,22 @@ function handleShortcutRename() {
   handleContextMenuRename(fileItem)
 }
 
-function handleShortcutDelete() {
+async function handleShortcutDelete() {
   if (!enableContextMenu) {
     return
   }
 
   const fileItem = toShortcutTargetFileItem()
   if (!fileItem || isOperationDisabledForSelection(fileItem.path)) {
+    return
+  }
+
+  if (isDesktopRuntime() && preferenceStore.skipDeleteFileConfirm) {
+    try {
+      await gameFs.deleteFile(AbsPath.from(fileItem.path), false)
+    } catch (error) {
+      handleError(error, { context: t('edit.fileTree.deleteFailed') })
+    }
     return
   }
 
