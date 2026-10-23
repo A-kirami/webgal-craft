@@ -466,8 +466,10 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByTestId('preview-missing-entry-overlay')).toHaveRole('alert')
     expect(document.querySelector('iframe')).toBeNull()
     expect(document.querySelector('[data-testid="preview-connection-status"]')).toBeNull()
-    expect(document.querySelector('[data-testid="preview-bottom-toolbar"]')).toBeNull()
-    expect(document.querySelector('[data-testid="preview-resolution"]')).toBeNull()
+    await expect.element(page.getByTestId('preview-bottom-toolbar')).toBeVisible()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomOut' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.zoomIn' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.fitToView' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' })).toBeDisabled()
     await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
     expect(startEmbeddedPreviewConnectionMock).not.toHaveBeenCalled()
@@ -624,11 +626,29 @@ describe('PreviewPanel', () => {
     expect(iframe.style.pointerEvents).toBe('')
   })
 
+  it('底部工具栏固定在视口下方并使用画布区域背景色', async () => {
+    await renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    const viewport = page.getByTestId('preview-viewport').element()
+    const toolbar = page.getByTestId('preview-bottom-toolbar').element()
+    const resolution = page.getByTestId('preview-resolution').element()
+
+    expect(viewport.nextElementSibling).toBe(toolbar)
+    expect(toolbar.contains(resolution)).toBe(true)
+    expect(getComputedStyle(toolbar).position).toBe('static')
+    expect(toolbar.classList.contains('bg-muted')).toBe(true)
+  })
+
   it.each([
     ['放大按钮', (root: HTMLElement) => root.querySelectorAll('button')[1]],
     ['缩放百分比读数', (root: HTMLElement) => root.querySelector('[data-testid="preview-bottom-toolbar"] output')],
     ['工具栏空白处', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')],
-  ])('空格平移模式下按在悬浮工具栏的%s上不会启动视口平移', async (_name, resolveTarget) => {
+  ])('空格平移模式下按在底部工具栏的%s上不会启动视口平移', async (_name, resolveTarget) => {
     const rendered = await renderInBrowser(PreviewPanel, {
       global: {
         plugins: [createPreviewPanelLiteI18n()],
