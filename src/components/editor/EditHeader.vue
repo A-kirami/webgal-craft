@@ -112,6 +112,11 @@ async function saveBeforeBackground() {
 
   try {
     await leaveHook?.flush()
+  } catch (error) {
+    handleError(error)
+  }
+
+  try {
     await saveDirtyDocumentsUnder(currentGamePath)
   } catch (error) {
     handleError(error)

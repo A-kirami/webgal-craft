@@ -3,6 +3,7 @@ import { page } from 'vitest/browser'
 import { defineComponent, h, reactive } from 'vue'
 
 import { createBrowserClickStub, renderInBrowser } from '~/__tests__/browser-render'
+import { EDITOR_LEAVE_HOOK_KEY } from '~/features/editor/leave-hook'
 
 import EditHeader from './EditHeader.vue'
 
@@ -20,6 +21,7 @@ const {
   getDirtyBufferContentMock,
   getByLabelMock,
   hasUnsavedDocumentsUnderMock,
+  handleErrorMock,
   isAndroidRuntimeMock,
   isDesktopRuntimeMock,
   loggerErrorMock,
@@ -38,6 +40,7 @@ const {
   getDirtyBufferContentMock: vi.fn(),
   getByLabelMock: vi.fn(),
   hasUnsavedDocumentsUnderMock: vi.fn(),
+  handleErrorMock: vi.fn(),
   isAndroidRuntimeMock: vi.fn(() => false),
   isDesktopRuntimeMock: vi.fn(() => true),
   loggerErrorMock: vi.fn(),
@@ -116,8 +119,8 @@ vi.mock('vue-sonner', () => ({
   },
 }))
 
-vi.mock('~/utils/error-handler', () => ({
-  handleError: vi.fn(),
+vi.mock(import('~/utils/error-handler'), () => ({
+  handleError: handleErrorMock,
 }))
 
 function createAssetImageStub() {
@@ -175,6 +178,7 @@ describe('EditHeader', () => {
     getDirtyBufferContentMock.mockReset()
     getByLabelMock.mockReset()
     hasUnsavedDocumentsUnderMock.mockReset()
+    handleErrorMock.mockReset()
     isAndroidRuntimeMock.mockReset()
     loggerErrorMock.mockReset()
     modalOpenMock.mockReset()
@@ -389,6 +393,45 @@ describe('EditHeader', () => {
       expect(saveFileMock).toHaveBeenCalledOnce()
       expect(saveFileMock).toHaveBeenCalledWith('/games/test/scene/a.txt')
     })
+  })
+
+  it.each(['flowchart', 'documents', 'both'])('Android 后台保存 %s 失败时仍尝试两项保存并分别报错', async (failure) => {
+    isAndroidRuntimeMock.mockReturnValue(true)
+    isDesktopRuntimeMock.mockReturnValue(false)
+    collectDocumentPathsUnderMock.mockReturnValue(['/games/test/scene/a.txt'])
+    getDirtyBufferContentMock.mockReturnValue('dirty')
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    const flush = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+    const flowchartError = new Error('流程图保存失败')
+    const documentError = new Error('文档保存失败')
+    if (failure !== 'documents') {
+      flush.mockRejectedValue(flowchartError)
+    }
+    if (failure !== 'flowchart') {
+      saveFileMock.mockRejectedValue(documentError)
+    }
+
+    await renderInBrowser(EditHeader, {
+      browser: { i18nMode: 'lite' },
+      global: {
+        stubs: globalStubs,
+        provide: { [EDITOR_LEAVE_HOOK_KEY as symbol]: { flush } },
+      },
+    })
+
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    await vi.waitFor(() => {
+      expect(flush).toHaveBeenCalledOnce()
+      expect(saveFileMock).toHaveBeenCalledExactlyOnceWith('/games/test/scene/a.txt')
+      expect(handleErrorMock).toHaveBeenCalledTimes(failure === 'both' ? 2 : 1)
+    })
+    if (failure !== 'documents') {
+      expect(handleErrorMock).toHaveBeenCalledWith(flowchartError)
+    }
+    if (failure !== 'flowchart') {
+      expect(handleErrorMock).toHaveBeenCalledWith(documentError)
+    }
   })
 
   it('桌面端不会注册 Android 系统返回键', async () => {
