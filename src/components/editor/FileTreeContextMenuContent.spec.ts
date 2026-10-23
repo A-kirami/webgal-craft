@@ -10,6 +10,11 @@ import {
 import FileTreeContextMenuContent from './FileTreeContextMenuContent.vue'
 
 const {
+  deleteFileMock,
+  handleErrorMock,
+  isDesktopRuntimeMock,
+  preferenceStore,
+  modalOpenMock,
   clearClipboardMock,
   createErrorMock,
   loggerMock,
@@ -18,6 +23,11 @@ const {
   reportWarningsMock,
   toastMock,
 } = vi.hoisted(() => ({
+  deleteFileMock: vi.fn(),
+  handleErrorMock: vi.fn(),
+  isDesktopRuntimeMock: vi.fn(),
+  preferenceStore: { skipDeleteFileConfirm: false },
+  modalOpenMock: vi.fn(),
   clearClipboardMock: vi.fn(),
   createErrorMock: vi.fn((error: unknown) => error),
   loggerMock: {
@@ -69,6 +79,7 @@ vi.mock('~/features/editor/file-tree/useFileClipboard', () => ({
 
 vi.mock('~/services/game-fs', () => ({
   gameFs: {
+    deleteFile: deleteFileMock,
     copyFile: vi.fn(),
   },
 }))
@@ -89,6 +100,22 @@ vi.mock('~/stores/workspace', () => ({
   })),
 }))
 
+vi.mock(import('~/services/platform/runtime'), () => ({
+  isDesktopRuntime: isDesktopRuntimeMock,
+}))
+
+vi.mock(import('~/utils/error-handler'), () => ({
+  handleError: handleErrorMock,
+}))
+
+vi.mock(import('~/stores/preference'), () => ({
+  usePreferenceStore: Object.assign(vi.fn().mockReturnValue(preferenceStore), { $id: 'preference' as const }),
+}))
+
+vi.mock(import('~/stores/modal'), () => ({
+  useModalStore: Object.assign(vi.fn().mockReturnValue({ open: modalOpenMock }), { $id: 'modal' as const }),
+}))
+
 const globalStubs = {
   ContextMenuItem: createBrowserClickStub('StubContextMenuItem'),
   ContextMenuSeparator: createBrowserContainerStub('StubContextMenuSeparator', 'hr'),
@@ -96,6 +123,11 @@ const globalStubs = {
 
 describe('FileTreeContextMenuContent', () => {
   beforeEach(() => {
+    deleteFileMock.mockReset().mockResolvedValue(undefined)
+    handleErrorMock.mockReset()
+    isDesktopRuntimeMock.mockReturnValue(true)
+    preferenceStore.skipDeleteFileConfirm = false
+    modalOpenMock.mockReset()
     clearClipboardMock.mockReset()
     createErrorMock.mockReset()
     createErrorMock.mockImplementation((error: unknown) => error)
@@ -110,6 +142,57 @@ describe('FileTreeContextMenuContent', () => {
       plan: undefined,
       warnings: [],
     })
+  })
+
+  it.each([true, false])('启用跳过确认后删除时遵循平台限制（桌面端：%s）', async (isDesktop) => {
+    isDesktopRuntimeMock.mockReturnValue(isDesktop)
+    await renderInBrowser(FileTreeContextMenuContent, {
+      props: { item: { name: 'scene.txt', path: '/project/scene.txt' } },
+      global: { stubs: globalStubs },
+    })
+    preferenceStore.skipDeleteFileConfirm = true
+    await page.getByText('common.delete').click()
+
+    if (isDesktop) {
+      await vi.waitFor(() => {
+        expect(deleteFileMock).toHaveBeenCalledWith('/project/scene.txt', false)
+      })
+      expect(modalOpenMock).not.toHaveBeenCalled()
+    } else {
+      expect(modalOpenMock).toHaveBeenCalledWith('DeleteFileModal', {
+        file: expect.objectContaining({ path: '/project/scene.txt' }),
+      })
+      expect(deleteFileMock).not.toHaveBeenCalled()
+    }
+  })
+
+  it('跳过确认后删除失败会显示错误提示', async () => {
+    preferenceStore.skipDeleteFileConfirm = true
+    const error = new Error('delete failed')
+    deleteFileMock.mockRejectedValueOnce(error)
+    await renderInBrowser(FileTreeContextMenuContent, {
+      props: { item: { name: 'scene.txt', path: '/project/scene.txt' } },
+      global: { stubs: globalStubs },
+    })
+    await page.getByText('common.delete').click()
+
+    await vi.waitFor(() => {
+      expect(handleErrorMock).toHaveBeenCalledWith(error, { context: 'edit.fileTree.deleteFailed' })
+    })
+    expect(modalOpenMock).not.toHaveBeenCalled()
+  })
+
+  it('未启用跳过确认时右键删除仍打开确认弹窗', async () => {
+    await renderInBrowser(FileTreeContextMenuContent, {
+      props: { item: { name: 'scene.txt', path: '/project/scene.txt' } },
+      global: { stubs: globalStubs },
+    })
+    await page.getByText('common.delete').click()
+
+    expect(modalOpenMock).toHaveBeenCalledWith('DeleteFileModal', {
+      file: { name: 'scene.txt', path: '/project/scene.txt' },
+    })
+    expect(deleteFileMock).not.toHaveBeenCalled()
   })
 
   it('cut 粘贴被取消时不会清空剪贴板，也不会显示成功提示', async () => {
