@@ -40,6 +40,10 @@ watch(isEditingTitle, (editing) => {
 }, { immediate: true })
 
 function commitTitle() {
+  if (!isEditingTitle.value) {
+    return
+  }
+
   const nextTitle = draftTitle.trim()
   if (!nextTitle) {
     nodeContext.cancelTitleEdit()

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { page, userEvent } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, ref } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
 import { FLOWCHART_NODE_CONTEXT_KEY } from '~/features/editor/flowchart/flowchart-node-view'
@@ -116,6 +116,33 @@ describe('FlowchartNodeView', () => {
 
     expect(context.commitTitle).not.toHaveBeenCalled()
     expect(context.cancelTitleEdit).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { key: '{Escape}', commits: 0 },
+    { key: '{Enter}', commits: 1 },
+  ])('按 $key 结束编辑时不会因失焦再次提交标题', async ({ key, commits }) => {
+    const editing = ref(true)
+    const context = createContext({
+      cancelTitleEdit: vi.fn(() => {
+        editing.value = false
+      }),
+      commitTitle: vi.fn(() => {
+        editing.value = false
+      }),
+      isTitleEditing: () => editing.value,
+    })
+    await renderNode({ context })
+    const input = page.getByRole('textbox', { name: 'edit.flowchart.node.titleInputLabel' })
+    await input.fill('新的标题')
+
+    await userEvent.keyboard(key)
+
+    expect(context.commitTitle).toHaveBeenCalledTimes(commits)
+    if (commits) {
+      expect(context.commitTitle).toHaveBeenCalledWith('node-1', '新的标题')
+    }
+    await expect.element(input).not.toBeInTheDocument()
   })
 
   it('未绑定场景时显示提示，选择文件后交给会话绑定', async () => {
