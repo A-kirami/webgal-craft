@@ -65,7 +65,7 @@ function lastDriverOptions(): TourDriverOptions {
   return options
 }
 
-/** 真实 driver.js 的 destroy 会同步触发 onDestroyed，mock 保持同样行为 */
+/** 模拟高亮动画完成后 driver.js 的同步销毁回调。 */
 function destroyDriver(): void {
   lastDriverOptions().onDestroyed?.(
     undefined,
@@ -344,9 +344,10 @@ describe('useOnboardingTour', () => {
 
   it('complete 销毁进行中的引导并记为完成', async () => {
     const completedVersion = ref('')
+    const onDriverDestroyed = vi.fn()
     useStorageMock.mockImplementation(() => completedVersion)
 
-    const tour = mountTour()
+    const tour = mountTour({ onDriverDestroyed })
     isReady.value = true
     await nextTick()
 
@@ -354,6 +355,7 @@ describe('useOnboardingTour', () => {
 
     expect(driverMock.destroy).toHaveBeenCalledTimes(1)
     expect(completedVersion.value).toBe(PERSISTENCE.version)
+    expect(onDriverDestroyed).toHaveBeenCalledTimes(1)
   })
 
   it('驱动销毁后执行额外的清理回调', async () => {
@@ -365,6 +367,47 @@ describe('useOnboardingTour', () => {
     driverMock.destroy()
 
     expect(onDriverDestroyed).toHaveBeenCalledTimes(1)
+  })
+
+  it('首步尚未完成高亮时跳过也会释放占位、记录完成并清理一次', async () => {
+    const onDriverDestroyed = vi.fn()
+    const nextReady = ref(true)
+    mountTour({ onDriverDestroyed })
+    isReady.value = true
+    await nextTick()
+    mountTourWithReady(nextReady, { storageKey: 'tour-next-version', version: '1' })
+    await nextTick()
+    expect(createTourDriverMock).toHaveBeenCalledTimes(1)
+
+    // 首步动画期间 destroy 不会回调 onDestroyed。
+    driverMock.destroy.mockImplementationOnce(() => undefined)
+    lastDriverOptions().overrides?.onDestroyStarted?.(
+      undefined,
+      {} as DriveStep,
+      {} as Parameters<DestroyedHook>[2],
+    )
+    await nextTick()
+
+    expect(isTourCompleted(PERSISTENCE)).toBe(true)
+    expect(onDriverDestroyed).toHaveBeenCalledTimes(1)
+    expect(createTourDriverMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('首步尚未完成高亮时让位也会清理，恢复后重新启动', async () => {
+    const onDriverDestroyed = vi.fn()
+    mountTour({ onDriverDestroyed })
+    isReady.value = true
+    await nextTick()
+
+    driverMock.destroy.mockImplementationOnce(() => undefined)
+    isReady.value = false
+    await nextTick()
+
+    expect(onDriverDestroyed).toHaveBeenCalledTimes(1)
+    expect(isTourCompleted(PERSISTENCE)).toBe(false)
+    isReady.value = true
+    await nextTick()
+    expect(driverMock.drive).toHaveBeenCalledTimes(2)
   })
 
   it('步骤钩子通过控制面推进当前引导', async () => {

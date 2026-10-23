@@ -46,14 +46,14 @@ describe('buildArgumentCompletionInfo', () => {
     expect(keysFor(commandType.say)).toEqual(expect.arrayContaining(['when', 'left', 'right', 'center']))
   })
 
-  it('补全 Terre 4.6.3 场景语义参数与命令', () => {
+  it('补全 WebGAL 4.6.3 场景语义参数与命令', () => {
     expect(keysFor(commandType.setVar)).toContain('local')
     expect(keysFor(commandType.callScene)).toContain('writeReturnTo')
     expect(keysFor(commandType.callScene)).not.toContain('when')
     expect(buildCommandCompletionInfo(t).map(item => item.commandRaw)).toContain('return')
   })
 
-  it('旧运行时不显示 Terre 4.6.3 场景语义补全', () => {
+  it('旧运行时不显示 WebGAL 4.6.3 场景语义补全', () => {
     const legacySetVarKeys = buildArgumentCompletionInfo(commandType.setVar, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.key)
     expect(legacySetVarKeys).toContain('global')

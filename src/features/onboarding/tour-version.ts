@@ -9,6 +9,7 @@ export const TOUR_PERSISTENCE = {
   editorWorkspace: { storageKey: 'tour-editor-workspace-version', version: '1' },
   effectEditor: { storageKey: 'tour-effect-editor-version', version: '1' },
   engines: { storageKey: 'tour-engines-version', version: '1' },
+  flowchart: { storageKey: 'tour-flowchart-version', version: '1' },
   home: { storageKey: 'tour-home-version', version: '1' },
   resourceSwitch: { storageKey: 'tour-resource-switch-version', version: '1' },
   sidebarCollapse: { storageKey: 'tour-sidebar-collapse-version', version: '1' },

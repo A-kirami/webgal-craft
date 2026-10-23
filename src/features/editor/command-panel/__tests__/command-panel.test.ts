@@ -36,7 +36,7 @@ describe('commandPanel', () => {
     expect(favoriteCommands.every(entry => commandEntries.includes(entry))).toBe(true)
   })
 
-  it('旧运行时隐藏仅在 Terre 4.6.3 中支持的命令', () => {
+  it('旧运行时隐藏仅在 WebGAL 4.6.3 中支持的命令', () => {
     const entries = resolveCommandPanelVisibleCommands(
       'scene',
       [],

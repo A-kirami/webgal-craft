@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import FlowchartEditor from '~/components/editor/flowchart/FlowchartEditor.vue'
 import { ResizablePanel } from '~/components/ui/resizable'
 import { useAnimationTableSyncBootstrap } from '~/features/editor/animation/useAnimationTableSyncBootstrap'
 import { querySentenceResourceReferences } from '~/features/editor/command-registry/diagnostics'
 import { useEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
+import { useFlowchartWorkspace } from '~/features/editor/flowchart/useFlowchartWorkspace'
+import { EDITOR_LEAVE_HOOK_KEY } from '~/features/editor/leave-hook'
 import { useExternalPreviewReadySync } from '~/features/editor/preview/useExternalPreviewReadySync'
 import { createEditorShortcutDefinitions } from '~/features/editor/shortcut/definitions'
 import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContext'
@@ -29,6 +32,8 @@ import { usePreferenceStore } from '~/stores/preference'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
+import type { EditorViewMode } from '~/features/editor/view-mode'
+
 interface EditorPanelHandle {
   expandCommandPanel?: () => void
   toggleCommandPanel?: () => void
@@ -41,12 +46,35 @@ const preferenceStore = usePreferenceStore()
 const workspaceStore = useWorkspaceStore()
 const router = useRouter()
 const editorPanelRef = useTemplateRef<EditorPanelHandle>('editorPanel')
+
+// 编辑页局部视图状态：进入编辑页、刷新或切换项目都回到场景视图
+let viewMode = $ref<EditorViewMode>('scene')
+const flowchartWorkspace = useFlowchartWorkspace({
+  gamePath: computed(() => workspaceStore.currentGame?.path),
+})
 const effectEditorProvider = useEffectEditorProvider()
 const transformOverlayBridge = useTransformOverlayBridge({
   provider: effectEditorProvider,
 })
 
 provide(TRANSFORM_OVERLAY_BRIDGE_KEY, transformOverlayBridge)
+
+// 流程图自动保存有防抖窗口，离开页面前必须把它写入完成，否则工作区上下文已被替换
+provide(EDITOR_LEAVE_HOOK_KEY, {
+  flush: () => flowchartWorkspace.flush(),
+})
+
+async function flushBeforeNavigation() {
+  try {
+    await flowchartWorkspace.flush()
+  } catch (error) {
+    handleError(error)
+    return false
+  }
+}
+
+onBeforeRouteLeave(flushBeforeNavigation)
+onBeforeRouteUpdate(flushBeforeNavigation)
 
 let pendingEditExit: Promise<void> | undefined
 
@@ -75,6 +103,10 @@ useResourceSwitchTour()
 useSidebarCollapseTour()
 
 // 进入工作区时即时校验：失效则进入阻断式恢复弹窗，由用户决定重试 / 重链接 / 返回主页
+watch(() => workspaceStore.currentGame?.id, () => {
+  viewMode = 'scene'
+})
+
 watch(() => workspaceStore.currentGame?.id, async (gameId) => {
   if (!gameId) {
     return
@@ -172,18 +204,27 @@ function toggleCommandPanel() {
 }
 
 function toggleSidebar() {
-  if (!editorStore.isCurrentSceneFile) {
+  if (viewMode !== 'scene' || !editorStore.isCurrentSceneFile) {
     return
   }
 
   preferenceStore.showSidebar = !preferenceStore.showSidebar
 }
 
+// 场景编辑的布局偏好只属于场景视图，流程页快捷键不得改动它
 function togglePreviewPanel() {
+  if (viewMode !== 'scene') {
+    return
+  }
+
   preferenceStore.showPreviewPanel = !preferenceStore.showPreviewPanel
 }
 
 function setLeftPanelView(view: 'resource' | 'scene') {
+  if (viewMode !== 'scene') {
+    return
+  }
+
   preferenceStore.leftPanelView = view
 }
 
@@ -211,9 +252,20 @@ useShortcutContext({
 
 <template>
   <div class="bg-background flex flex-col overflow-hidden">
-    <EditHeader />
+    <EditHeader ::view-mode="viewMode" />
+    <FlowchartEditor
+      v-if="viewMode === 'flowchart'"
+      :workspace="flowchartWorkspace"
+    />
+    <!--
+      场景视图只隐藏、不卸载：流程页只是临时配置，切回来时不能重建 Monaco，也不能丢掉预览会话。
+      不能用 KeepAlive——它把子树移进脱离文档的缓存容器，iframe 的浏览上下文会被销毁，预览照样重新加载。
+      流程画布仍按需挂载：它依赖尺寸测量与全局撤销/删除监听，隐藏存活的实例会算错坐标。
+    -->
     <ResizablePanelGroup
+      v-show="viewMode === 'scene'"
       auto-save-id="editor-main"
+      class="flex-1 min-h-0"
       direction="horizontal"
     >
       <!-- 左栏（预览 + 场景/资源） -->

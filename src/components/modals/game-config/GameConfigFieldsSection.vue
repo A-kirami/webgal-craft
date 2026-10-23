@@ -4,7 +4,12 @@ import { useFieldArray } from 'vee-validate'
 
 import { FormField } from '~/components/ui/form'
 import { AUDIO_EXTENSIONS } from '~/features/editor/command-registry/common-params'
-import { createGameConfigKey, GAME_CONFIG_DEFAULT_LANGUAGES } from '~/features/modals/game-config/game-config-form'
+import {
+  createGameConfigKey,
+  DEFAULT_FLOWCHART_LOCKED_NODE_VISIBILITY,
+  FLOWCHART_LOCKED_NODE_VISIBILITY_VALUES,
+  GAME_CONFIG_DEFAULT_LANGUAGES,
+} from '~/features/modals/game-config/game-config-form'
 
 import type { AbsPath } from '~/domain/path'
 import type {
@@ -20,6 +25,8 @@ interface Props {
 }
 
 defineProps<Props>()
+
+const { t } = useI18n()
 
 // “自动检测”选项需要一个非空取值，这里用含分号的哨兵：引擎在分号处截断取值，表单校验也拒绝分号，
 // 因此它不可能与 Default_Language 的真实取值重名。
@@ -50,6 +57,25 @@ const defaultLanguageOptions = GAME_CONFIG_DEFAULT_LANGUAGES.map(value => ({
 }))
 
 const SUPPORTED_DEFAULT_LANGUAGES: ReadonlySet<string> = new Set(GAME_CONFIG_DEFAULT_LANGUAGES)
+
+// 引擎可能新增取值：编辑器不认识的取值按原样保留，避免保存时把它改回默认值
+function isSupportedLockedNodeVisibility(value: unknown): boolean {
+  return typeof value === 'string' && (FLOWCHART_LOCKED_NODE_VISIBILITY_VALUES as readonly string[]).includes(value)
+}
+
+function lockedNodeVisibilityLabel(value: string): string {
+  switch (value) {
+    case 'all': {
+      return t('modals.gameConfig.fields.flowchartLockedNodeVisibility.options.all')
+    }
+    case 'none': {
+      return t('modals.gameConfig.fields.flowchartLockedNodeVisibility.options.none')
+    }
+    default: {
+      return t('modals.gameConfig.fields.flowchartLockedNodeVisibility.options.node')
+    }
+  }
+}
 
 function handleOptionalNumberChange(handleChange: (value: '' | number) => void, nextValue: string | number) {
   if (nextValue === '') {
@@ -363,6 +389,78 @@ function scrollCustomAddButtonIntoView() {
               />
             </FormControl>
           </div>
+        </FormItem>
+      </FormField>
+
+      <FormField
+        v-slot="{ handleChange, value }"
+        name="enableFlowchart"
+      >
+        <FormItem
+          data-testid="game-config-enable-flowchart-row"
+          class="flex flex-row gap-2 items-center justify-between"
+        >
+          <div class="flex flex-col gap-1">
+            <FormLabel>{{ $t('modals.gameConfig.fields.enableFlowchart.label') }}</FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.enableFlowchart.description') }}
+            </FormDescription>
+          </div>
+          <div class="flex flex-col gap-1 items-end">
+            <FormControl>
+              <Switch
+                :model-value="Boolean(value)"
+                @update:model-value="handleChange"
+              />
+            </FormControl>
+          </div>
+        </FormItem>
+      </FormField>
+
+      <FormField
+        v-slot="{ handleChange, value }"
+        name="flowchartLockedNodeVisibility"
+      >
+        <FormItem class="gap-x-2 gap-y-1 grid grid-cols-[1fr_auto] items-center">
+          <div class="flex flex-col gap-1">
+            <FormLabel>
+              {{ $t('modals.gameConfig.fields.flowchartLockedNodeVisibility.label') }}
+            </FormLabel>
+            <FormDescription class="text-xs">
+              {{ $t('modals.gameConfig.fields.flowchartLockedNodeVisibility.description') }}
+            </FormDescription>
+          </div>
+          <Select
+            data-testid="game-config-flowchart-locked-node-visibility"
+            :model-value="typeof value === 'string' && value ? value : DEFAULT_FLOWCHART_LOCKED_NODE_VISIBILITY"
+            @update:model-value="handleChange($event)"
+          >
+            <FormControl>
+              <SelectTrigger
+                data-testid="game-config-flowchart-locked-node-visibility-trigger"
+                class="text-xs h-8 min-w-28 w-40"
+              >
+                <SelectValue />
+              </SelectTrigger>
+            </FormControl>
+            <SelectContent>
+              <SelectItem
+                v-for="option in FLOWCHART_LOCKED_NODE_VISIBILITY_VALUES"
+                :key="option"
+                class="text-xs py-1.5"
+                :value="option"
+              >
+                {{ lockedNodeVisibilityLabel(option) }}
+              </SelectItem>
+              <SelectItem
+                v-if="typeof value === 'string' && value !== '' && !isSupportedLockedNodeVisibility(value)"
+                class="text-xs py-1.5"
+                :value="value"
+              >
+                {{ value }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </FormItem>
       </FormField>
 

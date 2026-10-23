@@ -13,6 +13,8 @@ const {
   ensureEditorRuntimeCompatibleMock,
   handleErrorMock,
   modalOpenMock,
+  onBeforeRouteLeaveMock,
+  onBeforeRouteUpdateMock,
   querySentenceResourceReferencesMock,
   retryActiveDocumentMock,
   requestGameRuntimeRebindMock,
@@ -20,6 +22,7 @@ const {
   useAnimationTableSyncBootstrapMock,
   useEditorStoreMock,
   useFileStoreMock,
+  useFlowchartWorkspaceMock,
   useModalStoreMock,
   usePreferenceStoreMock,
   useResourceIndexMock,
@@ -32,6 +35,8 @@ const {
   ensureEditorRuntimeCompatibleMock: vi.fn(),
   handleErrorMock: vi.fn(),
   modalOpenMock: vi.fn(),
+  onBeforeRouteLeaveMock: vi.fn<(guard: () => Promise<false | undefined>) => void>(),
+  onBeforeRouteUpdateMock: vi.fn<(guard: () => Promise<false | undefined>) => void>(),
   querySentenceResourceReferencesMock: vi.fn(() => []),
   requestGameRuntimeRebindMock: vi.fn(),
   retryActiveDocumentMock: vi.fn(),
@@ -39,6 +44,9 @@ const {
   useAnimationTableSyncBootstrapMock: vi.fn(),
   useEditorStoreMock: vi.fn(),
   useFileStoreMock: vi.fn(),
+  useFlowchartWorkspaceMock: vi.fn(() => ({
+    flush: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+  })),
   useModalStoreMock: vi.fn(),
   usePreferenceStoreMock: vi.fn(),
   useResourceIndexMock: vi.fn(),
@@ -51,6 +59,16 @@ const {
 vi.mock('~/components/ui/resizable', () => ({
   ResizablePanel: {
     name: 'StubResizablePanel',
+    setup() {
+      return () => undefined
+    },
+  },
+}))
+
+vi.mock('~/components/editor/flowchart/FlowchartEditor.vue', () => ({
+  default: {
+    name: 'StubFlowchartEditor',
+    props: ['workspace'],
     setup() {
       return () => undefined
     },
@@ -111,6 +129,10 @@ vi.mock('~/components/ui/resizable/ResizablePanelGroup.vue', () => ({
   },
 }))
 
+vi.mock('~/features/editor/flowchart/useFlowchartWorkspace', () => ({
+  useFlowchartWorkspace: useFlowchartWorkspaceMock,
+}))
+
 vi.mock('~/features/editor/animation/useAnimationTableSyncBootstrap', () => ({
   useAnimationTableSyncBootstrap: useAnimationTableSyncBootstrapMock,
 }))
@@ -161,6 +183,7 @@ vi.mock('~/services/game-manager', () => ({
 }))
 
 vi.mock('@tauri-apps/plugin-log', () => ({
+  error: vi.fn(),
   warn: vi.fn(),
 }))
 
@@ -182,6 +205,8 @@ vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-reb
 })
 
 vi.mock('vue-router', () => ({
+  onBeforeRouteLeave: onBeforeRouteLeaveMock,
+  onBeforeRouteUpdate: onBeforeRouteUpdateMock,
   useRouter: () => ({
     replace: routerReplaceMock,
   }),
@@ -224,6 +249,9 @@ describe('edit/[gameId]', () => {
     useAnimationTableSyncBootstrapMock.mockReset()
     useEditorStoreMock.mockReset()
     useFileStoreMock.mockReset()
+    useFlowchartWorkspaceMock.mockClear()
+    onBeforeRouteLeaveMock.mockClear()
+    onBeforeRouteUpdateMock.mockClear()
     useModalStoreMock.mockReset()
     usePreferenceStoreMock.mockReset()
     useResourceIndexMock.mockReset()
@@ -289,6 +317,34 @@ describe('edit/[gameId]', () => {
 
     expect(useResourceIndexBootstrapMock).toHaveBeenCalledOnce()
     expect(useResourceIndexBootstrapMock).toHaveBeenCalledWith(querySentenceResourceReferencesMock)
+  })
+
+  it.each([
+    ['离开编辑页', onBeforeRouteLeaveMock],
+    ['切换游戏', onBeforeRouteUpdateMock],
+  ])('%s 前等待流程图保存，失败时阻止导航，重试成功后放行', async (_name, registerGuard) => {
+    await renderEditView()
+    const { flush } = useFlowchartWorkspaceMock.mock.results[0]!.value
+    const guard = registerGuard.mock.calls[0]![0]
+    let finishSave!: () => void
+    flush.mockReturnValueOnce(new Promise<void>((resolve) => {
+      finishSave = resolve
+    }))
+    let completed = false
+    const navigation = guard().then((result) => {
+      completed = true
+      return result
+    })
+    await Promise.resolve()
+    expect(completed).toBe(false)
+    finishSave()
+    await expect(navigation).resolves.toBeUndefined()
+
+    const failure = new Error('写盘失败')
+    flush.mockRejectedValueOnce(failure)
+    await expect(guard()).resolves.toBe(false)
+    expect(handleErrorMock).toHaveBeenCalledWith(failure)
+    await expect(guard()).resolves.toBeUndefined()
   })
 
   it('当前游戏运行时不兼容时请求依赖重选重绑引擎，而不是打开切换引擎弹窗', async () => {

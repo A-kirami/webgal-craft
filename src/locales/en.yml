@@ -442,6 +442,16 @@ modals:
       enableContinue:
         label: Continue Button
         description: Show the Continue button on the title screen
+      enableFlowchart:
+        description: Turn on flowcharts for this game and edit them in the Flowchart view
+        label: Flowcharts
+      flowchartLockedNodeVisibility:
+        description: How locked nodes appear on the in-game flowchart
+        label: Locked Node Visibility
+        options:
+          all: Show all locked nodes with their names
+          node: Show locked nodes without names
+          none: Hide locked nodes
       showPanic:
         label: Panic Overlay
         description: When enabled, pressing Esc shows the panic screen
@@ -769,6 +779,71 @@ edit:
     gameSettings: Game Settings
     missingPreviewUrl: Preview URL is not available. Start the preview first.
     openFailed: Failed to open test window
+    viewMode:
+      scene: Scene
+      flowchart: Flowchart
+  flowchart:
+    canvas:
+      addNode: Add Node
+      fitView: Fit View
+      redo: Redo
+      undo: Undo
+      zoomIn: Zoom In
+      zoomOut: Zoom Out
+    defaults:
+      branchName: "Branch Story {index}"
+      mainFlowchartName: Main Story
+      nodeTitle: Node
+      rootNodeTitle: Start
+    disabled:
+      description: Flowcharts are turned off in the game configuration. Turn them on to edit the main and branch flowcharts here.
+      enable: Turn On Flowcharts
+      title: Flowcharts Are Off for This Game
+    errors:
+      cycle: This connection would create a loop
+      duplicateEdge: This connection already exists
+      flowchartNotFound: The flowchart no longer exists
+      invalidName: The name cannot be empty
+      mainProtected: The main flowchart cannot be deleted
+      nodeNotFound: The node no longer exists
+      rootProtected: The root node cannot be deleted
+      selfLoop: A node cannot connect to itself
+    enableFailed: Failed to turn on flowcharts
+    loadFailedDescription: game/flowchart.json could not be read. The file is unchanged; fix its content and retry.
+    loadFailedTitle: Failed to Load the Flowchart
+    loading: Loading flowchart…
+    manager:
+      createBranch: New Branch Flowchart
+      delete: "Delete {name}"
+      deleteDescription: 'Deletes "{name}", all its nodes, and its connections. You can undo this in the current editing session.'
+      deleteTitle: Delete Branch Flowchart?
+      kindBranch: "Branch"
+      kindMain: "Main"
+      labelPrefix: "Flowchart:"
+      listLabel: Flowcharts
+      rename: "Rename {name}"
+      renameInputLabel: Flowchart Name
+      triggerLabel: "Current flowchart: {name}"
+    node:
+      bindScene: Choose Scene File
+      delete: Delete Node
+      editTitle: Double-click to Rename the Node
+      rename: Rename Node
+      replaceScene: Replace Scene File
+      rootBadge: Root
+      scenePickerTitle: Choose Scene File
+      titleInputLabel: Node Title
+      unboundScene: No Scene Bound
+    retry: Retry
+    saveFailed: Failed to save the flowchart
+    sceneDock:
+      collapse: Collapse Scene List
+      collapseAll: Collapse All
+      empty: No scenes yet
+      expand: Expand Scene List
+      loading: Loading scenes…
+      refresh: Refresh
+      title: Scenes
   empty:
     title: No Open Files
     description: Select a file from the left file list to start editing, or create a new scene file
@@ -1675,6 +1750,25 @@ tour:
     previewDrag:
       title: Drag in the Preview
       description: Drag figures and backgrounds directly in the preview. Drag to move, drag corners to scale, and drag the rotate handle to rotate.
+  flowchart:
+    manager:
+      title: Manage Flowcharts
+      description: Switch between main and branch flowcharts here. You can also create, rename, or delete a branch.
+    addNode:
+      title: Add Nodes
+      description: Click here to add a node and organize your story flow. New nodes automatically avoid existing nodes.
+    node:
+      title: Work with Nodes
+      description: Drag the title bar to move a node. Double-click its name to rename it. Hover over or select a node to reveal rename and delete buttons above its upper-right corner. The root node can be renamed but cannot be deleted.
+    scenes:
+      title: Bind Scenes
+      description: Drop a scene file onto an empty area of the canvas to create a node, or onto an existing node to bind or replace its scene. The target node is highlighted. You can also click the scene area inside a node to choose a file.
+    connect:
+      title: Connect Nodes
+      description: Drag from the connection point at the bottom of a node to the top of another node to link them. A node cannot connect to itself, and connections cannot form loops.
+    canvas:
+      title: Navigate and Undo
+      description: Drag an empty area of the canvas to pan and use the scroll wheel to zoom. Fit View shows the whole flowchart. Changes support undo and redo and are saved automatically.
   resourceSwitch:
     statusBar:
       title: Switch Engine and Template

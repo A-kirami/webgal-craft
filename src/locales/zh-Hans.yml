@@ -442,6 +442,16 @@ modals:
       enableContinue:
         label: 继续游戏按钮
         description: 在标题界面显示继续游戏按钮
+      enableFlowchart:
+        description: 为当前游戏开启流程图，并在流程视图中编辑
+        label: 流程图
+      flowchartLockedNodeVisibility:
+        description: 游戏内流程图中未解锁节点的展示方式
+        label: 未解锁节点展示
+        options:
+          all: 展示所有未解锁节点及其名称
+          node: 展示未解锁节点但不展示名称
+          none: 不展示未解锁节点
       showPanic:
         label: 紧急回避
         description: 启用后，按下 Esc 键可显示紧急回避画面
@@ -769,6 +779,71 @@ edit:
     gameSettings: 游戏设置
     missingPreviewUrl: 预览地址不存在，先启动预览
     openFailed: 打开测试窗口失败
+    viewMode:
+      scene: 场景
+      flowchart: 流程
+  flowchart:
+    canvas:
+      addNode: 添加节点
+      fitView: 适配视图
+      redo: 重做
+      undo: 撤销
+      zoomIn: 放大
+      zoomOut: 缩小
+    defaults:
+      branchName: 支线剧情{index}
+      mainFlowchartName: 主线剧情
+      nodeTitle: 节点
+      rootNodeTitle: 起点
+    disabled:
+      description: 流程图功能需要在游戏配置中开启。开启后即可在这里编辑主线与支线流程。
+      enable: 启用流程图
+      title: 当前游戏未启用流程图
+    errors:
+      cycle: 这条连线会形成循环依赖
+      duplicateEdge: 这条连线已经存在
+      flowchartNotFound: 流程图已不存在
+      invalidName: 名称不能为空
+      mainProtected: 主线流程图不可删除
+      nodeNotFound: 节点已不存在
+      rootProtected: 根节点不可删除
+      selfLoop: 节点不能连接自身
+    enableFailed: 启用流程图失败
+    loadFailedDescription: 无法读取 game/flowchart.json。文件未被修改，修正内容后可以重试。
+    loadFailedTitle: 流程图加载失败
+    loading: 正在加载流程图……
+    manager:
+      createBranch: 新建支线流程
+      delete: 删除{name}
+      deleteDescription: 将删除“{name}”及其全部节点与连线，可在本次编辑会话内撤销。
+      deleteTitle: 删除支线流程？
+      kindBranch: "支线"
+      kindMain: "主线"
+      labelPrefix: "流程："
+      listLabel: 流程图列表
+      rename: 重命名{name}
+      renameInputLabel: 流程图名称
+      triggerLabel: "当前流程图：{name}"
+    node:
+      bindScene: 选择场景文件
+      delete: 删除节点
+      editTitle: 双击重命名节点
+      rename: 重命名节点
+      replaceScene: 替换场景文件
+      rootBadge: 根节点
+      scenePickerTitle: 选择场景文件
+      titleInputLabel: 节点标题
+      unboundScene: 未绑定场景
+    retry: 重试
+    saveFailed: 流程图保存失败
+    sceneDock:
+      collapse: 收起场景列表
+      collapseAll: 全部折叠
+      empty: 场景目录为空
+      expand: 展开场景列表
+      loading: 正在加载场景……
+      refresh: 刷新
+      title: 场景
   empty:
     title: 没有打开的文件
     description: 从左侧文件列表中选择一个文件开始编辑，或创建一个新的场景文件
@@ -1675,6 +1750,25 @@ tour:
     previewDrag:
       title: 在预览中拖动
       description: 直接拖动预览中的立绘或背景即可调整：拖动移动位置，拖边角缩放，拖旋转手柄旋转。
+  flowchart:
+    manager:
+      title: 管理流程
+      description: 在这里切换主线与支线，也可以新建、重命名或删除支线。
+    addNode:
+      title: 添加节点
+      description: 点击这里添加节点，用节点组织剧情流程。新节点会自动避开已有节点。
+    node:
+      title: 操作节点
+      description: 拖动标题栏移动节点，双击名称重命名。悬停或选中节点时，右上方会显示重命名和删除按钮；根节点只能重命名，不能删除。
+    scenes:
+      title: 绑定场景
+      description: 把场景文件拖放到画布空白处可创建节点，拖放到已有节点上可绑定或替换场景，目标节点会高亮。也可以点击节点内的场景区域选择文件。
+    connect:
+      title: 连接节点
+      description: 从节点底部的连接点拖到另一个节点顶部，建立流程关系。节点不能连接自身，连线也不能形成循环。
+    canvas:
+      title: 浏览与撤销
+      description: 拖动画布空白处平移，滚动滚轮缩放。“适应视图”可查看全图；修改支持撤销和重做，并会自动保存。
   resourceSwitch:
     statusBar:
       title: 切换引擎与模板

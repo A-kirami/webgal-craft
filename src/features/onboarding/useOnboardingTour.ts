@@ -35,7 +35,7 @@ export interface UseOnboardingTourOptions {
   prepare?(): Promise<void> | void
   /** 引导可以出现的条件：目标就绪等；条件消失时进行中的引导立即让位 */
   ready(): boolean
-  overrides?: TourOverrides
+  overrides?: Omit<TourOverrides, 'onDestroyed' | 'onDestroyStarted'>
   persistence: TourPersistence
   steps(t: I18nT, controls: OnboardingTourStepControls): DriveStep[]
 }
@@ -80,14 +80,23 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
     return activeDriver ? true : activeTourCount.value === 0
   }
 
-  /** 清掉当前驱动并释放占位，保证计数只减一次 */
-  function clearActiveDriver(): void {
+  function handleDestroyed(): void {
     if (!activeDriver) {
       return
     }
 
     activeDriver = undefined
     activeTourCount.value -= 1
+    options.onDriverDestroyed?.()
+    if (!isUnmounting && !isAborting) {
+      completedVersion.value = options.persistence.version
+    }
+  }
+
+  function destroyTour(): void {
+    activeDriver?.destroy()
+    // 首步动画结束前 driver.js 不触发 onDestroyed，生命周期仍须在销毁时收尾。
+    handleDestroyed()
   }
 
   function canStart(): boolean {
@@ -98,23 +107,13 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
   }
 
   function abortTour(): void {
-    const driver = activeDriver
-    if (!driver) {
+    if (!activeDriver) {
       return
     }
 
-    clearActiveDriver()
     isAborting = true
-    driver.destroy()
+    destroyTour()
     isAborting = false
-  }
-
-  function handleDestroyed(): void {
-    clearActiveDriver()
-    options.onDriverDestroyed?.()
-    if (!isUnmounting && !isAborting) {
-      completedVersion.value = options.persistence.version
-    }
   }
 
   async function startTour(): Promise<void> {
@@ -134,7 +133,7 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
       activeDriver = createTourDriver({
         labels: createTourLabels(t),
         onDestroyed: handleDestroyed,
-        overrides: options.overrides,
+        overrides: { ...options.overrides, onDestroyStarted: destroyTour },
         steps: options.steps(t, { moveNext: () => activeDriver?.moveNext() }),
       })
       activeTourCount.value += 1
@@ -161,6 +160,6 @@ export function useOnboardingTour(options: UseOnboardingTourOptions): Onboarding
   })
 
   return {
-    complete: () => activeDriver?.destroy(),
+    complete: destroyTour,
   }
 }
