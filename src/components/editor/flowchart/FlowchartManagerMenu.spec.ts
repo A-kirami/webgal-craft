@@ -78,10 +78,13 @@ describe('FlowchartManagerMenu', () => {
 
     await openMenu()
 
-    const activeRow = await page.getByRole('option').nth(0).element()
-    const inactiveRow = await page.getByRole('option').nth(1).element()
-    expect(activeRow.getAttribute('aria-selected')).toBe('true')
-    expect(inactiveRow.getAttribute('aria-selected')).toBe('false')
+    const list = page.getByRole('list', { name: 'edit.flowchart.manager.listLabel' })
+    await expect.element(list).toBeVisible()
+    expect(list.getByRole('listitem').elements()).toHaveLength(2)
+    await expect.element(page.getByTestId('flowchart-select-main')).toHaveAttribute('aria-current', 'true')
+    await expect.element(page.getByTestId('flowchart-select-branch-1')).not.toHaveAttribute('aria-current')
+    expect(list.getByRole('button', { name: 'edit.flowchart.manager.rename', exact: true }).elements()).toHaveLength(2)
+    await expect.element(list.getByRole('button', { name: 'edit.flowchart.manager.delete', exact: true })).toBeInTheDocument()
 
     await clickByTestId('flowchart-select-branch-1')
     expect(onSelect).toHaveBeenCalledWith('branch-1')
@@ -120,8 +123,8 @@ describe('FlowchartManagerMenu', () => {
     await openMenu()
 
     const trigger = await page.getByTestId('flowchart-manager-trigger').element()
-    const listbox = await page.getByRole('listbox').element()
-    await expect.poll(() => listbox.parentElement!.getBoundingClientRect().width).toBeCloseTo(trigger.getBoundingClientRect().width, 0)
+    const list = await page.getByRole('list', { name: 'edit.flowchart.manager.listLabel' }).element()
+    await expect.poll(() => list.parentElement!.getBoundingClientRect().width).toBeCloseTo(trigger.getBoundingClientRect().width, 0)
   })
 
   it('底部操作新建支线流程', async () => {

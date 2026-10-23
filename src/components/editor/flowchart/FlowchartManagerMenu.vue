@@ -108,20 +108,19 @@ function confirmDelete() {
     <PopoverContent align="start" class="p-1 w-[var(--reka-popover-trigger-width)]">
       <ul
         class="flex flex-col max-h-72 overflow-y-auto"
-        role="listbox"
+        role="list"
         :aria-label="$t('edit.flowchart.manager.listLabel')"
       >
         <li
           v-for="flowchart in flowcharts"
           :key="flowchart.id"
-          :aria-selected="flowchart.id === activeFlowchartId"
-          role="option"
           class="px-1 rounded flex gap-1 items-center"
           :class="[$style.row, flowchart.id === activeFlowchartId ? 'bg-accent' : 'hover:bg-muted/60']"
         >
           <component
             :is="renamingFlowchartId === flowchart.id ? 'div' : 'button'"
             :type="renamingFlowchartId === flowchart.id ? undefined : 'button'"
+            :aria-current="flowchart.id === activeFlowchartId ? 'true' : undefined"
             class="text-xs px-1 text-left flex flex-1 gap-1.5 h-7 min-w-0 items-center"
             :class="flowchart.id === activeFlowchartId ? 'text-primary' : 'text-foreground'"
             :data-testid="`flowchart-select-${flowchart.id}`"
