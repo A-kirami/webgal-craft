@@ -206,7 +206,7 @@ function createRootNode(title: string): FlowchartNode {
 }
 
 /**
- * 补齐编辑所需的不变量：主线存在、每个流程图恰有一个根节点、标题非空。
+ * 补齐编辑所需的不变量：主线存在、每个流程图恰有一个根节点、名称和节点标题非空。
  *
  * 文件可能包含空流程图，或缺少根节点标记；
  * 编辑器只处理补全后的状态，避免空状态成为正常的可编辑状态。
@@ -224,21 +224,24 @@ export function normalizeFlowchartDocument(
 }
 
 function normalizeFlowchart(flowchart: Flowchart, defaults: FlowchartDocumentDefaults): Flowchart {
+  const defaultName = flowchart.kind === 'main' ? defaults.mainFlowchartName : flowchart.id
+  const name = flowchart.name.trim() ? flowchart.name : defaultName
   const nodes = flowchart.nodes.map(node => ({
     ...node,
     title: node.title.trim() || (node.isRoot ? defaults.rootNodeTitle : defaults.nodeTitle),
   }))
 
   if (nodes.some(node => node.isRoot)) {
-    return { ...flowchart, nodes }
+    return { ...flowchart, name, nodes }
   }
 
   if (nodes.length === 0) {
-    return { ...flowchart, nodes: [createRootNode(defaults.rootNodeTitle)] }
+    return { ...flowchart, name, nodes: [createRootNode(defaults.rootNodeTitle)] }
   }
 
   return {
     ...flowchart,
+    name,
     nodes: nodes.map((node, index) => (index === 0 ? { ...node, isRoot: true } : node)),
   }
 }

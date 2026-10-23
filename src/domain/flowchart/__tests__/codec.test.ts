@@ -116,6 +116,26 @@ describe('parseFlowchartDocument', () => {
 })
 
 describe('normalizeFlowchartDocument', () => {
+  it.each([undefined, '', ' '.repeat(3)])('补齐缺失或空白的流程图名称（%s）', (name) => {
+    const { document } = parseFlowchartDocument(JSON.stringify({
+      flowcharts: [{ id: 'main', name }, { id: 'alice', name }],
+    }))
+
+    const normalized = normalizeFlowchartDocument(document, defaults)
+
+    expect(normalized.flowcharts.map(flowchart => flowchart.name)).toEqual(['主线剧情', 'alice'])
+  })
+
+  it('保留已有非空流程图名称', () => {
+    const { document } = parseFlowchartDocument(JSON.stringify({
+      flowcharts: [{ id: 'main', name: '我的主线' }, { id: 'alice', name: '  Alice线  ' }],
+    }))
+
+    const normalized = normalizeFlowchartDocument(document, defaults)
+
+    expect(normalized.flowcharts.map(flowchart => flowchart.name)).toEqual(['我的主线', '  Alice线  '])
+  })
+
   it('缺少主线时补出默认主线', () => {
     const raw = JSON.stringify({
       flowcharts: [{ id: 'alice', name: 'Alice线', nodes: [{ id: 'a', position: { x: 0, y: 0 }, data: { label: 'A' } }] }],
