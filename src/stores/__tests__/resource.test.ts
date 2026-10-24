@@ -1,10 +1,13 @@
 import '~/__tests__/setup'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { disposePinia, getActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestEngine, createTestGame, createTestTemplate } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
+import { useFileStore } from '~/stores/file'
 import { useResourceStore } from '~/stores/resource'
+import { AppError } from '~/types/errors'
 
 import type { Engine, Game, Template } from '~/database/model'
 
@@ -13,11 +16,13 @@ const {
   useGamesMock,
   useTemplatesMock,
   useWorkspaceStoreMock,
+  resolveFilePathMock,
 } = vi.hoisted(() => ({
   useEnginesMock: vi.fn(),
   useGamesMock: vi.fn(),
   useTemplatesMock: vi.fn(),
   useWorkspaceStoreMock: vi.fn(),
+  resolveFilePathMock: vi.fn<(path: AbsPath) => Promise<AbsPath>>(),
 }))
 
 const workspaceStoreState = reactive<{
@@ -29,7 +34,7 @@ const workspaceStoreState = reactive<{
 })
 
 const gamesRef = ref<Game[] | undefined>(undefined)
-const enginesRef = ref<Engine[] | undefined>(undefined)
+const enginesRef = shallowRef<Engine[] | undefined>(undefined)
 const templatesRef = ref<Template[] | undefined>(undefined)
 
 vi.mock('~/composables/useDatabase', () => ({
@@ -41,6 +46,16 @@ vi.mock('~/composables/useDatabase', () => ({
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
+
+vi.mock(import('~/stores/file'))
+
+vi.mock(import('@tauri-apps/plugin-log'), () => ({
+  error: vi.fn(),
+}))
+
+async function flushCapabilities(): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 0))
+}
 
 function createGame(id: string, name: string, lastModified: number): Game {
   return createTestGame({
@@ -79,8 +94,17 @@ function createTemplate(id: string, name: string, createdAt: number, webgalVersi
 }
 
 describe('useResourceStore', () => {
+  afterEach(() => {
+    disposePinia(getActivePinia()!)
+  })
+
   beforeEach(() => {
     vi.resetAllMocks()
+    resolveFilePathMock.mockRejectedValue(new AppError('NOT_FOUND', 'missing runtime'))
+    vi.mocked(useFileStore, { partial: true }).mockReturnValue({
+      initialized: Promise.resolve(),
+      resolveFilePath: resolveFilePathMock,
+    })
 
     workspaceStoreState.searchQuery = ''
     workspaceStoreState.currentGame = undefined
@@ -135,7 +159,7 @@ describe('useResourceStore', () => {
     expect(store.filteredTemplates.map(template => template.id)).toEqual(['classic'])
   })
 
-  it('从当前游戏绑定的引擎派生模型能力，并将缺失字段视为不支持', () => {
+  it('从当前游戏绑定的引擎派生模型能力，并在运行时缺失时视为不支持', async () => {
     enginesRef.value = [
       createTestEngine({
         id: 'engine-with-defaults',
@@ -158,10 +182,114 @@ describe('useResourceStore', () => {
 
     const store = useResourceStore()
 
+    await flushCapabilities()
+
     expect(store.currentEngineCapabilities).toEqual({ live2d: false, spine: false })
 
     workspaceStoreState.currentGame = createTestGame({ engineId: 'engine-with-live2d' })
     expect(store.currentEngineCapabilities).toEqual({ live2d: true, spine: false })
+  })
+
+  it('工程 VFS 可解析两个 Live2D 库时启用能力，不修改引擎元数据', async () => {
+    const engine = createTestEngine({ id: 'engine', metadata: { live2dSupport: false } })
+    enginesRef.value = [engine]
+    workspaceStoreState.currentGame = createTestGame({ path: AbsPath.from('/games/v1'), engineId: engine.id })
+    resolveFilePathMock.mockImplementation(async path => path)
+
+    const store = useResourceStore()
+    await flushCapabilities()
+
+    expect(store.currentEngineCapabilities).toEqual({ live2d: true, spine: false })
+    expect(resolveFilePathMock).toHaveBeenCalledWith('/games/v1/lib/live2d.min.js')
+    expect(resolveFilePathMock).toHaveBeenCalledWith('/games/v1/lib/live2dcubismcore.min.js')
+    expect(enginesRef.value[0]?.metadata.live2dSupport).toBe(false)
+  })
+
+  it('等待文件视图初始化后再检测运行时，初始化期间不发布不支持警告', async () => {
+    let finishInitialization!: () => void
+    const initialized = new Promise<void>((resolve) => {
+      finishInitialization = resolve
+    })
+    vi.mocked(useFileStore, { partial: true }).mockReturnValue({ initialized, resolveFilePath: resolveFilePathMock })
+    enginesRef.value = [createTestEngine({ id: 'engine' })]
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'engine' })
+    resolveFilePathMock.mockImplementation(async path => path)
+    const store = useResourceStore()
+    await flushCapabilities()
+
+    expect(store.currentEngineCapabilities).toBeUndefined()
+    expect(resolveFilePathMock).not.toHaveBeenCalled()
+    finishInitialization()
+    await flushCapabilities()
+    expect(store.currentEngineCapabilities?.live2d).toBe(true)
+  })
+
+  it.each([
+    { target: '工程', path: '/games/b', engineId: 'first' },
+    { target: '引擎', path: '/games/a', engineId: 'second' },
+  ])('切换$target后立即失效旧能力并重新检测', async ({ path, engineId }) => {
+    enginesRef.value = [createTestEngine({ id: 'first' }), createTestEngine({ id: 'second' })]
+    workspaceStoreState.currentGame = createTestGame({ path: AbsPath.from('/games/a'), engineId: 'first' })
+    resolveFilePathMock.mockImplementation(async path => path)
+    const store = useResourceStore()
+    await flushCapabilities()
+    expect(store.currentEngineCapabilities?.live2d).toBe(true)
+
+    resolveFilePathMock.mockRejectedValue(new AppError('NOT_FOUND', 'missing runtime'))
+    workspaceStoreState.currentGame = createTestGame({ path: AbsPath.from(path), engineId })
+    expect(store.currentEngineCapabilities).toBeUndefined()
+    await flushCapabilities()
+    expect(store.currentEngineCapabilities?.live2d).toBe(false)
+  })
+
+  it.each(['live2d.min.js', 'live2dcubismcore.min.js'])('缺少 %s 时仍提示不支持 Live2D', async (missingFile) => {
+    enginesRef.value = [createTestEngine({ id: 'engine' })]
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'engine' })
+    resolveFilePathMock.mockImplementation(async (path) => {
+      if (AbsPath.basename(path) === missingFile) {
+        throw new AppError('NOT_FOUND', 'missing runtime')
+      }
+      return path
+    })
+
+    const store = useResourceStore()
+    await flushCapabilities()
+
+    expect(store.currentEngineCapabilities?.live2d).toBe(false)
+  })
+
+  it('工程切换后忽略旧工程迟到的检测结果', async () => {
+    let resolveOld!: (path: AbsPath) => void
+    const pending = new Promise<AbsPath>((resolve) => {
+      resolveOld = resolve
+    })
+    enginesRef.value = [createTestEngine({ id: 'engine' })]
+    workspaceStoreState.currentGame = createTestGame({ path: AbsPath.from('/games/a'), engineId: 'engine' })
+    resolveFilePathMock
+      .mockResolvedValueOnce(AbsPath.from('/games/a/lib/live2d.min.js'))
+      .mockReturnValueOnce(pending)
+    const store = useResourceStore()
+    await flushCapabilities()
+    expect(resolveFilePathMock).toHaveBeenCalledWith('/games/a/lib/live2dcubismcore.min.js')
+
+    resolveFilePathMock.mockRejectedValue(new AppError('NOT_FOUND', 'missing runtime'))
+    workspaceStoreState.currentGame = createTestGame({ path: AbsPath.from('/games/b'), engineId: 'engine' })
+    await flushCapabilities()
+    resolveOld(AbsPath.from('/games/a/lib/live2dcubismcore.min.js'))
+    await flushCapabilities()
+
+    expect(store.currentEngineCapabilities?.live2d).toBe(false)
+  })
+
+  it('VFS 读取失败时保持能力未知，不将 I/O 错误当作缺少运行时', async () => {
+    enginesRef.value = [createTestEngine({ id: 'engine' })]
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'engine' })
+    resolveFilePathMock.mockRejectedValue(new AppError('IO_ERROR', 'permission denied'))
+    const store = useResourceStore()
+    await flushCapabilities()
+
+    expect(store.currentEngineCapabilities).toBeUndefined()
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('permission denied'))
   })
 
   it('引擎记录尚未加载或当前绑定无法解析时不提供能力上下文', () => {
