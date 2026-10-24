@@ -11,6 +11,7 @@ import {
 } from '~/features/modals/game-config/game-config-form'
 import { configManager } from '~/services/config-manager'
 import { useModalStore } from '~/stores/modal'
+import { useResourceStore } from '~/stores/resource'
 import { useWorkspaceStore } from '~/stores/workspace'
 import { handleError } from '~/utils/error-handler'
 
@@ -33,6 +34,7 @@ const open = defineModel<boolean>('open', { default: false })
 
 const { t } = useI18n()
 const modalStore = useModalStore()
+const resourceStore = useResourceStore()
 const workspaceStore = useWorkspaceStore()
 const validationSchema = createGameConfigSchema(t)
 
@@ -228,6 +230,7 @@ async function handleSave() {
         </section>
 
         <GameConfigFieldsSection
+          :capabilities="resourceStore.currentEngineGameConfigCapabilities"
           :background-root-path="props.backgroundRootPath"
           :bgm-root-path="props.bgmRootPath"
           :game-path="props.gamePath"

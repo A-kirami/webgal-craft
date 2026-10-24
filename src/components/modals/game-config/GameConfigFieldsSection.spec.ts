@@ -137,6 +137,7 @@ async function renderSection(i18nMode: 'lite' | 'localized' = 'lite', messages?:
       messages,
     },
     props: {
+      capabilities: { cubismMemoryReservedSize: true, legacyExpressionBlendMode: true },
       backgroundRootPath: '/games/demo/game/background',
       bgmRootPath: '/games/demo/game/bgm',
       gamePath: '/games/demo',
@@ -229,6 +230,7 @@ describe('GameConfigFieldsSection', () => {
         i18nMode: 'lite',
       },
       props: {
+        capabilities: { cubismMemoryReservedSize: true, legacyExpressionBlendMode: true },
         backgroundRootPath: '/games/demo/game/background',
         bgmRootPath: '/games/demo/game/bgm',
         gamePath: '/games/demo',

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, reactive } from 'vue'
 
 import {
   createBrowserCheckboxStub,
@@ -42,6 +42,17 @@ vi.mock('~/stores/modal', () => ({
 
 vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: () => workspaceStoreState,
+}))
+
+const resourceStoreState = reactive({
+  currentEngineGameConfigCapabilities: {
+    cubismMemoryReservedSize: true,
+    legacyExpressionBlendMode: true,
+  },
+})
+
+vi.mock(import('~/stores/resource'), () => ({
+  useResourceStore: Object.assign(vi.fn().mockImplementation(() => resourceStoreState), { $id: 'resource' as const }),
 }))
 
 vi.mock('vue-sonner', () => ({
@@ -268,6 +279,103 @@ describe('GameConfigModal', () => {
       open: modalOpenMock,
     })
     workspaceStoreState.currentGame = undefined
+    resourceStoreState.currentEngineGameConfigCapabilities = {
+      cubismMemoryReservedSize: true,
+      legacyExpressionBlendMode: true,
+    }
+  })
+
+  it('不支持 Live2D 配置时隐藏相关字段，保存仍保留原值', async () => {
+    resourceStoreState.currentEngineGameConfigCapabilities = {
+      cubismMemoryReservedSize: false,
+      legacyExpressionBlendMode: false,
+    }
+
+    await renderInBrowser(GameConfigModal, {
+      browser: { i18nMode: 'lite' },
+      props: {
+        open: true,
+        ...preparedModalProps,
+        initialValues: {
+          ...preparedModalProps.initialValues,
+          cubismMemoryReservedSize: 64,
+          legacyExpressionBlendMode: true,
+        },
+      },
+      global: { stubs: globalStubs },
+    })
+
+    await expect.element(page.getByTestId('game-config-legacy-expression-row')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('game-config-cubism-memory-reserved-size')).not.toBeInTheDocument()
+    await expect.element(page.getByTestId('game-config-show-panic-row')).toBeVisible()
+    await expect.element(page.getByTestId('game-config-enable-continue-row')).toBeVisible()
+    await expect.element(page.getByTestId('game-config-enable-flowchart-row')).toBeVisible()
+    await expect.element(page.getByTestId('game-config-flowchart-locked-node-visibility-trigger')).toBeVisible()
+    await page.getByTestId('game-config-game-name').fill('Renamed Game')
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        entries: expect.arrayContaining([
+          { key: 'Legacy_Expression_Blend_Mode', value: 'true' },
+          { key: 'Cubism_Memory_Reserved_Size_MB', value: '64' },
+        ]),
+      }))
+    })
+  })
+
+  it('能力变化后隐藏配置，重新显示和保存仍保留编辑值', async () => {
+    await renderInBrowser(GameConfigModal, {
+      browser: { i18nMode: 'lite' },
+      props: { open: true, ...preparedModalProps },
+      global: { stubs: globalStubs },
+    })
+
+    const row = page.getByTestId('game-config-legacy-expression-row')
+    const memoryInput = page.getByTestId('game-config-cubism-memory-reserved-size')
+    await expect.element(row).toBeVisible()
+    await expect.element(memoryInput).toBeVisible()
+    await row.getByRole('checkbox').click()
+    await memoryInput.fill('96')
+    resourceStoreState.currentEngineGameConfigCapabilities = {
+      cubismMemoryReservedSize: false,
+      legacyExpressionBlendMode: false,
+    }
+    await expect.element(row).not.toBeInTheDocument()
+    await expect.element(memoryInput).not.toBeInTheDocument()
+    resourceStoreState.currentEngineGameConfigCapabilities = {
+      cubismMemoryReservedSize: true,
+      legacyExpressionBlendMode: true,
+    }
+    await expect.element(row.getByRole('checkbox')).toBeChecked()
+    await expect.element(memoryInput).toHaveValue(96)
+    resourceStoreState.currentEngineGameConfigCapabilities = {
+      cubismMemoryReservedSize: false,
+      legacyExpressionBlendMode: false,
+    }
+    await expect.element(memoryInput).not.toBeInTheDocument()
+    await page.getByRole('button', { name: 'common.save' }).click()
+
+    await vi.waitFor(() => {
+      expect(setConfigMock).toHaveBeenCalledWith('/games/demo', expect.objectContaining({
+        entries: expect.arrayContaining([
+          { key: 'Legacy_Expression_Blend_Mode', value: 'true' },
+          { key: 'Cubism_Memory_Reserved_Size_MB', value: '96' },
+        ]),
+      }))
+    })
+  })
+
+  it('不支持预留内存时仍显示已支持的旧版表情混合配置', async () => {
+    resourceStoreState.currentEngineGameConfigCapabilities.cubismMemoryReservedSize = false
+    await renderInBrowser(GameConfigModal, {
+      browser: { i18nMode: 'lite' },
+      props: { open: true, ...preparedModalProps },
+      global: { stubs: globalStubs },
+    })
+
+    await expect.element(page.getByTestId('game-config-legacy-expression-row')).toBeVisible()
+    await expect.element(page.getByTestId('game-config-cubism-memory-reserved-size')).not.toBeInTheDocument()
   })
 
   it('打开时会渲染预取配置中的关键字段', async () => {
