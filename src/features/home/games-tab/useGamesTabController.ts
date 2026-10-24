@@ -1,10 +1,10 @@
 import { createHomeResourceImportMessages, useHomeResourceImportActions } from '~/features/home/shared/useHomeResourceImportActions'
+import { requestGameDependencyResolution } from '~/features/modals/game-dependency-resolution/request-game-dependency-resolution'
 import {
   isRuntimeRebindRequired,
   requestGameRuntimeRebind,
   resolveRuntimeRebindIssue,
-} from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
-import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+} from '~/features/modals/game-dependency-resolution/request-game-runtime-rebind'
 import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
@@ -12,7 +12,7 @@ import { resourceReconcile } from '~/services/resource-reconcile'
 import { handleError } from '~/utils/error-handler'
 
 import type { Engine, Game } from '~/database/model'
-import type { ResolveImportDependencies } from '~/types/import-dependency-resolution'
+import type { ResolveGameDependencies } from '~/types/game-dependency-resolution'
 import type { I18nT } from '~/utils/i18n-like'
 
 type EngineAvailabilityCheck = Pick<Engine, 'availability' | 'id' | 'metadata' | 'status'>
@@ -26,13 +26,13 @@ interface UseGamesTabControllerOptions {
   openNoEngineAlertModal: (onConfirm: () => void) => void
   openRecoverGameModal: (game: Game) => void
   pushRoute: (path: string) => unknown
-  resolveDependencies?: ResolveImportDependencies
+  resolveDependencies?: ResolveGameDependencies
   t: I18nT
   switchToEnginesTab: () => void
 }
 
 export function useGamesTabController(options: UseGamesTabControllerOptions) {
-  const resolveDependencies = options.resolveDependencies ?? requestImportDependencyResolution
+  const resolveDependencies = options.resolveDependencies ?? requestGameDependencyResolution
   const importWorkflow = createGameImportWorkflow({
     android: options.android,
     selectTitle: options.t('common.dialogs.selectGameFolder'),

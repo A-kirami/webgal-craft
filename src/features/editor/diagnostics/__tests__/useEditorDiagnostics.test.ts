@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick, reactive, shallowRef } from 'vue'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { buildStatements } from '~/domain/script/sentence'
 
@@ -199,7 +199,7 @@ describe('useEditorDiagnostics', () => {
     }
     const resourceStore = reactive({
       currentEngineCapabilities: undefined,
-      currentEngineRuntimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      currentEngineRuntimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })
 
     useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)
@@ -241,7 +241,7 @@ describe('useEditorDiagnostics', () => {
     }
     const resourceStore = reactive({
       currentEngineCapabilities: undefined,
-      currentEngineRuntimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      currentEngineRuntimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })
 
     useEditorDiagnosticsStoreMock.mockReturnValue(diagnosticsStore)

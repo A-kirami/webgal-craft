@@ -3,27 +3,27 @@ import { db } from '~/database/db'
 import { engineSwitch } from '~/services/engine-switch'
 import { AppError } from '~/types/errors'
 
-import { requestImportDependencyResolution } from './request-import-dependency-resolution'
+import { requestGameDependencyResolution } from './request-game-dependency-resolution'
 
 import type { Game } from '~/database/model'
 import type { AbsPath } from '~/domain/path'
 import type {
-  ImportDependencyResolutionContext,
-  ImportEngineDependencyCompatibilityIssue,
-  ResolveImportDependencies,
-} from '~/types/import-dependency-resolution'
+  GameDependencyResolutionContext,
+  GameEngineDependencyCompatibilityIssue,
+  ResolveGameDependencies,
+} from '~/types/game-dependency-resolution'
 import type { EngineRef } from '~/types/project-config'
 
 type RuntimeRebindReason = 'incompatible' | 'missing' | 'unavailable'
 
 interface RequestGameRuntimeRebindOptions {
-  compatibilityIssue?: ImportEngineDependencyCompatibilityIssue
+  compatibilityIssue?: GameEngineDependencyCompatibilityIssue
   reason?: RuntimeRebindReason
-  resolveDependencies?: ResolveImportDependencies
+  resolveDependencies?: ResolveGameDependencies
 }
 
 interface RuntimeRebindIssue {
-  compatibilityIssue?: ImportEngineDependencyCompatibilityIssue
+  compatibilityIssue?: GameEngineDependencyCompatibilityIssue
   reason: RuntimeRebindReason
 }
 
@@ -58,7 +58,7 @@ async function readProjectEngineRef(gamePath: AbsPath): Promise<EngineRef | unde
 async function buildRuntimeRebindContext(
   game: Game,
   options: RequestGameRuntimeRebindOptions,
-): Promise<ImportDependencyResolutionContext> {
+): Promise<GameDependencyResolutionContext> {
   const currentEngine = game.engineId ? await db.engines.get(game.engineId) : undefined
   const gameName = game.metadata.name?.trim()
   // 记录缺失本身就意味着需要重选运行时，调用方没显式给出原因时按 missing 上报
@@ -98,7 +98,7 @@ export async function requestGameRuntimeRebind(
   game: Game,
   options: RequestGameRuntimeRebindOptions = {},
 ): Promise<boolean> {
-  const resolveDependencies = options.resolveDependencies ?? requestImportDependencyResolution
+  const resolveDependencies = options.resolveDependencies ?? requestGameDependencyResolution
   const context = await buildRuntimeRebindContext(game, options)
   const result = await resolveDependencies(context)
   if (!result?.engineId) {

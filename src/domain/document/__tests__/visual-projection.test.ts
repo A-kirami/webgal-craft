@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 import { ensureParsed } from '~/domain/script/sentence'
 
@@ -67,12 +67,12 @@ describe('可视化投影', () => {
     const [latestEntry] = projectSceneStatements(createSceneModel([
       createStatement(1, 'return;'),
     ]))
-    const [legacyEntry] = projectSceneStatements(createSceneModel([
+    const [baselineEntry] = projectSceneStatements(createSceneModel([
       createStatement(1, 'return;'),
-    ], LEGACY_ENGINE_RUNTIME_CAPABILITIES), [latestEntry!])
+    ], BASELINE_ENGINE_RUNTIME_CAPABILITIES), [latestEntry!])
 
-    expect(legacyEntry).not.toBe(latestEntry)
-    expect(ensureParsed(legacyEntry!)).toMatchObject({
+    expect(baselineEntry).not.toBe(latestEntry)
+    expect(ensureParsed(baselineEntry!)).toMatchObject({
       command: commandType.say,
       commandRaw: 'return',
       content: 'return',

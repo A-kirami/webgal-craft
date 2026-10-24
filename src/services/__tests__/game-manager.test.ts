@@ -245,10 +245,10 @@ const configuredImportDependencyContext = {
   source: 'configured',
 } as const
 
-const legacyImportDependencyContext = {
+const unconfiguredImportDependencyContext = {
   gameName: 'Demo Game',
   purpose: 'import',
-  source: 'legacy',
+  source: 'unconfigured',
   engine: {
     reason: 'selectionRequired',
   },
@@ -788,7 +788,7 @@ describe('gameManager', () => {
     })
   })
 
-  it('importGame 对没有 project.wgcp 的旧项目会要求选择兼容引擎并写入引擎引用', async () => {
+  it('importGame 对自带 index.html 但无项目配置的目录仍要求选择兼容引擎并写入引用', async () => {
     mockExistingPaths(
       '/games/self-contained',
       '/games/self-contained/game/config.txt',
@@ -809,7 +809,7 @@ describe('gameManager', () => {
       resolveDependencies,
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
-    expect(resolveDependencies).toHaveBeenCalledWith(legacyImportDependencyContext)
+    expect(resolveDependencies).toHaveBeenCalledWith(unconfiguredImportDependencyContext)
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/self-contained', {
       version: 1,
       engine: selectedProjectEngineRef,
@@ -1406,7 +1406,7 @@ describe('gameManager', () => {
     expect(gameManager.identityKeyOf({ path: AbsPath.from('/Games/Demo/') })).toBe('/games/demo')
   })
 
-  it('importGame 在 legacy 项目需要选择引擎时复用组合依赖解析流程', async () => {
+  it('importGame 在无项目配置时引导选择引擎并写入项目配置', async () => {
     mockExistingPaths(
       '/games/no-engine',
       '/games/no-engine/game/config.txt',
@@ -1427,7 +1427,7 @@ describe('gameManager', () => {
     })).resolves.toEqual({ id: 'game-1', alreadyRegistered: false })
 
     expect(resolveDependencies).toHaveBeenCalledOnce()
-    expect(resolveDependencies).toHaveBeenCalledWith(legacyImportDependencyContext)
+    expect(resolveDependencies).toHaveBeenCalledWith(unconfiguredImportDependencyContext)
     expect(writeProjectConfigMock).toHaveBeenCalledWith('/games/no-engine', {
       version: 1,
       engine: selectedProjectEngineRef,

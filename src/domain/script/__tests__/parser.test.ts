@@ -1,13 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES, resolveEngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, resolveEngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import { GATED_COMMANDS, parseScene, parseSceneOrEmpty, parseSentence, resolveWebgalScriptConfigKey, WEBGAL_SCRIPT_LANGUAGES } from '~/domain/script/parser'
 import { getCommandScriptString } from '~/features/editor/command-registry'
 
 /** 4.6.3 / 4.6.4：有场景语义，但没有 changeFigureDiff */
 const WITHOUT_CHANGE_FIGURE_DIFF = { changeFigureDiff: false, sceneSemantics: true }
-const WITHOUT_SCENE_SEMANTICS = LEGACY_ENGINE_RUNTIME_CAPABILITIES
+const WITHOUT_SCENE_SEMANTICS = BASELINE_ENGINE_RUNTIME_CAPABILITIES
 
 const parserLoggerTarget = globalThis as { logger?: { error: (message: string) => void } }
 const originalLogger = parserLoggerTarget.logger

@@ -14,7 +14,7 @@ import type { HomeResourceImportOutcome } from '~/features/home/shared/home-reso
 import type { PreparedEngineManagedImport } from '~/services/engine-manager'
 import type { PreparedGameManagedImport } from '~/services/game-manager'
 import type { PreparedTemplateManagedImport } from '~/services/template-manager'
-import type { ResolveImportDependencies } from '~/types/import-dependency-resolution'
+import type { ResolveGameDependencies } from '~/types/game-dependency-resolution'
 import type {
   DirectoryMaterializer,
   ImportResourceKind,
@@ -163,7 +163,7 @@ function createResourceImportWorkflow<TPlan>(
 
 export function createGameImportWorkflow(options: {
   selectTitle: string
-  resolveDependencies: ResolveImportDependencies
+  resolveDependencies: ResolveGameDependencies
   afterDesktopCommit?: (gameId: string) => Promise<unknown> | unknown
   afterManagedCommit?: (gameId: string) => Promise<unknown> | unknown
   android?: boolean

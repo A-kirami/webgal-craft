@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 
 import {
   parseChooseContent,
@@ -201,20 +201,20 @@ describe('sentence', () => {
     })
   })
 
-  it('旧运行时按物理行拆分多行语句', () => {
+  it('基线能力下按物理行拆分多行语句', () => {
     const raw = [
       'changeFigure:hero.png',
       '  -id=hero -left;',
       'say:next;',
     ].join('\n')
 
-    expect(buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject([
+    expect(buildStatementSourceRanges(raw, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject([
       { startLine: 0, endLine: 0, rawText: 'changeFigure:hero.png' },
       { startLine: 1, endLine: 1, rawText: '  -id=hero -left;' },
       { startLine: 2, endLine: 2, rawText: 'say:next;' },
     ])
-    expect(splitStatements(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toEqual(raw.split('\n'))
-    expect(findStatementSourceRangeAtLine(raw, 1, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject({
+    expect(splitStatements(raw, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toEqual(raw.split('\n'))
+    expect(findStatementSourceRangeAtLine(raw, 1, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toMatchObject({
       startLine: 1,
       endLine: 1,
       rawText: '  -id=hero -left;',
@@ -286,26 +286,26 @@ describe('sentence', () => {
     const raw = ['changeFigure:hero.png', '  -id=hero -left;'].join('\n')
 
     const multiline = buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)
-    const perLine = buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    const perLine = buildStatementSourceRanges(raw, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(multiline).toHaveLength(1)
     expect(perLine).toHaveLength(2)
-    expect(buildStatementSourceRanges(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toBe(perLine)
+    expect(buildStatementSourceRanges(raw, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toBe(perLine)
     expect(buildStatementSourceRanges(raw, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(multiline)
   })
 
   it('缺少场景语义的运行时把立绘差分退化为旁白但保留原命令名', () => {
     const raw = 'changeFigureDiff:smile.png -left -id=hero;'
-    const legacy = parseSentence(raw, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    const baselineParsed = parseSentence(raw, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     // 缺少场景语义的运行时命令表最残缺：该命令退化成 say 简写，commandRaw 仍是原命令名，
     // 序列化后文本不变，只是语义不再是命令。
-    expect(legacy).toMatchObject({
+    expect(baselineParsed).toMatchObject({
       command: commandType.say,
       commandRaw: 'changeFigureDiff',
       content: 'smile.png',
     })
-    expect(serializeSentence(legacy!)).toBe(raw)
+    expect(serializeSentence(baselineParsed!)).toBe(raw)
   })
 
   it('只缺立绘差分能力的运行时不认识该命令，但仍保留 return', () => {

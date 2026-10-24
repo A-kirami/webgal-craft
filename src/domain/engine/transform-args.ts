@@ -87,8 +87,8 @@ function resolveLegacyWriteMode(sentence: ArgsSource, parallel: boolean): Transf
  * 解析变换类语句的写入模式，回退顺序与引擎保持一致：
  * `transformFrom` > 显式旧参数（按 key 存在判定）> 默认 `current`。
  *
- * 旧引擎不认 `transformFrom`（等价于参数不存在），完整走 4.6.4 的旧规则；
- * 新引擎无参数时 `writeFullEffect` 从 true 变为 false，这是两个分支唯一的默认值差异。
+ * 不支持 `transformFrom` 时忽略该参数，完整走 4.6.4 的写入规则；
+ * 支持该能力时，无参数下的 `writeFullEffect` 从 true 变为 false，这是两个分支唯一的默认值差异。
  *
  * 调用方只应把它用于引擎 `resolveTransformArgs` 的三个消费方：
  * `setTransform`、`setAnimation`、`setTempAnimation`。

@@ -1680,13 +1680,13 @@ game:
   gameDependencyResolutionDescriptionWithName: 「{name}」に必要なエンジンまたはテンプレートは現在利用できません。利用可能なリソースを選択すると、WebGAL Craft がゲーム設定を更新してインポートを続行します。
   gameDependencyResolutionRuntimeRebindDescription: このゲームに紐付いたエンジンは利用できないか、WebGAL Craft では使用できません。利用可能なエンジンを選択すると、WebGAL Craft がゲーム設定を更新して開き直します。
   gameDependencyResolutionRuntimeRebindDescriptionWithName: 「{name}」に紐付いたエンジンは利用できないか、WebGAL Craft では使用できません。利用可能なエンジンを選択すると、WebGAL Craft がゲーム設定を更新して開き直します。
-  gameDependencyResolutionLegacyDescription: これは旧版のゲームです。WebGAL Craft で使用できるエンジンを選択する必要があります。WebGAL Craft がゲーム設定を作成してインポートを続行します。
-  gameDependencyResolutionLegacyDescriptionWithName: 「{name}」は旧版のゲームです。WebGAL Craft で使用できるエンジンを選択する必要があります。WebGAL Craft がゲーム設定を作成してインポートを続行します。
+  gameDependencyResolutionUnconfiguredDescription: このゲームにはまだ WebGAL Craft の設定がありません。使用可能なエンジンを選択すると、WebGAL Craft がゲーム設定を作成してインポートを続行します。
+  gameDependencyResolutionUnconfiguredDescriptionWithName: 「{name}」にはまだ WebGAL Craft の設定がありません。使用可能なエンジンを選択すると、WebGAL Craft がゲーム設定を作成してインポートを続行します。
   gameDependencyResolutionEngineTitle: エンジンを選択
   gameDependencyResolutionTemplateTitle: テンプレートを選択
   gameDependencyResolutionEngineIssue: WebGAL Craft で使用できるエンジンを選択してください。インポート後は、このゲームがそのエンジンで開いてプレビューします。
   gameDependencyResolutionRuntimeRebindEngineIssue: WebGAL Craft で使用できるエンジンを選択してください。変更後は、このゲームがそのエンジンで開いてプレビューします。
-  gameDependencyResolutionEngineLegacyIssue: 旧版のゲームをインポートするには、先に WebGAL Craft で使用できるエンジンを選択する必要があります。
+  gameDependencyResolutionEngineUnconfiguredIssue: このゲームをインポートするには、先に WebGAL Craft で使用できるエンジンを選択する必要があります。
   gameDependencyResolutionTemplateIssue: 利用可能なテンプレートを選択するか、選択したエンジンの既定テンプレートを使用してください。
   gameDependencyResolutionOriginalEngine: 現在のエンジン
   gameDependencyResolutionOriginalTemplate: 現在のテンプレート

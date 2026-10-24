@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 import { buildStatements, ensureParsed } from '~/domain/script/sentence'
 
@@ -145,7 +145,7 @@ describe('diagnoseScene', () => {
     ])
   })
 
-  it('旧引擎诊断扩展立绘位置和目标', () => {
+  it('基线能力下诊断扩展立绘位置和目标', () => {
     const sentences = [
       parseSentence('Alice: hello -left13;'),
       parseSentence('changeFigure: hero.png -right14;'),
@@ -154,7 +154,7 @@ describe('diagnoseScene', () => {
     ]
 
     expect(diagnoseScene(sentences, {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([
       {
         code: 'unsupported-figure-position',
@@ -225,16 +225,16 @@ describe('diagnoseScene', () => {
     ])).toEqual([])
   })
 
-  it('旧引擎诊断语句里已有的立绘差分', () => {
-    // 旧运行时下该命令由解析器退化成 say 简写，诊断必须仍能认出来
+  it('基线能力下诊断语句里已有的立绘差分', () => {
+    // 基线能力下该命令由解析器退化成 say 简写，诊断必须仍能认出来
     const sentences = [
-      parseSentence('changeFigureDiff:smile.png -left -id=hero;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
-      parseSentence('changeFigure:hero.png -left;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
-      parseSentence('say:hello;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+      parseSentence('changeFigureDiff:smile.png -left -id=hero;', BASELINE_ENGINE_RUNTIME_CAPABILITIES),
+      parseSentence('changeFigure:hero.png -left;', BASELINE_ENGINE_RUNTIME_CAPABILITIES),
+      parseSentence('say:hello;', BASELINE_ENGINE_RUNTIME_CAPABILITIES),
     ]
 
     expect(diagnoseScene(sentences, {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([{
       code: 'unsupported-change-figure-diff',
       field: { kind: 'content' },
@@ -283,7 +283,7 @@ describe('diagnoseScene', () => {
     // 引擎支持与否不影响「会跳过」的结论，只多出「命令本身太新」的诊断
     expect(diagnoseScene(sentences, {
       engineCapabilities: { live2d: false, spine: false },
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([
       {
         code: 'skipped-figure-diff-model',
@@ -342,7 +342,7 @@ describe('diagnoseScene', () => {
     }])
   })
 
-  it('为旧引擎的 say Opus 语音引用生成警告', () => {
+  it('为基线能力下的 say Opus 语音引用生成警告', () => {
     const sentences = [
       parseSentence('say:hello -voice.opus;'),
       parseSentence('say:world -vocal=voice.ogg;'),
@@ -350,7 +350,7 @@ describe('diagnoseScene', () => {
     ]
 
     expect(diagnoseScene(sentences, {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([{
       code: 'unsupported-opus-vocal',
       field: { kind: 'argument', key: 'vocal' },
@@ -388,13 +388,13 @@ describe('diagnoseScene', () => {
     ])
   })
 
-  it('旧运行时不将 return 解析为命令，但仍诊断局部变量和场景调用参数', () => {
+  it('基线能力下不将 return 解析为命令，但仍诊断局部变量和场景调用参数', () => {
     expect(diagnoseScene([
-      parseSentence('return:success;', LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+      parseSentence('return:success;', BASELINE_ENGINE_RUNTIME_CAPABILITIES),
       parseSentence('setVar: result=1 -local;'),
       parseSentence('callScene:battle.txt -enemy=slime -when=hp>0 -writeReturnTo=result;'),
     ], {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([
       expect.objectContaining({ code: 'unsupported-local-variable', statementIndex: 1, field: { kind: 'argument', key: 'local' } }),
       expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'enemy' } }),
@@ -442,7 +442,7 @@ describe('diagnoseScene', () => {
     ]
 
     expect(diagnoseScene(sentences, {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })).toEqual([{
       code: 'unsupported-transform-from',
       field: { kind: 'argument', key: 'transformFrom' },
@@ -495,7 +495,7 @@ describe('diagnoseEditorDocument', () => {
     expect(diagnoseEditorDocument({
       visualProjection: {
         kind: 'scene',
-        runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+        runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
         statements: buildStatements('changeFigure: hero.png -left13;'),
       },
     })).toEqual([{

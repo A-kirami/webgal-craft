@@ -9,7 +9,7 @@ import {
 
 import GameDependencyResolutionModal from './GameDependencyResolutionModal.vue'
 
-import type { ImportDependencyResolutionContext, ImportDependencyResolutionResult } from '~/types/import-dependency-resolution'
+import type { GameDependencyResolutionContext, GameDependencyResolutionResult } from '~/types/game-dependency-resolution'
 import type { TemplateBinding } from '~/types/project-config'
 
 const selectedTemplate = {
@@ -28,7 +28,7 @@ const configuredEngineContext = {
     },
     reason: 'missing',
   },
-} satisfies ImportDependencyResolutionContext
+} satisfies GameDependencyResolutionContext
 
 const configuredTemplateContext = {
   gameName: 'Demo Game',
@@ -43,7 +43,7 @@ const configuredTemplateContext = {
     displayName: 'Old Template',
     reason: 'missing',
   },
-} satisfies ImportDependencyResolutionContext
+} satisfies GameDependencyResolutionContext
 
 const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
@@ -132,9 +132,9 @@ const globalStubs = {
 }
 
 interface RenderGameDependencyResolutionModalOptions {
-  context: ImportDependencyResolutionContext
+  context: GameDependencyResolutionContext
   onCancel?: () => void
-  onConfirm?: (result: ImportDependencyResolutionResult) => void
+  onConfirm?: (result: GameDependencyResolutionResult) => void
   open?: boolean
   updateOpen?: (open: boolean) => void
 }

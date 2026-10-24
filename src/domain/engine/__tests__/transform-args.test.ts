@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { resolveTransformWriteMode } from '~/domain/engine/transform-args'
 import { parseSentence } from '~/domain/script/parser'
 
@@ -14,11 +14,11 @@ function resolve(rawText: string, supportsTransformFrom: boolean): TransformWrit
 
   return resolveTransformWriteMode(sentence, supportsTransformFrom
     ? LATEST_ENGINE_RUNTIME_CAPABILITIES
-    : LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    : BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 }
 
 describe('resolveTransformWriteMode', () => {
-  it('新引擎下 transformFrom 优先于同句的旧参数', () => {
+  it('支持 transformFrom 时优先于同句的旧参数', () => {
     expect(resolve('setTransform: {} -transformFrom=default;', true)).toEqual({
       transformFrom: 'default',
       writeDefault: true,
@@ -36,7 +36,7 @@ describe('resolveTransformWriteMode', () => {
     })
   })
 
-  it('新引擎下 default 与 parallel 组合成非完整写入', () => {
+  it('支持 transformFrom 时 default 与 parallel 组合成非完整写入', () => {
     expect(resolve('setTransform: {} -transformFrom=default -parallel;', true)).toEqual({
       transformFrom: 'default',
       writeDefault: true,
@@ -56,7 +56,7 @@ describe('resolveTransformWriteMode', () => {
     expect(resolve('setTransform: {} -transformFrom;', true)).toEqual(expected)
   })
 
-  it('新引擎下无参数默认 current 且不完整写入', () => {
+  it('支持 transformFrom 时无参数默认 current 且不完整写入', () => {
     expect(resolve('setTransform: {};', true)).toEqual({
       transformFrom: 'current',
       writeDefault: false,
@@ -64,7 +64,7 @@ describe('resolveTransformWriteMode', () => {
     })
   })
 
-  it('新引擎下显式旧参数按 key 存在走旧分支，可表达非对角组合', () => {
+  it('支持 transformFrom 时显式旧参数仍按 key 存在走旧分支，可表达非对角组合', () => {
     expect(resolve('setTransform: {} -writeDefault;', true)).toEqual({
       transformFrom: 'default',
       writeDefault: true,
@@ -92,7 +92,7 @@ describe('resolveTransformWriteMode', () => {
     })
   })
 
-  it('旧引擎完全忽略 transformFrom 并保持 4.6.4 的默认值', () => {
+  it('不支持 transformFrom 时忽略该参数并保持 4.6.4 的默认值', () => {
     expect(resolve('setTransform: {} -transformFrom=default;', false)).toEqual({
       transformFrom: 'current',
       writeDefault: false,

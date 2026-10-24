@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { fsCmds } from '~/commands/fs'
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
 import { mime } from '~/plugins/mime'
 import { gameAssetDir } from '~/services/platform/app-paths'
@@ -144,7 +144,7 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     getPreferredProjection: () => 'text' as const,
     getPreviewBaseUrl: () => undefined,
     waitForPreviewInitialization: async () => undefined,
-    getSceneRuntimeCapabilities: () => LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+    getSceneRuntimeCapabilities: () => BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     getSceneSelection: () => undefined,
     getSession(path: string) {
       return sessions.get(path)

@@ -6,12 +6,12 @@ import { AppError } from '~/types/errors'
 const {
   dbEngineGetMock,
   readProjectConfigMock,
-  requestImportDependencyResolutionMock,
+  requestGameDependencyResolutionMock,
   switchEngineMock,
 } = vi.hoisted(() => ({
   dbEngineGetMock: vi.fn(),
   readProjectConfigMock: vi.fn(),
-  requestImportDependencyResolutionMock: vi.fn(),
+  requestGameDependencyResolutionMock: vi.fn(),
   switchEngineMock: vi.fn(),
 }))
 
@@ -29,8 +29,8 @@ vi.mock('~/database/db', () => ({
   },
 }))
 
-vi.mock('~/features/modals/import-dependency-resolution/request-import-dependency-resolution', () => ({
-  requestImportDependencyResolution: requestImportDependencyResolutionMock,
+vi.mock('~/features/modals/game-dependency-resolution/request-game-dependency-resolution', () => ({
+  requestGameDependencyResolution: requestGameDependencyResolutionMock,
 }))
 
 vi.mock('~/services/engine-switch', () => ({
@@ -70,7 +70,7 @@ describe('requestGameRuntimeRebind', () => {
       }
       return
     })
-    requestImportDependencyResolutionMock.mockResolvedValue({ engineId: 'engine-new' })
+    requestGameDependencyResolutionMock.mockResolvedValue({ engineId: 'engine-new' })
 
     const { requestGameRuntimeRebind } = await import('../request-game-runtime-rebind')
     const rebound = await requestGameRuntimeRebind(game, {
@@ -79,7 +79,7 @@ describe('requestGameRuntimeRebind', () => {
     })
 
     expect(rebound).toBe(true)
-    expect(requestImportDependencyResolutionMock).toHaveBeenCalledWith({
+    expect(requestGameDependencyResolutionMock).toHaveBeenCalledWith({
       gameName: 'Demo Game',
       purpose: 'runtimeRebind',
       source: 'configured',
@@ -98,7 +98,7 @@ describe('requestGameRuntimeRebind', () => {
   it('用户取消依赖重选时不会执行重绑', async () => {
     const game = createTestGame({ engineId: 'engine-old' })
     dbEngineGetMock.mockResolvedValue(createTestEngine({ id: 'engine-old' }))
-    requestImportDependencyResolutionMock.mockResolvedValue(undefined)
+    requestGameDependencyResolutionMock.mockResolvedValue(undefined)
 
     const { requestGameRuntimeRebind } = await import('../request-game-runtime-rebind')
     const rebound = await requestGameRuntimeRebind(game)
@@ -118,7 +118,7 @@ describe('requestGameRuntimeRebind', () => {
         version: '4.5.0',
       },
     })
-    requestImportDependencyResolutionMock.mockImplementation(async () => {
+    requestGameDependencyResolutionMock.mockImplementation(async () => {
       // 重绑流程在用户选定后再取一次所选引擎记录
       dbEngineGetMock.mockResolvedValue(selectedEngine)
       return { engineId: 'engine-new' }
@@ -128,7 +128,7 @@ describe('requestGameRuntimeRebind', () => {
     const rebound = await requestGameRuntimeRebind(game)
 
     expect(rebound).toBe(true)
-    expect(requestImportDependencyResolutionMock).toHaveBeenCalledWith({
+    expect(requestGameDependencyResolutionMock).toHaveBeenCalledWith({
       gameName: 'Demo Game',
       purpose: 'runtimeRebind',
       source: 'configured',
@@ -147,13 +147,13 @@ describe('requestGameRuntimeRebind', () => {
     const game = createTestGame({ engineId: 'engine-missing' })
     dbEngineGetMock.mockResolvedValue(undefined)
     readProjectConfigMock.mockRejectedValue(new Error('项目配置损坏'))
-    requestImportDependencyResolutionMock.mockResolvedValue(undefined)
+    requestGameDependencyResolutionMock.mockResolvedValue(undefined)
 
     const { requestGameRuntimeRebind } = await import('../request-game-runtime-rebind')
     const rebound = await requestGameRuntimeRebind(game)
 
     expect(rebound).toBe(false)
-    expect(requestImportDependencyResolutionMock).toHaveBeenCalledWith({
+    expect(requestGameDependencyResolutionMock).toHaveBeenCalledWith({
       gameName: 'Demo Game',
       purpose: 'runtimeRebind',
       source: 'configured',
@@ -193,7 +193,7 @@ describe('requestGameRuntimeRebind', () => {
     const game = createTestGame({ engineId: 'engine-old' })
     dbEngineGetMock.mockResolvedValueOnce(createTestEngine({ id: 'engine-old' }))
     dbEngineGetMock.mockResolvedValueOnce(undefined)
-    requestImportDependencyResolutionMock.mockResolvedValue({ engineId: 'engine-missing' })
+    requestGameDependencyResolutionMock.mockResolvedValue({ engineId: 'engine-missing' })
 
     const { requestGameRuntimeRebind } = await import('../request-game-runtime-rebind')
 

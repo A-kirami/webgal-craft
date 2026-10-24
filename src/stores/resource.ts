@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { useEngines, useGames, useTemplates } from '~/composables/useDatabase'
 import { resolveEngineGameConfigCapabilities } from '~/domain/engine/game-config-capabilities'
 import { resolveEngineModelCapabilities } from '~/domain/engine/model-capabilities'
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES, resolveEngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, resolveEngineRuntimeCapabilities } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
 import { createTemplateGroups } from '~/features/home/templates-tab/template-groups'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
@@ -137,7 +137,7 @@ export const useResourceStore = defineStore('resource', () => {
   const currentEngineRuntimeCapabilities = $computed(() =>
     currentEngine
       ? resolveEngineRuntimeCapabilities(currentEngine.metadata.webgalVersion)
-      : LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      : BASELINE_ENGINE_RUNTIME_CAPABILITIES,
   )
 
   const currentEngineGameConfigCapabilities = $computed(() =>

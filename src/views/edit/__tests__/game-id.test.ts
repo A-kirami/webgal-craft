@@ -192,8 +192,8 @@ vi.mock('~/utils/error-handler', () => ({
 }))
 
 // 只替换重绑入口与原因映射，保留真实的"是否需要重绑"判定
-vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('~/features/modals/import-dependency-resolution/request-game-runtime-rebind')>()
+vi.mock('~/features/modals/game-dependency-resolution/request-game-runtime-rebind', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/features/modals/game-dependency-resolution/request-game-runtime-rebind')>()
   return {
     ...actual,
     requestGameRuntimeRebind: requestGameRuntimeRebindMock,

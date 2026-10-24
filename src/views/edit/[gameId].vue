@@ -12,12 +12,12 @@ import { useShortcutContext } from '~/features/editor/shortcut/useShortcutContex
 import { useShortcutDispatcher } from '~/features/editor/shortcut/useShortcutDispatcher'
 import { TRANSFORM_OVERLAY_BRIDGE_KEY } from '~/features/editor/transform-overlay/context'
 import { useTransformOverlayBridge } from '~/features/editor/transform-overlay/useTransformOverlayBridge'
+import { requestGameDependencyResolution } from '~/features/modals/game-dependency-resolution/request-game-dependency-resolution'
 import {
   isRuntimeRebindRequired,
   requestGameRuntimeRebind,
   resolveRuntimeRebindIssue,
-} from '~/features/modals/import-dependency-resolution/request-game-runtime-rebind'
-import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+} from '~/features/modals/game-dependency-resolution/request-game-runtime-rebind'
 import { useEditorTour } from '~/features/onboarding/useEditorTour'
 import { useEditorWorkspaceTour } from '~/features/onboarding/useEditorWorkspaceTour'
 import { useEffectEditorTour } from '~/features/onboarding/useEffectEditorTour'
@@ -136,7 +136,7 @@ watch(() => workspaceStore.currentGame?.id, async (gameId) => {
       try {
         rebound = await requestGameRuntimeRebind(currentGame, {
           ...resolveRuntimeRebindIssue(error.details?.issue),
-          resolveDependencies: context => requestImportDependencyResolution(context, {
+          resolveDependencies: context => requestGameDependencyResolution(context, {
             onCancel: () => {
               void exitEditMode()
             },

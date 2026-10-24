@@ -4,7 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { effectScope, nextTick, reactive } from 'vue'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { createEffectEditorProvider } from '~/features/editor/effect-editor/useEffectEditorProvider'
 import { useEditSettingsStore } from '~/stores/edit-settings'
 
@@ -344,12 +344,12 @@ describe('useEffectEditorProvider 预览基线生命周期', () => {
     )
   })
 
-  it('旧引擎忽略 transformFrom 并沿用旧解析结果', async () => {
+  it('基线能力下忽略 transformFrom 并沿用旧解析结果', async () => {
     const client = createBaselineClient()
     const provider = createProvider(client)
     await provider.open(createOpenTarget({
       baseSentence: createSetTransformSentence([{ key: 'transformFrom', value: 'default' }]),
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     }))
     await vi.waitFor(() => {
       expect(provider.session?.baselineResolved).toBe(true)

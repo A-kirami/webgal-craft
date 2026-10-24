@@ -182,11 +182,11 @@ export function findSkippedFigureDiffModelReferences(
 }
 
 /**
- * 立绘差分是 4.6.5 起的能力：旧引擎只把整句当旁白读出，不执行也不报错。
+ * 立绘差分是 4.6.5 起的能力：不支持该能力的引擎只把整句当旁白读出，不执行也不报错。
  *
- * 旧命令表里没有该命令，4.6.3 / 4.6.4 上这句会退化成 say 简写（commandRaw 就是原命令名），
- * 因此不能只看 command，必须同时认 commandRaw —— 只看 command 时这两档引擎上不会触发诊断。
- * 该命令在 domain/script/parser.ts 的 diff-legacy 档里被排除，两处判据必须同时成立。
+ * 缺少该能力的命令表里没有该命令，语句会退化成 say 简写（commandRaw 就是原命令名），
+ * 因此不能只看 command，必须同时认 commandRaw，否则这类引擎上不会触发诊断。
+ * 该命令由 domain/script/parser.ts 按 changeFigureDiff 能力排除，两处判据必须一致。
  */
 export function findChangeFigureDiffCompatReferences(
   sentence: ISentence,
@@ -207,7 +207,7 @@ function isChangeFigureDiffStatement(sentence: ISentence): boolean {
   if (sentence.command === commandType.changeFigureDiff) {
     return true
   }
-  // 旧运行时解析器把不认识的命令退化成 say 简写，commandRaw 保留原命令名
+  // 缺少对应能力时，解析器把不认识的命令退化成 say 简写，commandRaw 保留原命令名
   return sentence.command === commandType.say
     && sentence.commandRaw === getCommandScriptString(commandType.changeFigureDiff)
 }
