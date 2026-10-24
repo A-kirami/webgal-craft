@@ -307,7 +307,7 @@ function closeOutputControl(control: PreviewOutputControl): void {
           <Button
             variant="ghost"
             size="icon-xs"
-            :disabled="!previewAvailable"
+            :disabled="!previewAvailable && connectionStatus !== 'failed'"
             @click="emit('refresh')"
           >
             <RotateCw />

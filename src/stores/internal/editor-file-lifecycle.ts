@@ -48,7 +48,6 @@ export interface SessionAccessor {
   getSession: (path: AbsPath) => EditorSession | undefined
   setSession: (path: AbsPath, session: EditorSession) => void
   deleteSession: (path: AbsPath) => void
-  hasSession: (path: AbsPath) => boolean
   getEditableSession: (path: AbsPath) => EditableEditorSession | undefined
   getEditableState: (path: AbsPath) => EditableEditorState | undefined
 }
@@ -77,6 +76,7 @@ export interface EditorFileLifecycleContext extends
   getAssetUrl: (path: AbsPath) => string
   getPreferredProjection: () => 'text' | 'visual'
   getPreviewBaseUrl: () => string | undefined
+  waitForPreviewInitialization: () => Promise<void>
   getSceneRuntimeCapabilities: () => EngineRuntimeCapabilities
   getSceneSelection: (path: AbsPath) => SceneSelectionState | undefined
   getWorkspaceRootPath: () => string | undefined
@@ -146,6 +146,7 @@ async function loadNonEditableState(
   mimeType: string,
 ): Promise<AssetPreviewState | UnsupportedState | undefined> {
   if (['image/', 'video/', 'audio/'].some(prefix => mimeType.startsWith(prefix))) {
+    await context.waitForPreviewInitialization()
     requireWorkspaceRootPath(context)
     requirePreviewBaseUrl(context)
 
@@ -239,36 +240,32 @@ async function resolveDocumentKind(
   return 'plaintext'
 }
 
-async function loadEditableDocumentState(
+async function loadEditableSession(
   context: EditorFileLifecycleContext,
   path: AbsPath,
   mimeType: string,
-): Promise<void> {
+): Promise<EditorSession> {
   const loadedDocument = await context.readTextDocumentFile(path)
   if (!loadedDocument.ok) {
-    context.setSession(path, createUnsupportedSession({
+    return createUnsupportedSession({
       path,
       view: 'unsupported',
-    }))
-    return
+    })
   }
 
   const { content, metadata } = loadedDocument
   const documentKind = await resolveDocumentKind(context, path, mimeType)
 
   try {
-    context.setSession(
+    return createEditableSession(
       path,
-      createEditableSession(
-        path,
-        createLoadedDocumentState(
-          documentKind,
-          content,
-          metadata,
-          context.getSceneRuntimeCapabilities(),
-        ),
-        context.getPreferredProjection(),
+      createLoadedDocumentState(
+        documentKind,
+        content,
+        metadata,
+        context.getSceneRuntimeCapabilities(),
       ),
+      context.getPreferredProjection(),
     )
   } catch (error) {
     logger.warn(`创建文档模型失败 (${path}): ${error}`)
@@ -535,34 +532,36 @@ async function handleFileModifiedEventInternal(
 export async function loadEditorState(
   context: EditorFileLifecycleContext,
   path: AbsPath,
+  signal: AbortSignal,
 ): Promise<void> {
-  if (context.hasSession(path)) {
-    return
-  }
-
   try {
     context.setTabLoading(path, true)
     context.setTabError(path, undefined)
 
     const mimeType = mime.getType(path) ?? ''
     const nonEditableState = await loadNonEditableState(context, path, mimeType)
+    let session: EditorSession
     if (nonEditableState) {
-      context.setSession(
-        path,
-        nonEditableState.view === 'preview'
-          ? createPreviewSession(nonEditableState)
-          : createUnsupportedSession(nonEditableState),
-      )
-      return
+      session = nonEditableState.view === 'preview'
+        ? createPreviewSession(nonEditableState)
+        : createUnsupportedSession(nonEditableState)
+    } else {
+      session = await loadEditableSession(context, path, mimeType)
     }
-
-    await loadEditableDocumentState(context, path, mimeType)
+    // 关闭标签页或重新加载后，旧任务不能重新创建会话或覆盖新结果。
+    if (!signal.aborted) {
+      context.setSession(path, session)
+    }
   } catch (error) {
-    logger.error(`无法加载编辑器状态 ${path}: ${error}`)
-    context.setTabError(path, error instanceof Error ? error.message : 'Unknown error')
+    if (!signal.aborted) {
+      logger.error(`无法加载编辑器状态 ${path}: ${error}`)
+      context.setTabError(path, error instanceof Error ? error.message : 'Unknown error')
+    }
   } finally {
-    context.setTabLoading(path, false)
-    context.setTabModified(path, false)
+    if (!signal.aborted) {
+      context.setTabLoading(path, false)
+      context.setTabModified(path, false)
+    }
   }
 }
 

@@ -663,11 +663,11 @@ export const useEditorStore = defineStore('editor', () => {
     getEditableState,
     getPreferredProjection: () => usePreferenceStore().editorMode,
     getPreviewBaseUrl: () => previewSessionStore.currentGameServeUrl,
+    waitForPreviewInitialization: () => previewSessionStore.initialized,
     getSceneRuntimeCapabilities: () => resourceStore.currentEngineRuntimeCapabilities,
     getSceneSelection,
     getSession: (path: AbsPath) => sessions.get(path),
     getWorkspaceRootPath: () => useWorkspaceStore().CWD,
-    hasSession: (path: AbsPath) => sessions.has(path),
     messages: {
       fileSyncFailed: editorMessages.fileSyncFailed,
       previewUnavailable: editorMessages.previewUnavailable,
@@ -787,6 +787,10 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   function syncActiveScenePreview(path: AbsPath) {
+    if (tabsStore.activeTab?.path !== path) {
+      return
+    }
+
     const session = getEditableSession(path)
     if (!session || session.document.model.kind !== 'scene') {
       return
@@ -800,7 +804,20 @@ export const useEditorStore = defineStore('editor', () => {
     syncScenePreview(path, sceneCursor.lineNumber, sceneCursor.lineText)
   }
 
-  watch(() => tabsStore.activeTab?.path, async (activePath) => {
+  const pendingLoads = new Map<AbsPath, AbortController>()
+
+  async function loadDocument(path: AbsPath): Promise<void> {
+    pendingLoads.get(path)?.abort()
+    const controller = new AbortController()
+    pendingLoads.set(path, controller)
+    await loadEditorStateAction(fileLifecycleContext, path, controller.signal)
+    if (pendingLoads.get(path) === controller) {
+      pendingLoads.delete(path)
+    }
+  }
+
+  // URL 就绪也可能来自预览失败后的重试，此时需要恢复当前尚未加载的标签页。
+  watch([() => tabsStore.activeTab?.path, () => previewSessionStore.currentGameServeUrl], async ([activePath]) => {
     if (!activePath) {
       return
     }
@@ -810,7 +827,7 @@ export const useEditorStore = defineStore('editor', () => {
       const preferenceStore = usePreferenceStore()
       setActiveProjection(preferenceStore.editorMode, activePath)
     } else {
-      await loadEditorStateAction(fileLifecycleContext, activePath)
+      await loadDocument(activePath)
     }
 
     syncActiveScenePreview(activePath)
@@ -818,8 +835,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   /**
    * 重新加载当前标签页文档。
-   * 加载失败只会记在标签页错误态上，不会因为文件视图或运行时后来恢复而自动重试，
-   * 因此重绑引擎之后需要显式调用它把文档补上。
+   * 文件视图恢复后显式补载文档；预览 URL 的恢复由上面的 watcher 驱动。
    */
   async function retryActiveDocument(): Promise<void> {
     const path = tabsStore.activeTab?.path
@@ -827,11 +843,13 @@ export const useEditorStore = defineStore('editor', () => {
       return
     }
 
-    await loadEditorStateAction(fileLifecycleContext, path)
+    await loadDocument(path)
     syncActiveScenePreview(path)
   }
 
   function disposeDocumentSession(path: AbsPath): void {
+    pendingLoads.get(path)?.abort()
+    pendingLoads.delete(path)
     cancelAutoSave(path)
     saveHooks.delete(path)
     sessions.delete(path)

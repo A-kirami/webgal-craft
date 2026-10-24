@@ -155,7 +155,7 @@ let workspaceStoreState: {
 }
 
 let previewSessionStoreState: {
-  currentGameServeUrl: string
+  currentGameServeUrl: string | undefined
   reloadVersion: number
   serveStatus: 'idle' | 'connecting' | 'ready' | 'failed'
   refresh: () => void
@@ -451,6 +451,24 @@ describe('PreviewPanel', () => {
 
     previewSessionStoreState.serveStatus = 'failed'
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'failed')
+  })
+
+  it('预览会话失败且没有地址时仍可刷新重试', async () => {
+    previewSessionStoreState.currentGameServeUrl = undefined
+    previewSessionStoreState.serveStatus = 'failed'
+    const refresh = vi.fn()
+    previewSessionStoreState.refresh = refresh
+    await renderInBrowser(PreviewPanel, {
+      global: {
+        plugins: [createPreviewPanelLiteI18n()],
+        stubs: globalStubs,
+      },
+    })
+
+    await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).click()
+
+    expect(refresh).toHaveBeenCalledOnce()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
   })
 
   it('缺少规范入口时只显示错误遮罩且不展示连接状态，入口恢复后重新挂载预览', async () => {

@@ -4,6 +4,7 @@ import { LRUCache } from 'lru-cache'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AbsPath } from '~/domain/path'
+import { useSceneEntryStatus } from '~/features/editor/scene-entry/useSceneEntryStatus'
 import { mime } from '~/plugins/mime'
 import { registerPendingFileWrite, rollbackPendingFileWrite } from '~/services/file-write-echo-registry'
 import {
@@ -100,11 +101,21 @@ vi.mock('~/stores/workspace', () => ({
   useWorkspaceStore: useWorkspaceStoreMock,
 }))
 
-vi.mock('~/composables/useFileSystemEvents', () => ({
-  useFileSystemEvents: () => ({
-    emit: fileSystemEventsEmitMock,
-  }),
-}))
+vi.mock(import('~/composables/useFileSystemEvents'), async (importOriginal) => {
+  const { useFileSystemEvents } = await importOriginal()
+  return {
+    useFileSystemEvents: () => {
+      const events = useFileSystemEvents()
+      return {
+        ...events,
+        emit: (event) => {
+          fileSystemEventsEmitMock(event)
+          events.emit(event)
+        },
+      }
+    },
+  }
+})
 
 vi.mock('~/services/directory-cache', () => ({
   invalidateDirectoryItemsCache: invalidateDirectoryItemsCacheMock,
@@ -1269,12 +1280,17 @@ describe('useFileStore', () => {
     expect(vfsCopyPathMock).not.toHaveBeenCalled()
   })
 
-  it('refreshTemplateOverlay 在文件树尚未建立时会补建文件树并通知目录变更', async () => {
+  it('重绑引擎会补建文件树、恢复监听并重新检测场景入口', async () => {
     resolvePreviewSiteMock.mockRejectedValueOnce(new AppError('CONFIG_ERROR', '游戏未绑定可用引擎'))
+    vfsListDirMock.mockImplementation(async ({ relPath }) => relPath === 'game'
+      ? [createVfsEntry('scene', true)]
+      : [createVfsEntry('start.txt', false)])
 
     const store = useFileStore()
     await store.initialized
-
+    const entry = useSceneEntryStatus()
+    await vi.waitFor(() => expect(loggerWarnMock).toHaveBeenCalled())
+    expect(entry.status.value).toBe('checking')
     expect(watchFsMock).not.toHaveBeenCalled()
 
     await store.refreshTemplateOverlay(AbsPath.from('/workspace'), {
@@ -1298,6 +1314,7 @@ describe('useFileStore', () => {
       path: '/workspace/game',
     })
     expect(store.getItemByPath(AbsPath.from('/workspace/game'))).toBeDefined()
+    await vi.waitFor(() => expect(entry.status.value).toBe('valid'))
   })
 
   it('切换工作区后 initialized 立即指向新一代，同一轮更新里的消费者不会读到上一代已兑现的状态', async () => {
