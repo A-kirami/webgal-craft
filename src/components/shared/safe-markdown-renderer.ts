@@ -1,12 +1,12 @@
 import purifier from 'dompurify'
-import MarkdownIt from 'markdown-it'
+import MarkdownParser from 'markdown-it'
 
 import type { Token } from 'markdown-it'
 
 const safeUrlProtocols = new Set(['http:', 'https:'])
 const taskListMarkerPattern = /^\[([ xX])\]\s+/
 
-const markdown = new MarkdownIt({
+const markdown = new MarkdownParser({
   html: true,
   linkify: false,
 })
