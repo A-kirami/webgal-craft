@@ -11,6 +11,7 @@ import {
   GAME_CONFIG_DEFAULT_LANGUAGES,
 } from '~/features/modals/game-config/game-config-form'
 
+import type { EngineGameConfigCapabilities } from '~/domain/engine/game-config-capabilities'
 import type { AbsPath } from '~/domain/path'
 import type {
   GameConfigDefaultLanguage,
@@ -21,6 +22,7 @@ interface Props {
   backgroundRootPath: AbsPath
   bgmRootPath: AbsPath
   gamePath: AbsPath
+  capabilities: EngineGameConfigCapabilities
   serveUrl?: string
 }
 
@@ -490,8 +492,10 @@ function scrollCustomAddButtonIntoView() {
       </FormField>
 
       <FormField
+        v-if="capabilities.legacyExpressionBlendMode"
         v-slot="{ handleChange, value }"
         name="legacyExpressionBlendMode"
+        :keep-value="true"
       >
         <FormItem
           data-testid="game-config-legacy-expression-row"
@@ -515,8 +519,10 @@ function scrollCustomAddButtonIntoView() {
       </FormField>
 
       <FormField
+        v-if="capabilities.cubismMemoryReservedSize"
         v-slot="{ handleChange, value }"
         name="cubismMemoryReservedSize"
+        :keep-value="true"
         :validate-on-model-update="false"
       >
         <FormItem class="gap-x-2 gap-y-1 grid grid-cols-[1fr_auto] items-center">

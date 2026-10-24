@@ -191,15 +191,18 @@ describe('useResourceStore', () => {
   })
 
   it('工程 VFS 可解析两个 Live2D 库时启用能力，不修改引擎元数据', async () => {
-    const engine = createTestEngine({ id: 'engine', metadata: { live2dSupport: false } })
+    const engine = createTestEngine({ id: 'engine', metadata: { live2dSupport: false, webgalVersion: '4.6.6' } })
     enginesRef.value = [engine]
     workspaceStoreState.currentGame = createTestGame({ path: AbsPath.from('/games/v1'), engineId: engine.id })
     resolveFilePathMock.mockImplementation(async path => path)
 
     const store = useResourceStore()
+    expect(store.currentEngineGameConfigCapabilities.legacyExpressionBlendMode).toBe(false)
+    expect(store.currentEngineGameConfigCapabilities.cubismMemoryReservedSize).toBe(false)
     await flushCapabilities()
 
     expect(store.currentEngineCapabilities).toEqual({ live2d: true, spine: false })
+    expect(store.currentEngineGameConfigCapabilities).toEqual({ legacyExpressionBlendMode: true, cubismMemoryReservedSize: true })
     expect(resolveFilePathMock).toHaveBeenCalledWith('/games/v1/lib/live2d.min.js')
     expect(resolveFilePathMock).toHaveBeenCalledWith('/games/v1/lib/live2dcubismcore.min.js')
     expect(enginesRef.value[0]?.metadata.live2dSupport).toBe(false)
@@ -328,6 +331,31 @@ describe('useResourceStore', () => {
 
     workspaceStoreState.currentGame = createTestGame({ engineId: 'webgal-463' })
     expect(store.currentEngineRuntimeCapabilities).toEqual({ changeFigureDiff: false, figurePositions: true, multilineStatements: true, opusVocalShorthand: true, sceneSemantics: true, seekAnimation: false, transformFrom: false })
+  })
+
+  it('游戏配置能力跟随当前绑定引擎的版本与模型声明更新', async () => {
+    const engine = createTestEngine({
+      id: 'config-engine',
+      metadata: { description: '', icon: '', webgalVersion: '4.6.5', live2dSupport: true },
+    })
+    enginesRef.value = [engine]
+    workspaceStoreState.currentGame = createTestGame({ engineId: engine.id })
+    const store = useResourceStore()
+
+    expect(store.currentEngineGameConfigCapabilities.legacyExpressionBlendMode).toBe(true)
+    expect(store.currentEngineGameConfigCapabilities.cubismMemoryReservedSize).toBe(false)
+
+    enginesRef.value = [{ ...engine, metadata: { ...engine.metadata, webgalVersion: '4.6.6' } }]
+    expect(store.currentEngineGameConfigCapabilities.cubismMemoryReservedSize).toBe(true)
+    enginesRef.value = [{ ...engine, metadata: { ...engine.metadata, webgalVersion: '4.6.6', live2dSupport: false } }]
+    await flushCapabilities()
+    expect(store.currentEngineGameConfigCapabilities.legacyExpressionBlendMode).toBe(false)
+    expect(store.currentEngineGameConfigCapabilities.cubismMemoryReservedSize).toBe(false)
+
+    workspaceStoreState.currentGame = createTestGame({ engineId: 'missing' })
+    expect(store.currentEngineGameConfigCapabilities.legacyExpressionBlendMode).toBe(false)
+    workspaceStoreState.currentGame = undefined
+    expect(store.currentEngineGameConfigCapabilities.cubismMemoryReservedSize).toBe(false)
   })
 
   it('会把独立模板和引擎内置模板整理为模板族展示模型', () => {
