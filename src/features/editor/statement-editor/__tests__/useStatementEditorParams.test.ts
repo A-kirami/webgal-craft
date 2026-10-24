@@ -6,7 +6,7 @@ import '~/__tests__/mocks/modal-store'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { computed } from 'vue'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { mustParse } from '~/domain/script/__tests__/utils'
 import { parseCommandNode } from '~/domain/script/codec'
 import {
@@ -84,9 +84,9 @@ describe('useStatementEditorParams', () => {
     ])
   })
 
-  it('旧引擎隐藏 changeFigure 的扩展位置，但保留已有位置 flag', () => {
+  it('基线能力下隐藏 changeFigure 的扩展位置，但保留已有位置 flag', () => {
     const { editor } = createHarness('changeFigure: hero.png -right14;', {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })
     const positionField = requireArgField(editor, 'position')
 
@@ -113,9 +113,9 @@ describe('useStatementEditorParams', () => {
     expect(updates.at(-1)?.parsed.args).toEqual([{ key: 'local', value: true }])
   })
 
-  it('旧运行时保留 setVar 的单个 global 开关', () => {
+  it('基线能力下保留 setVar 的单个 global 开关', () => {
     const { editor, updates } = createHarness('setVar: score=10 -global;', {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })
 
     expect(editor.params.argFields.value.map(field => field.field.key)).toContain('global')
@@ -167,7 +167,7 @@ describe('useStatementEditorParams', () => {
       argFields: computed(() => [concatField]),
       readEditableArgs: () => structuredClone(sentence.args),
       emitUpdate: patch => emittedPatches.push(patch),
-      runtimeCapabilities: computed(() => LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+      runtimeCapabilities: computed(() => BASELINE_ENGINE_RUNTIME_CAPABILITIES),
     })
 
     params.handleArgFieldChange(concatField, false)

@@ -3,8 +3,8 @@ import { nextTick, reactive, toRaw } from 'vue'
 
 import { encodeTextFile } from '~/domain/document/file-codec'
 import {
+  BASELINE_ENGINE_RUNTIME_CAPABILITIES,
   LATEST_ENGINE_RUNTIME_CAPABILITIES,
-  LEGACY_ENGINE_RUNTIME_CAPABILITIES,
 } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { parseSentence } from '~/domain/script/parser'
@@ -95,7 +95,7 @@ const workspaceStoreMock = reactive({
 })
 
 const resourceStoreMock = reactive({
-  currentEngineRuntimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+  currentEngineRuntimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
 })
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -345,7 +345,7 @@ describe('编辑器文本与文档流程', () => {
     preferenceStoreMock.editorMode = 'text'
     workspaceStoreMock.currentGame = { id: 'game-1', path: '/game' }
     workspaceStoreMock.cwd = '/game'
-    resourceStoreMock.currentEngineRuntimeCapabilities = LEGACY_ENGINE_RUNTIME_CAPABILITIES
+    resourceStoreMock.currentEngineRuntimeCapabilities = BASELINE_ENGINE_RUNTIME_CAPABILITIES
     previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
   })
 
@@ -915,10 +915,10 @@ describe('编辑器文本与文档流程', () => {
     expect(editorStore.redoDocument(path).applied).toBe(true)
     expect(textProjection.textContent).toBe(editedContent)
 
-    resourceStoreMock.currentEngineRuntimeCapabilities = LEGACY_ENGINE_RUNTIME_CAPABILITIES
+    resourceStoreMock.currentEngineRuntimeCapabilities = BASELINE_ENGINE_RUNTIME_CAPABILITIES
     await flushEditorWatchers()
 
-    expect(textProjection.runtimeCapabilities).toEqual(LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    expect(textProjection.runtimeCapabilities).toEqual(BASELINE_ENGINE_RUNTIME_CAPABILITIES)
     expect(visualProjection.statements.map(statement => statement.rawText)).toEqual([
       'changeFigure:hero.png',
       '  -id=hero;',
@@ -941,7 +941,7 @@ describe('编辑器文本与文档流程', () => {
       'load transformFrom scene',
     )
 
-    const capabilities = { ...LEGACY_ENGINE_RUNTIME_CAPABILITIES, transformFrom: true }
+    const capabilities = { ...BASELINE_ENGINE_RUNTIME_CAPABILITIES, transformFrom: true }
     resourceStoreMock.currentEngineRuntimeCapabilities = capabilities
     await flushEditorWatchers()
 
@@ -2192,7 +2192,7 @@ describe('编辑器文本与文档流程', () => {
         documentKind: 'scene',
         localContent: 'local!',
         externalContent: 'remote\r\nchange',
-        runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+        runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
       }),
       expect.stringContaining('external-document-change-'),
     )

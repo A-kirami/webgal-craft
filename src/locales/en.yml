@@ -1680,13 +1680,13 @@ game:
   gameDependencyResolutionDescriptionWithName: 'The engine or template "{name}" needs is currently unavailable. Select an available resource, and WebGAL Craft will update the game config before continuing the import.'
   gameDependencyResolutionRuntimeRebindDescription: The engine bound to this game is unavailable or cannot be used in WebGAL Craft. Select an available engine, and WebGAL Craft will update the game config before reopening it.
   gameDependencyResolutionRuntimeRebindDescriptionWithName: 'The engine bound to "{name}" is unavailable or cannot be used in WebGAL Craft. Select an available engine, and WebGAL Craft will update the game config before reopening it.'
-  gameDependencyResolutionLegacyDescription: This is a legacy game, and it needs an engine that can be used in WebGAL Craft. WebGAL Craft will create a game config and continue the import.
-  gameDependencyResolutionLegacyDescriptionWithName: '"{name}" is a legacy game, and it needs an engine that can be used in WebGAL Craft. WebGAL Craft will create a game config and continue the import.'
+  gameDependencyResolutionUnconfiguredDescription: This game has no WebGAL Craft configuration yet. Select an available engine. WebGAL Craft creates the game configuration and continues the import.
+  gameDependencyResolutionUnconfiguredDescriptionWithName: '"{name}" has no WebGAL Craft configuration yet. Select an available engine. WebGAL Craft creates the game configuration and continues the import.'
   gameDependencyResolutionEngineTitle: Select Engine
   gameDependencyResolutionTemplateTitle: Select Template
   gameDependencyResolutionEngineIssue: Select an engine that can be used in WebGAL Craft. After the import, the game will use it to open and preview.
   gameDependencyResolutionRuntimeRebindEngineIssue: Select an engine that can be used in WebGAL Craft. After the change, the game will use it to open and preview.
-  gameDependencyResolutionEngineLegacyIssue: A legacy game needs an engine that can be used in WebGAL Craft before it can be imported.
+  gameDependencyResolutionEngineUnconfiguredIssue: Select an engine that can be used in WebGAL Craft before importing this game.
   gameDependencyResolutionTemplateIssue: Select an available template, or use the selected engine's default template.
   gameDependencyResolutionOriginalEngine: Current Engine
   gameDependencyResolutionOriginalTemplate: Current Template

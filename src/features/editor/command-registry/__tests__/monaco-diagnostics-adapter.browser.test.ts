@@ -14,15 +14,15 @@ vi.mock('~/plugins/i18n', () => ({
   i18n: { global: { t: (key: string, params: Record<string, unknown> = {}) => `${key}:${Object.values(params).join(':')}` } },
 }))
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
 import { resolveWebgalScriptLanguageId } from '~/features/editor/text-editor/text-editor-language'
 import { updateEditorDiagnostics } from '~/plugins/editor/diagnostics'
 
 const OWNER = 'webgal-editor-diagnostics'
 /** 能力全关时的语言档位：return 与立绘差分都按旁白着色 */
-const LEGACY_LANGUAGE_ID = resolveWebgalScriptLanguageId(
-  resolveWebgalScriptConfigKey(LEGACY_ENGINE_RUNTIME_CAPABILITIES),
+const BASELINE_LANGUAGE_ID = resolveWebgalScriptLanguageId(
+  resolveWebgalScriptConfigKey(BASELINE_ENGINE_RUNTIME_CAPABILITIES),
 )
 const models: monaco.editor.ITextModel[] = []
 let modelId = 0
@@ -44,7 +44,7 @@ function readMarkers(model: monaco.editor.ITextModel): monaco.editor.IMarker[] {
 describe('updateEditorDiagnostics', () => {
   beforeAll(() => {
     monaco.languages.register({ id: 'webgalscript' })
-    monaco.languages.register({ id: LEGACY_LANGUAGE_ID })
+    monaco.languages.register({ id: BASELINE_LANGUAGE_ID })
   })
 
   beforeEach(() => {
@@ -159,7 +159,7 @@ describe('updateEditorDiagnostics', () => {
     ])
   })
 
-  it('旧运行时会将多行语句标为错误', () => {
+  it('基线能力下会将多行语句标为错误', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
@@ -169,7 +169,7 @@ describe('updateEditorDiagnostics', () => {
       'changeFigure:hero.png',
       '  -id=hero;',
     ].join('\n'))
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({
       startLineNumber: 1,
@@ -180,7 +180,7 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
-  it('旧运行时会标记立绘差分，范围覆盖整条语句', () => {
+  it('基线能力下会标记立绘差分，范围覆盖整条语句', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
@@ -191,7 +191,7 @@ describe('updateEditorDiagnostics', () => {
       'changeFigure: hero.png -left;',
       statement,
     ].join('\n'))
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({
       startLineNumber: 2,
@@ -259,7 +259,7 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
-  it('旧运行时会标记扩展立绘位置', () => {
+  it('基线能力下会标记扩展立绘位置', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
@@ -271,7 +271,7 @@ describe('updateEditorDiagnostics', () => {
       'setAnimation: bounce -target=fig-left14;',
       'setTransform: {} -target=fig-right13;',
     ].join('\n'))
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([
       expect.objectContaining({
@@ -297,14 +297,14 @@ describe('updateEditorDiagnostics', () => {
     ])
   })
 
-  it('旧引擎标记整个 transformFrom 参数而不是它的取值', () => {
+  it('基线能力下标记整个 transformFrom 参数而不是它的取值', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
     })
 
     const model = createModel('setTransform: {} -target=fig-center -transformFrom=default;')
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({
       startLineNumber: 1,
@@ -336,7 +336,7 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
-  it('新引擎标记整个旧写入参数 token', () => {
+  it('支持 transformFrom 时标记整个旧写入参数 token', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
@@ -381,14 +381,14 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
-  it('legacy 语言模型仍会生成旧运行时诊断', () => {
+  it('基线能力语言模型仍会诊断不支持的局部变量', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
     })
 
-    const model = createModel('setVar: result=1 -local;', LEGACY_LANGUAGE_ID)
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    const model = createModel('setVar: result=1 -local;', BASELINE_LANGUAGE_ID)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({
       message: 'edit.diagnostics.unsupportedLocalVariable:',
@@ -480,14 +480,14 @@ describe('updateEditorDiagnostics', () => {
     ])
   })
 
-  it('为旧引擎的 say Opus 语音引用定位黄色 marker', () => {
+  it('为基线能力下的 say Opus 语音引用定位黄色 marker', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
     })
 
     const model = createModel('say:voice.opus -voice.opus;')
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([expect.objectContaining({
       startLineNumber: 1,
@@ -498,7 +498,7 @@ describe('updateEditorDiagnostics', () => {
     })])
   })
 
-  it('旧运行时不将 return 识别为返回命令，但仍标记受限场景语义', () => {
+  it('基线能力下不将 return 识别为返回命令，但仍标记受限场景语义', () => {
     useResourceIndex.mockReturnValue({
       status: { value: 'ready' },
       hasAssetKey: vi.fn(() => true),
@@ -509,7 +509,7 @@ describe('updateEditorDiagnostics', () => {
       'setVar: result=1 -local;',
       'callScene:battle.txt -enemy=slime -writeReturnTo=result;',
     ].join('\n'))
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([
       expect.objectContaining({
@@ -543,7 +543,7 @@ describe('updateEditorDiagnostics', () => {
     })
 
     const model = createModel('callScene:battle.txt -next=false -enemy=slime;')
-    updateEditorDiagnostics(model, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    updateEditorDiagnostics(model, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(readMarkers(model)).toEqual([
       expect.objectContaining({

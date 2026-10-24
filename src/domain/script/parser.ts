@@ -112,8 +112,8 @@ function sameProfile(left: GatingProfile, right: GatingProfile): boolean {
 }
 
 /**
- * 旧引擎不认识的命令要在解析器层面缺席：认识它就会把它当成可编辑命令改写，
- * 而旧引擎只会把整句当旁白读出；缺席后该行退化成 say 简写，commandRaw 保留原命令名，
+ * 引擎不支持的命令要在解析器层面缺席：认识它就会把它当成可编辑命令改写，
+ * 而缺少对应能力的引擎只会把整句当旁白读出；缺席后该行退化成 say 简写，commandRaw 保留原命令名，
  * 序列化后文本不变。诊断侧靠 commandRaw 反查该命令，见 command-registry/diagnostics.ts。
  */
 function buildConfigForProfile(profile: GatingProfile): WebgalScriptConfig {

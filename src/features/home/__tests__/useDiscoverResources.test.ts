@@ -19,7 +19,7 @@ const {
   toastInfoMock,
   toastSuccessMock,
   readDirMock,
-  requestImportDependencyResolutionMock,
+  requestGameDependencyResolutionMock,
   resolveHomeTabDefinitionMock,
   templateImportMock,
   useModalStoreMock,
@@ -48,7 +48,7 @@ const {
   toastInfoMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   readDirMock: vi.fn(),
-  requestImportDependencyResolutionMock: vi.fn(),
+  requestGameDependencyResolutionMock: vi.fn(),
   resolveHomeTabDefinitionMock: vi.fn(),
   templateImportMock: vi.fn(),
   useModalStoreMock: vi.fn(),
@@ -90,8 +90,8 @@ vi.mock('~/features/home/home-tabs', () => ({
   resolveHomeTabDefinition: resolveHomeTabDefinitionMock,
 }))
 
-vi.mock('~/features/modals/import-dependency-resolution/request-import-dependency-resolution', () => ({
-  requestImportDependencyResolution: requestImportDependencyResolutionMock,
+vi.mock('~/features/modals/game-dependency-resolution/request-game-dependency-resolution', () => ({
+  requestGameDependencyResolution: requestGameDependencyResolutionMock,
 }))
 
 vi.mock('~/services/engine-manager', () => ({
@@ -157,7 +157,7 @@ describe('useDiscoverResources', () => {
     toastInfoMock.mockReset()
     toastSuccessMock.mockReset()
     readDirMock.mockReset()
-    requestImportDependencyResolutionMock.mockReset()
+    requestGameDependencyResolutionMock.mockReset()
     resolveHomeTabDefinitionMock.mockReset()
     templateImportMock.mockReset()
     useModalStoreMock.mockReset()
@@ -707,7 +707,7 @@ describe('useDiscoverResources', () => {
     await modalProps?.onImport?.([AbsPath.from('/games/demo')])
 
     expect(gameManager.importGame).toHaveBeenCalledWith('/games/demo', {
-      resolveDependencies: requestImportDependencyResolutionMock,
+      resolveDependencies: requestGameDependencyResolutionMock,
     })
   })
 

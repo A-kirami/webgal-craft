@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, ref } from 'vue'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { RelPath } from '~/domain/path'
 import { parseSentence } from '~/domain/script/parser'
 import { useStatementFieldDiagnostics } from '~/features/editor/statement-editor/useStatementFieldDiagnostics'
@@ -127,13 +127,13 @@ describe('useStatementFieldDiagnostics', () => {
     expect(hasAssetKey).not.toHaveBeenCalled()
   })
 
-  it('旧引擎草稿会即时诊断扩展立绘位置', () => {
+  it('基线能力下的草稿会即时诊断扩展立绘位置', () => {
     resourceIndexStatus.value = 'idle'
     const parsed = computed(() => parseSentence('setAnimation: bounce -target=fig-left13;'))
 
     const result = useStatementFieldDiagnostics({
       parsed,
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })
 
     expect(result.getFieldDiagnostics({ kind: 'argument', key: 'target' })).toEqual([{

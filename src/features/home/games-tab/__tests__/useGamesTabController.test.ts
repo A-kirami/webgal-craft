@@ -19,7 +19,7 @@ const {
   openPathMock,
   reconcileGameRecordMock,
   requestGameRuntimeRebindMock,
-  requestImportDependencyResolutionMock,
+  requestGameDependencyResolutionMock,
   resolveRuntimeRebindIssueMock,
   routerPushMock,
 } = vi.hoisted(() => ({
@@ -34,7 +34,7 @@ const {
   openPathMock: vi.fn(),
   reconcileGameRecordMock: vi.fn(),
   requestGameRuntimeRebindMock: vi.fn(),
-  requestImportDependencyResolutionMock: vi.fn(),
+  requestGameDependencyResolutionMock: vi.fn(),
   resolveRuntimeRebindIssueMock: vi.fn(),
   routerPushMock: vi.fn(),
 }))
@@ -69,13 +69,13 @@ vi.mock('~/services/resource-reconcile', () => ({
   },
 }))
 
-vi.mock('~/features/modals/import-dependency-resolution/request-import-dependency-resolution', () => ({
-  requestImportDependencyResolution: requestImportDependencyResolutionMock,
+vi.mock('~/features/modals/game-dependency-resolution/request-game-dependency-resolution', () => ({
+  requestGameDependencyResolution: requestGameDependencyResolutionMock,
 }))
 
 // 只替换重绑入口与原因映射，保留真实的"是否需要重绑"判定
-vi.mock('~/features/modals/import-dependency-resolution/request-game-runtime-rebind', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('~/features/modals/import-dependency-resolution/request-game-runtime-rebind')>()
+vi.mock('~/features/modals/game-dependency-resolution/request-game-runtime-rebind', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('~/features/modals/game-dependency-resolution/request-game-runtime-rebind')>()
   return {
     ...actual,
     requestGameRuntimeRebind: requestGameRuntimeRebindMock,
@@ -286,7 +286,7 @@ describe('useGamesTabController', () => {
       {
         compatibilityIssue: 'versionTooOld',
         reason: 'incompatible',
-        resolveDependencies: requestImportDependencyResolutionMock,
+        resolveDependencies: requestGameDependencyResolutionMock,
       },
     )
     expect(openRecoverGameModalMock).not.toHaveBeenCalled()
@@ -316,7 +316,7 @@ describe('useGamesTabController', () => {
       {
         compatibilityIssue: 'versionTooOld',
         reason: 'incompatible',
-        resolveDependencies: requestImportDependencyResolutionMock,
+        resolveDependencies: requestGameDependencyResolutionMock,
       },
     )
     expect(routerPushMock).not.toHaveBeenCalled()
@@ -404,7 +404,7 @@ describe('useGamesTabController', () => {
     await controller.selectGameFolder()
 
     expect(importGameMock).toHaveBeenCalledWith('/games/import-target', {
-      resolveDependencies: requestImportDependencyResolutionMock,
+      resolveDependencies: requestGameDependencyResolutionMock,
     })
   })
 })

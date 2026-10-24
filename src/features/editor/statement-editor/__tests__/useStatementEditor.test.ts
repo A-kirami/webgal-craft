@@ -6,7 +6,7 @@ import '~/__tests__/mocks/modal-store'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { RelPath } from '~/domain/path'
 import { SAY_CONTINUATION_RAW } from '~/domain/script/codec'
 import { FIGURE_POSITION_TARGET_IDS } from '~/domain/script/types'
@@ -164,9 +164,9 @@ describe('useStatementEditor', () => {
     })
   })
 
-  it('旧运行时隐藏 callScene 动态参数编辑器', () => {
+  it('基线能力下隐藏 callScene 动态参数编辑器', () => {
     const { editor, updates } = createHarness('callScene:battle.txt -enemy=slime;', {
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     })
 
     expect(editor.params.callSceneParameters.value).toBeUndefined()

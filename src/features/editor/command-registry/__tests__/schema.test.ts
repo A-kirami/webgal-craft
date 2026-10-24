@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import {
   arg,
   commandRaw,
@@ -104,8 +104,8 @@ describe('commandRegistrySchema', () => {
       ],
     }
 
-    expect(readArgFields(entry, LEGACY_ENGINE_RUNTIME_CAPABILITIES).map(item => item.field.key)).toEqual(['focus.y'])
-    expect(readEditorFields(entry, LEGACY_ENGINE_RUNTIME_CAPABILITIES).map(item => item.key)).toEqual(['focus.y'])
+    expect(readArgFields(entry, BASELINE_ENGINE_RUNTIME_CAPABILITIES).map(item => item.field.key)).toEqual(['focus.y'])
+    expect(readEditorFields(entry, BASELINE_ENGINE_RUNTIME_CAPABILITIES).map(item => item.key)).toEqual(['focus.y'])
   })
 
   it('readAllArgFields 读取全部已声明字段并忽略能力门控', () => {
@@ -123,7 +123,7 @@ describe('commandRegistrySchema', () => {
 
     expect(readAllArgFields(entry).map(field => field.field.key)).toEqual(['writeDefault', 'transformFrom'])
     expect(readArgFields(entry, LATEST_ENGINE_RUNTIME_CAPABILITIES).map(field => field.field.key)).toEqual(['transformFrom'])
-    expect(readArgFields(entry, LEGACY_ENGINE_RUNTIME_CAPABILITIES).map(field => field.field.key)).toEqual(['writeDefault'])
+    expect(readArgFields(entry, BASELINE_ENGINE_RUNTIME_CAPABILITIES).map(field => field.field.key)).toEqual(['writeDefault'])
   })
 
   it('readEditorFields 与 deriveArgFieldsFromEditorFields 保持 arg 元信息一致', () => {

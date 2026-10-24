@@ -4,14 +4,14 @@ import { page } from 'vitest/browser'
 import { defineComponent, h } from 'vue'
 
 import { renderInBrowser } from '~/__tests__/browser-render'
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { resolveWebgalScriptConfigKey } from '~/domain/script/parser'
 import { resolveWebgalScriptLanguageId } from '~/features/editor/text-editor/text-editor-language'
 
 import ExternalDocumentDiffEditor from './ExternalDocumentDiffEditor.vue'
 
 describe('ExternalDocumentDiffEditor', () => {
-  it('旧运行时的场景差异编辑器使用不含 return 的语法高亮', async () => {
+  it('基线能力下的场景差异编辑器使用不含 return 的语法高亮', async () => {
     let editorHandle: {
       getModifiedEditor: () => monaco.editor.IStandaloneCodeEditor | undefined
     } | undefined
@@ -24,7 +24,7 @@ describe('ExternalDocumentDiffEditor', () => {
       kind: 'scene',
       localContent: 'return;',
       externalContent: 'return;',
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     }))
 
     await renderInBrowser(TestHarness, {
@@ -32,7 +32,7 @@ describe('ExternalDocumentDiffEditor', () => {
     })
 
     await expect.poll(() => editorHandle?.getModifiedEditor()?.getModel()?.getLanguageId())
-      .toBe(resolveWebgalScriptLanguageId(resolveWebgalScriptConfigKey(LEGACY_ENGINE_RUNTIME_CAPABILITIES)))
+      .toBe(resolveWebgalScriptLanguageId(resolveWebgalScriptConfigKey(BASELINE_ENGINE_RUNTIME_CAPABILITIES)))
   })
 
   it('采用左侧差异块后应用更新后的合并结果', async () => {

@@ -29,7 +29,8 @@ export function capabilityMinimumVersion(capability: EngineRuntimeCapability): s
   return CAPABILITY_MINIMUM_VERSIONS[capability]
 }
 
-export const LEGACY_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
+/** WebGAL 4.6.2 对应的基线能力；尚无引擎上下文时也使用此集合。 */
+export const BASELINE_ENGINE_RUNTIME_CAPABILITIES: EngineRuntimeCapabilities = {
   changeFigureDiff: false,
   figurePositions: false,
   multilineStatements: false,

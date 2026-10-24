@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath } from '~/domain/path'
 import { buildArgumentCompletionInfo, buildCommandCompletionInfo, filterCompletionOptions, queryArgumentValueCompletions } from '~/features/editor/command-registry/completion'
 
@@ -53,24 +53,24 @@ describe('buildArgumentCompletionInfo', () => {
     expect(buildCommandCompletionInfo(t).map(item => item.commandRaw)).toContain('return')
   })
 
-  it('旧运行时不显示 WebGAL 4.6.3 场景语义补全', () => {
-    const legacySetVarKeys = buildArgumentCompletionInfo(commandType.setVar, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+  it('基线能力下不显示 WebGAL 4.6.3 场景语义补全', () => {
+    const baselineSetVarKeys = buildArgumentCompletionInfo(commandType.setVar, t, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.key)
-    expect(legacySetVarKeys).toContain('global')
-    expect(legacySetVarKeys).not.toContain('local')
-    expect(buildArgumentCompletionInfo(commandType.callScene, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    expect(baselineSetVarKeys).toContain('global')
+    expect(baselineSetVarKeys).not.toContain('local')
+    expect(buildArgumentCompletionInfo(commandType.callScene, t, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.key)).not.toContain('writeReturnTo')
-    expect(buildCommandCompletionInfo(t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    expect(buildCommandCompletionInfo(t, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.commandRaw)).not.toContain('return')
   })
 
-  it('旧运行时的变换写入参数补全不出现 transformFrom', () => {
-    const legacySetAnimationKeys = buildArgumentCompletionInfo(commandType.setAnimation, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+  it('基线能力下的变换写入参数补全不出现 transformFrom', () => {
+    const baselineSetAnimationKeys = buildArgumentCompletionInfo(commandType.setAnimation, t, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.key)
 
-    expect(legacySetAnimationKeys).toContain('ignoreDefault')
-    expect(legacySetAnimationKeys).toContain('writeDefault')
-    expect(legacySetAnimationKeys).not.toContain('transformFrom')
+    expect(baselineSetAnimationKeys).toContain('ignoreDefault')
+    expect(baselineSetAnimationKeys).toContain('writeDefault')
+    expect(baselineSetAnimationKeys).not.toContain('transformFrom')
   })
 
   it('命令候选直接来自注册表并保留脚本关键字', () => {
@@ -170,7 +170,7 @@ describe('buildArgumentCompletionInfo', () => {
     ])
   })
 
-  it('旧引擎不会补全 4.6.3 扩展立绘位置', async () => {
+  it('基线能力下不会补全 4.6.3 扩展立绘位置', async () => {
     const options = await queryArgumentValueCompletions(commandType.say, 'figureId', {
       content: '',
       allowExtendedFigurePositions: false,
@@ -205,16 +205,16 @@ describe('buildArgumentCompletionInfo', () => {
     expect(files).toEqual([{ label: 'smile.png', value: 'smile.png' }])
   })
 
-  it('旧引擎不提供立绘差分的命令与参数补全', async () => {
-    expect(buildCommandCompletionInfo(t, LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+  it('基线能力下不提供立绘差分的命令与参数补全', async () => {
+    expect(buildCommandCompletionInfo(t, BASELINE_ENGINE_RUNTIME_CAPABILITIES)
       .map(item => item.commandRaw)).not.toContain('changeFigureDiff')
-    expect(buildArgumentCompletionInfo(commandType.changeFigureDiff, t, LEGACY_ENGINE_RUNTIME_CAPABILITIES))
+    expect(buildArgumentCompletionInfo(commandType.changeFigureDiff, t, BASELINE_ENGINE_RUNTIME_CAPABILITIES))
       .toEqual([])
 
     const files = await queryArgumentValueCompletions(commandType.changeFigureDiff, 'content', {
       content: '',
       listResources: () => [{ label: 'smile.png', value: 'smile.png' }],
-      runtimeCapabilities: LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      runtimeCapabilities: BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     }, t)
 
     expect(files).toEqual([])
@@ -222,15 +222,15 @@ describe('buildArgumentCompletionInfo', () => {
 
   it('命令级能力门控同时关掉参数键与参数值候选', async () => {
     // 只靠字段级门控时，未声明 hiddenWhenCapability 的字段仍会漏出候选
-    const legacy = LEGACY_ENGINE_RUNTIME_CAPABILITIES
-    expect(buildArgumentCompletionInfo(commandType.changeFigureDiff, t, legacy)).toEqual([])
+    const baselineCapabilities = BASELINE_ENGINE_RUNTIME_CAPABILITIES
+    expect(buildArgumentCompletionInfo(commandType.changeFigureDiff, t, baselineCapabilities)).toEqual([])
 
     const results = await Promise.all(
       ['content', 'position', 'id', 'animationFlag'].map(key =>
         queryArgumentValueCompletions(commandType.changeFigureDiff, key, {
           content: '',
           listResources: () => [{ label: 'smile.png', value: 'smile.png' }],
-          runtimeCapabilities: legacy,
+          runtimeCapabilities: baselineCapabilities,
           sceneOptions: {
             figureIds: [{ label: 'hero', value: 'hero' }],
             sceneLabels: [],

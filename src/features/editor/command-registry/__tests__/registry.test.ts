@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 import { serializeSentence } from '~/domain/script/serialize'
 
@@ -217,7 +217,7 @@ describe('命令注册表完整性', () => {
     expect(entry?.hasEffectEditor).toBeUndefined()
 
     expect(isRuntimeCapabilitySupported(entry!, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toBe(true)
-    expect(isRuntimeCapabilitySupported(entry!, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toBe(false)
+    expect(isRuntimeCapabilitySupported(entry!, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toBe(false)
 
     // 引擎忽略变换与入退场参数，面板不能提供写入入口
     const keys = readArgFields(getCommandConfig(commandType.changeFigureDiff))
@@ -317,7 +317,7 @@ describe('命令注册表完整性', () => {
   })
 
   it('变换写入模式控件只按引擎能力切换', () => {
-    // 控件列表由注册表静态派生、与语句 args 无关，所以新引擎上旧参数残余不会改变控件数量
+    // 控件列表由注册表静态派生、与语句 args 无关，所以支持 transformFrom 时旧参数残余不会改变控件数量
     const writeModeKeys = (type: commandType, capabilities: typeof LATEST_ENGINE_RUNTIME_CAPABILITIES) =>
       readArgFields(getCommandConfig(type), capabilities)
         .map(item => item.field.key)
@@ -325,7 +325,7 @@ describe('命令注册表完整性', () => {
 
     for (const type of [commandType.setTransform, commandType.setAnimation, commandType.setTempAnimation]) {
       expect(writeModeKeys(type, LATEST_ENGINE_RUNTIME_CAPABILITIES)).toEqual(['transformFrom'])
-      expect(writeModeKeys(type, LEGACY_ENGINE_RUNTIME_CAPABILITIES)).toEqual(['writeDefault', 'ignoreDefault'])
+      expect(writeModeKeys(type, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toEqual(['writeDefault', 'ignoreDefault'])
     }
   })
 

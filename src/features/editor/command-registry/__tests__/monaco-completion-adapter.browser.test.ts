@@ -184,7 +184,7 @@ describe('getArgKeyCompletions', () => {
     expect(plainText).not.toHaveProperty('command')
   })
 
-  it('旧引擎不提供扩展立绘位置参数', () => {
+  it('不支持扩展立绘位置时不提供对应参数', () => {
     const completions = getArgKeyCompletions(range, commandType.say, true, {
       changeFigureDiff: false,
       figurePositions: false,

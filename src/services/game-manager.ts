@@ -35,11 +35,11 @@ import type { GameIconPathExistsContext } from '~/services/project-icon-assets'
 import type { LookupPathKey } from '~/services/resource-path/lookup'
 import type { GameMetadata, GamePreviewAssets, PreviewAsset } from '~/services/types'
 import type {
-  ImportDependencyResolutionContext,
-  ImportDependencyResolutionResult,
-  ImportTemplateResolutionResult,
-  ResolveImportDependencies,
-} from '~/types/import-dependency-resolution'
+  GameDependencyResolutionContext,
+  GameDependencyResolutionResult,
+  GameTemplateResolutionResult,
+  ResolveGameDependencies,
+} from '~/types/game-dependency-resolution'
 import type {
   PreparedManagedImport,
   PrepareManagedImportResult,
@@ -55,7 +55,7 @@ interface RegisterGameOptions {
 }
 
 interface ImportGameOptions {
-  resolveDependencies?: ResolveImportDependencies
+  resolveDependencies?: ResolveGameDependencies
 }
 
 interface ManagedGameImportPlan {
@@ -536,9 +536,9 @@ async function resolveBoundTemplatePath(gamePath: AbsPath, engine: Engine): Prom
 }
 
 function buildImportDependencyContext(
-  source: ImportDependencyResolutionContext['source'],
+  source: GameDependencyResolutionContext['source'],
   metadata: GameMetadata,
-): ImportDependencyResolutionContext {
+): GameDependencyResolutionContext {
   const gameName = metadata.name?.trim()
   return {
     ...(gameName ? { gameName } : {}),
@@ -597,7 +597,7 @@ async function isTemplateBindingUsable(binding: TemplateBinding, engine?: Engine
 }
 
 async function assertTemplateDecisionUsable(
-  decision: ImportTemplateResolutionResult | undefined,
+  decision: GameTemplateResolutionResult | undefined,
   finalEngine: Engine,
 ): Promise<void> {
   if (!decision) {
@@ -626,9 +626,9 @@ async function assertTemplateDecisionUsable(
 }
 
 async function resolveImportDependencyDecision(
-  context: ImportDependencyResolutionContext,
+  context: GameDependencyResolutionContext,
   options: ImportGameOptions,
-): Promise<ImportDependencyResolutionResult> {
+): Promise<GameDependencyResolutionResult> {
   if (!context.engine && !context.template) {
     return {}
   }
@@ -662,7 +662,7 @@ async function resolveImportDependencyDecision(
 
 function applyTemplateDecision(
   config: ProjectConfig,
-  decision: ImportTemplateResolutionResult | undefined,
+  decision: GameTemplateResolutionResult | undefined,
 ): ProjectConfig {
   if (!decision) {
     return config
@@ -678,7 +678,7 @@ function applyTemplateDecision(
 
 async function inspectTemplateDependencyIssue(
   binding: TemplateBinding,
-): Promise<ImportDependencyResolutionContext['template']> {
+): Promise<GameDependencyResolutionContext['template']> {
   const displayName = formatTemplateBindingName(binding)
 
   if (binding.kind === 'standalone') {
@@ -711,7 +711,7 @@ interface ConfiguredEngineCheck {
   /** 配置里的引擎引用可直接使用时返回记录 */
   engine?: Engine
   /** 需要用户重新选择引擎时返回原因 */
-  issue?: ImportDependencyResolutionContext['engine']
+  issue?: GameDependencyResolutionContext['engine']
 }
 
 function checkConfiguredEngine(engineRef: EngineRef, engine: Engine | undefined): ConfiguredEngineCheck {
@@ -747,12 +747,12 @@ function checkConfiguredEngine(engineRef: EngineRef, engine: Engine | undefined)
   }
 }
 
-async function importLegacyGame(
+async function importUnconfiguredGame(
   gamePath: AbsPath,
   options: ImportGameOptions,
   inspection: GameInspectionPayload,
 ): Promise<string> {
-  const context = buildImportDependencyContext('legacy', inspection.metadata)
+  const context = buildImportDependencyContext('unconfigured', inspection.metadata)
   context.engine = {
     reason: 'selectionRequired',
   }
@@ -1028,7 +1028,7 @@ async function registerManagedImport(
   const { inspection, hasProjectConfig } = prepared.plan
   const id = hasProjectConfig
     ? await importConfiguredGame(normalizedPath, options, inspection)
-    : await importLegacyGame(normalizedPath, options, inspection)
+    : await importUnconfiguredGame(normalizedPath, options, inspection)
   return { id }
 }
 
@@ -1250,7 +1250,7 @@ async function importGame(gamePath: AbsPath, options: ImportGameOptions = {}): P
 
   const id = await exists(projectConfigPath(normalizedPath))
     ? await importConfiguredGame(normalizedPath, options, inspection.payload!)
-    : await importLegacyGame(normalizedPath, options, inspection.payload!)
+    : await importUnconfiguredGame(normalizedPath, options, inspection.payload!)
   return { id, alreadyRegistered: false }
 }
 

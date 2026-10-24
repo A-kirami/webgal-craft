@@ -7,7 +7,7 @@ import {
   createHomeResourceImportMessages,
   resolveImportNotificationMessage,
 } from '~/features/home/shared/useHomeResourceImportActions'
-import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+import { requestGameDependencyResolution } from '~/features/modals/game-dependency-resolution/request-game-dependency-resolution'
 import { engineManager } from '~/services/engine-manager'
 import { gameManager } from '~/services/game-manager'
 import { templateManager } from '~/services/template-manager'
@@ -261,7 +261,7 @@ function isHomeResourceImportOutcome(value: unknown): value is HomeResourceImpor
 
 function resolveImportFn(type: ResourceType): (path: AbsPath) => Promise<unknown> {
   switch (type) {
-    case 'games': { return path => gameManager.importGame(path, { resolveDependencies: requestImportDependencyResolution }) }
+    case 'games': { return path => gameManager.importGame(path, { resolveDependencies: requestGameDependencyResolution }) }
     case 'engines': { return path => engineManager.importEngine(path) }
     case 'templates': { return path => templateManager.importTemplate(path) }
     default: { throw new Error(`未知的资源类型: ${type satisfies never}`) }

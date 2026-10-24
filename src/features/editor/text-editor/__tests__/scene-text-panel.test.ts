@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { buildSceneStatements } from '~/domain/script/sentence'
 import {
   createEmptySceneTextPanelSnapshot,
@@ -155,12 +155,12 @@ describe('sceneTextPanel', () => {
     expect(snapshot.previousSpeaker).toBe('Alice')
   })
 
-  it('旧运行时在续行上只返回当前物理行', () => {
+  it('基线能力下在续行上只返回当前物理行', () => {
     const snapshot = resolveSceneTextPanelSnapshotFromContent(2, [
       'say:第一句',
       '  -speaker=Alice;',
       '第二句;',
-    ].join('\n'), LEGACY_ENGINE_RUNTIME_CAPABILITIES)
+    ].join('\n'), BASELINE_ENGINE_RUNTIME_CAPABILITIES)
 
     expect(snapshot.entry?.rawText).toBe('  -speaker=Alice;')
     expect(snapshot.startLineNumber).toBe(2)
@@ -168,7 +168,7 @@ describe('sceneTextPanel', () => {
     expect(snapshot.statementIndex).toBe(1)
   })
 
-  it('旧运行时不会在侧边栏将 return 识别为返回场景命令', () => {
+  it('基线能力下不会在侧边栏将 return 识别为返回场景命令', () => {
     const snapshot = resolveSceneTextPanelSnapshotFromContent(
       1,
       'return;',

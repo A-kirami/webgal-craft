@@ -24,7 +24,7 @@ describe('resolveTextEditorLanguage', () => {
     },
   ]
 
-  it('新运行时场景文件使用完整 WebGAL 语法高亮', () => {
+  it('场景语义和立绘差分能力齐全时使用完整 WebGAL 语法高亮', () => {
     expect(resolveTextEditorLanguage({
       kind: 'scene',
       path: '/game/scene.txt',
@@ -32,7 +32,7 @@ describe('resolveTextEditorLanguage', () => {
     }, registeredLanguages)).toBe(WEBGAL_SCRIPT_LANGUAGE_ID)
   })
 
-  it('旧运行时场景文件使用不含 return 命令的语法高亮', () => {
+  it('缺少场景语义能力时使用不含 return 命令的语法高亮', () => {
     const capabilities = { changeFigureDiff: false, sceneSemantics: false }
 
     expect(resolveTextEditorLanguage({

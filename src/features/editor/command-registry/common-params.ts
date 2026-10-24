@@ -143,7 +143,7 @@ export const TRANSFORM_FROM: ChoiceField = {
   requiredCapability: 'transformFrom',
 }
 
-// 旧开关只在旧引擎显示；新引擎上语句里的旧参数残余只走诊断，不因识别 transformFrom 而改写或删除
+// 旧开关仅在不支持 transformFrom 时显示；支持该能力时，旧参数残余只走诊断，不因识别 transformFrom 而改写或删除
 export const LEGACY_WRITE_DEFAULT: SwitchField = { ...WRITE_DEFAULT, hiddenWhenCapability: 'transformFrom' }
 export const LEGACY_IGNORE_DEFAULT: SwitchField = { ...IGNORE_DEFAULT, hiddenWhenCapability: 'transformFrom' }
 

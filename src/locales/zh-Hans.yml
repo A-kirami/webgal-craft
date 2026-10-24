@@ -1680,13 +1680,13 @@ game:
   gameDependencyResolutionDescriptionWithName: “{name}”所需的引擎或模板当前不可用。选择一个可用资源，WebGAL Craft 会更新游戏配置后继续导入。
   gameDependencyResolutionRuntimeRebindDescription: 这个游戏绑定的引擎不可用，或无法在 WebGAL Craft 中使用。选择一个可用引擎，WebGAL Craft 会更新游戏配置后继续打开。
   gameDependencyResolutionRuntimeRebindDescriptionWithName: “{name}”绑定的引擎不可用，或无法在 WebGAL Craft 中使用。选择一个可用引擎，WebGAL Craft 会更新游戏配置后继续打开。
-  gameDependencyResolutionLegacyDescription: 这是旧版游戏，需要选择一个可在 WebGAL Craft 中使用的引擎。WebGAL Craft 会创建游戏配置后继续导入。
-  gameDependencyResolutionLegacyDescriptionWithName: “{name}”是旧版游戏，需要选择一个可在 WebGAL Craft 中使用的引擎。WebGAL Craft 会创建游戏配置后继续导入。
+  gameDependencyResolutionUnconfiguredDescription: 这个游戏尚无 WebGAL Craft 配置。选择一个可用引擎，WebGAL Craft 会创建游戏配置后继续导入。
+  gameDependencyResolutionUnconfiguredDescriptionWithName: “{name}”尚无 WebGAL Craft 配置。选择一个可用引擎，WebGAL Craft 会创建游戏配置后继续导入。
   gameDependencyResolutionEngineTitle: 选择引擎
   gameDependencyResolutionTemplateTitle: 选择模板
   gameDependencyResolutionEngineIssue: 选择一个可在 WebGAL Craft 中使用的引擎。导入后，游戏会用它打开和预览。
   gameDependencyResolutionRuntimeRebindEngineIssue: 选择一个可在 WebGAL Craft 中使用的引擎。更换后，游戏会改用它打开和预览。
-  gameDependencyResolutionEngineLegacyIssue: 旧版游戏需要先选择一个可在 WebGAL Craft 中使用的引擎，才能继续导入。
+  gameDependencyResolutionEngineUnconfiguredIssue: 需要先为这个游戏选择一个可在 WebGAL Craft 中使用的引擎，才能继续导入。
   gameDependencyResolutionTemplateIssue: 选择一个可用模板，或使用所选引擎的默认模板。
   gameDependencyResolutionOriginalEngine: 当前引擎
   gameDependencyResolutionOriginalTemplate: 当前模板

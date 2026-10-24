@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { parseSentence } from '~/domain/script/parser'
 
 import {
@@ -70,10 +70,10 @@ describe('querySentenceResourceReferences', () => {
 })
 
 describe('findUnsupportedEngineOpusVocalReferences', () => {
-  it('仅诊断旧引擎的 say Opus 语音参数', () => {
+  it('仅诊断基线能力下的 say Opus 语音参数', () => {
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('say:hello -voice.opus;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([{
       source: { kind: 'argument', key: 'vocal' },
       value: 'voice.opus',
@@ -81,12 +81,12 @@ describe('findUnsupportedEngineOpusVocalReferences', () => {
 
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('say:hello -vocal=voice.opus;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toHaveLength(1)
 
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('bgm:theme.opus;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
 
     expect(findUnsupportedEngineOpusVocalReferences(
@@ -98,21 +98,21 @@ describe('findUnsupportedEngineOpusVocalReferences', () => {
   it('跳过含变量插值的语音引用', () => {
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('say:hello -vocal=voices/{index}.opus;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
 
     expect(findUnsupportedEngineOpusVocalReferences(
       parseSentence('say:hello -vocal={voice};')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
   })
 })
 
 describe('findTransformWriteModeCompatReferences', () => {
-  it('旧引擎按 key 存在诊断语句里的 transformFrom', () => {
+  it('基线能力下按 key 存在诊断语句里的 transformFrom', () => {
     expect(findTransformWriteModeCompatReferences(
       parseSentence('setTransform: {} -target=fig-center -transformFrom=default;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([{
       code: 'unsupported-transform-from',
       source: { kind: 'argument', key: 'transformFrom' },
@@ -121,7 +121,7 @@ describe('findTransformWriteModeCompatReferences', () => {
 
     expect(findTransformWriteModeCompatReferences(
       parseSentence('setAnimation: bounce -transformFrom;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([{
       code: 'unsupported-transform-from',
       source: { kind: 'argument', key: 'transformFrom' },
@@ -129,19 +129,19 @@ describe('findTransformWriteModeCompatReferences', () => {
     }])
   })
 
-  it('旧引擎只诊断 resolveTransformArgs 的三个消费方', () => {
+  it('基线能力下只诊断 resolveTransformArgs 的三个消费方', () => {
     expect(findTransformWriteModeCompatReferences(
       parseSentence('changeFigure: hero.png -transformFrom=default;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([])
 
     expect(findTransformWriteModeCompatReferences(
       parseSentence('setTempAnimation: {} -transformFrom=current;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toHaveLength(1)
   })
 
-  it('新引擎诊断语句里遗留的旧写入参数', () => {
+  it('支持 transformFrom 时诊断语句里遗留的旧写入参数', () => {
     expect(findTransformWriteModeCompatReferences(
       parseSentence('setTransform: {} -writeDefault -ignoreDefault=false -x=1;')!,
       LATEST_ENGINE_RUNTIME_CAPABILITIES,
@@ -178,7 +178,7 @@ describe('findTransformWriteModeCompatReferences', () => {
     }])
   })
 
-  it('新引擎不把 changeFigure 与 setTransition 的 ignoreDefault 当作写入模式残留', () => {
+  it('支持 transformFrom 时不把 changeFigure 与 setTransition 的 ignoreDefault 当作写入模式残留', () => {
     expect(findTransformWriteModeCompatReferences(
       parseSentence('changeBg: bg.png -ignoreDefault;')!,
       LATEST_ENGINE_RUNTIME_CAPABILITIES,
@@ -192,10 +192,10 @@ describe('findTransformWriteModeCompatReferences', () => {
 })
 
 describe('findChangeFigureDiffCompatReferences', () => {
-  it('旧引擎诊断语句里已有的立绘差分', () => {
+  it('基线能力下诊断语句里已有的立绘差分', () => {
     expect(findChangeFigureDiffCompatReferences(
       parseSentence('changeFigureDiff:smile.png -left -id=hero;')!,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )).toEqual([{
       code: 'unsupported-change-figure-diff',
       source: { kind: 'content' },
@@ -204,16 +204,16 @@ describe('findChangeFigureDiffCompatReferences', () => {
   })
 
   it('解析器不认识该命令时按 commandRaw 反查', () => {
-    // 4.6.3 / 4.6.4：唯一会走退化路径的能力组合，此时命令名只留在 commandRaw 里
+    // 缺少立绘差分能力时命令退化为 say，原命令名只留在 commandRaw 里
     const withoutChangeFigureDiff = { changeFigureDiff: false, sceneSemantics: true }
-    const legacyParsed = parseSentence('changeFigureDiff:smile.png -left -id=hero;', withoutChangeFigureDiff)!
+    const parsedWithoutChangeFigureDiff = parseSentence('changeFigureDiff:smile.png -left -id=hero;', withoutChangeFigureDiff)!
 
-    expect(legacyParsed).toMatchObject({
+    expect(parsedWithoutChangeFigureDiff).toMatchObject({
       command: commandType.say,
       commandRaw: 'changeFigureDiff',
     })
 
-    expect(findChangeFigureDiffCompatReferences(legacyParsed, withoutChangeFigureDiff))
+    expect(findChangeFigureDiffCompatReferences(parsedWithoutChangeFigureDiff, withoutChangeFigureDiff))
       .toEqual([{
         code: 'unsupported-change-figure-diff',
         source: { kind: 'content' },
@@ -234,7 +234,7 @@ describe('findChangeFigureDiffCompatReferences', () => {
     )).toEqual([])
   })
 
-  it('新引擎不诊断', () => {
+  it('支持立绘差分时不报告该命令的兼容性诊断', () => {
     expect(findChangeFigureDiffCompatReferences(
       parseSentence('changeFigureDiff:smile.png -left;', LATEST_ENGINE_RUNTIME_CAPABILITIES)!,
       LATEST_ENGINE_RUNTIME_CAPABILITIES,

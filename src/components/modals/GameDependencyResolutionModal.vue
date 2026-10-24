@@ -3,27 +3,27 @@ import { usePreferenceStore } from '~/stores/preference'
 import { formatNameWithVersion } from '~/utils/format'
 
 import type {
-  ImportDependencyIssueReason,
-  ImportDependencyResolutionContext,
-  ImportDependencyResolutionResult,
-  ImportEngineDependencyIssue,
-  ImportTemplateResolutionResult,
-} from '~/types/import-dependency-resolution'
+  GameDependencyIssueReason,
+  GameDependencyResolutionContext,
+  GameDependencyResolutionResult,
+  GameEngineDependencyIssue,
+  GameTemplateResolutionResult,
+} from '~/types/game-dependency-resolution'
 import type { TemplateBinding } from '~/types/project-config'
 
 let open = $(defineModel<boolean>('open'))
 
 const props = defineProps<{
-  context: ImportDependencyResolutionContext
+  context: GameDependencyResolutionContext
   onCancel?: () => void
-  onConfirm?: (result: ImportDependencyResolutionResult) => void
+  onConfirm?: (result: GameDependencyResolutionResult) => void
 }>()
 
 const { t } = useI18n()
 const preferenceStore = usePreferenceStore()
 
 let selectedEngineId = $ref<string>()
-let selectedTemplateDecision = $ref<ImportTemplateResolutionResult>()
+let selectedTemplateDecision = $ref<GameTemplateResolutionResult>()
 let settled = $ref(false)
 
 const needsEngine = $computed(() => !!props.context.engine)
@@ -60,10 +60,10 @@ const description = $computed(() => {
       : t('game.gameDependencyResolutionRuntimeRebindDescription')
   }
 
-  if (props.context.source === 'legacy') {
+  if (props.context.source === 'unconfigured') {
     return gameName
-      ? t('game.gameDependencyResolutionLegacyDescriptionWithName', { name: gameName })
-      : t('game.gameDependencyResolutionLegacyDescription')
+      ? t('game.gameDependencyResolutionUnconfiguredDescriptionWithName', { name: gameName })
+      : t('game.gameDependencyResolutionUnconfiguredDescription')
   }
 
   if (gameName) {
@@ -77,8 +77,8 @@ const engineIssue = $computed(() => {
     return t('game.gameDependencyResolutionRuntimeRebindEngineIssue')
   }
 
-  return props.context.source === 'legacy'
-    ? t('game.gameDependencyResolutionEngineLegacyIssue')
+  return props.context.source === 'unconfigured'
+    ? t('game.gameDependencyResolutionEngineUnconfiguredIssue')
     : t('game.gameDependencyResolutionEngineIssue')
 })
 const engineReasonLabel = $computed(() =>
@@ -108,7 +108,7 @@ const canConfirm = $computed(() =>
   && (!needsTemplate || !!selectedTemplateDecision),
 )
 
-function resolveEngineReasonLabel(issue: ImportEngineDependencyIssue | undefined) {
+function resolveEngineReasonLabel(issue: GameEngineDependencyIssue | undefined) {
   if (!issue) {
     return
   }
@@ -133,7 +133,7 @@ function resolveEngineReasonLabel(issue: ImportEngineDependencyIssue | undefined
   }
 }
 
-function resolveReasonLabel(reason: ImportDependencyIssueReason | undefined) {
+function resolveReasonLabel(reason: GameDependencyIssueReason | undefined) {
   switch (reason) {
     case 'missing': {
       return t('game.gameDependencyResolutionReasonMissing')

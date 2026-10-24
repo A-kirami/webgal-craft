@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
-import { LATEST_ENGINE_RUNTIME_CAPABILITIES, LEGACY_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
+import { BASELINE_ENGINE_RUNTIME_CAPABILITIES, LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { commandEntries } from '~/features/editor/command-registry'
 
 import {
@@ -36,12 +36,12 @@ describe('commandPanel', () => {
     expect(favoriteCommands.every(entry => commandEntries.includes(entry))).toBe(true)
   })
 
-  it('旧运行时隐藏仅在 WebGAL 4.6.3 中支持的命令', () => {
+  it('基线能力下隐藏仅在 WebGAL 4.6.3 中支持的命令', () => {
     const entries = resolveCommandPanelVisibleCommands(
       'scene',
       [],
       commandEntries,
-      LEGACY_ENGINE_RUNTIME_CAPABILITIES,
+      BASELINE_ENGINE_RUNTIME_CAPABILITIES,
     )
 
     expect(entries.map(entry => entry.type)).not.toContain(commandType.return)
@@ -53,7 +53,7 @@ describe('commandPanel', () => {
 
     // 上下文缺失时按最新能力处理，因此首启游戏也能看到该命令
     expect(typesFor(undefined)).toContain(commandType.changeFigureDiff)
-    expect(typesFor(LEGACY_ENGINE_RUNTIME_CAPABILITIES)).not.toContain(commandType.changeFigureDiff)
+    expect(typesFor(BASELINE_ENGINE_RUNTIME_CAPABILITIES)).not.toContain(commandType.changeFigureDiff)
     expect(typesFor(LATEST_ENGINE_RUNTIME_CAPABILITIES)).toContain(commandType.changeFigureDiff)
     // 只缺该能力（如 4.6.4）时同样不出现
     expect(typesFor({ ...LATEST_ENGINE_RUNTIME_CAPABILITIES, changeFigureDiff: false }))

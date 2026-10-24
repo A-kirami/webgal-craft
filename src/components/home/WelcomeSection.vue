@@ -6,7 +6,7 @@ import {
   createHomeResourceImportMessages,
   reportHomeResourceImportNotification,
 } from '~/features/home/shared/useHomeResourceImportActions'
-import { requestImportDependencyResolution } from '~/features/modals/import-dependency-resolution/request-import-dependency-resolution'
+import { requestGameDependencyResolution } from '~/features/modals/game-dependency-resolution/request-game-dependency-resolution'
 import { createGameImportWorkflow } from '~/features/resource-import/resource-import-workflows'
 import { isEngineEditorCompatible } from '~/services/engine-manager'
 import { isAndroidRuntime } from '~/services/platform/runtime'
@@ -34,7 +34,7 @@ const gameImportMessages = createHomeResourceImportMessages('games', t)
 const gameImportWorkflow = createGameImportWorkflow({
   android: isAndroidRuntime(),
   selectTitle: t('common.dialogs.selectGameFolder'),
-  resolveDependencies: requestImportDependencyResolution,
+  resolveDependencies: requestGameDependencyResolution,
   afterDesktopCommit: gameId => router.push(`/edit/${gameId}`),
   afterManagedCommit: gameId => router.push(`/edit/${gameId}`),
 })
