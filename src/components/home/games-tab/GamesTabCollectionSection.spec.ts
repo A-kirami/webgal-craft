@@ -128,7 +128,7 @@ describe('GamesTabCollectionSection', () => {
     await expect.element(page.getByRole('button', { name: 'home.games.deleteGame' })).not.toBeInTheDocument()
   })
 
-  it('网格视图只通过右键菜单提供删除操作', async () => {
+  it('网格视图保留右键菜单中的删除操作', async () => {
     const game = createTestGame()
     const onDeleteGame = vi.fn()
 
@@ -155,6 +155,61 @@ describe('GamesTabCollectionSection', () => {
 
     expect(onDeleteGame).toHaveBeenCalledOnce()
     expect(onDeleteGame).toHaveBeenCalledWith(game)
+  })
+
+  it.each([
+    ['common.openFolder', 'onOpenFolder'],
+    ['home.games.deleteGame', 'onDeleteGame'],
+  ] as const)('网格标题菜单执行 %s 时不会打开工程', async (label, event) => {
+    const game = createTestGame()
+    const onAction = vi.fn()
+    const onGameClick = vi.fn()
+
+    await renderInBrowser(GamesTabCollectionSection, {
+      browser: { i18nMode: 'lite' },
+      props: {
+        items: createItems([game]),
+        getGameProgress: () => 0,
+        hasGameProgress: () => false,
+        onGameClick,
+        [event]: onAction,
+        viewMode: 'grid',
+      },
+      global: { stubs: globalStubs },
+    })
+
+    await page.getByRole('button', { name: 'common.more' }).click()
+    await expect.element(page.getByRole('menuitem', { name: label })).toBeVisible()
+    expect(onGameClick).not.toHaveBeenCalled()
+
+    await page.getByRole('menuitem', { name: label }).click()
+
+    expect(onAction).toHaveBeenCalledExactlyOnceWith(game)
+    expect(onGameClick).not.toHaveBeenCalled()
+
+    await page.getByTestId(`game-card-${game.id}`).click()
+    expect(onGameClick).toHaveBeenCalledExactlyOnceWith(game)
+  })
+
+  it.each([
+    { availability: 'available', creating: true, visible: 'common.openFolder', hidden: 'home.games.deleteGame' },
+    { availability: 'missing', creating: false, visible: 'home.games.deleteGame', hidden: 'common.openFolder' },
+  ] as const)('网格标题菜单在 $availability、创建中=$creating 时遵循操作限制', async ({ availability, creating, visible, hidden }) => {
+    await renderInBrowser(GamesTabCollectionSection, {
+      browser: { i18nMode: 'lite' },
+      props: {
+        items: createItems([createTestGame({ availability })]),
+        getGameProgress: () => 50,
+        hasGameProgress: () => creating,
+        viewMode: 'grid',
+      },
+      global: { stubs: globalStubs },
+    })
+
+    await page.getByRole('button', { name: 'common.more' }).click()
+
+    await expect.element(page.getByRole('menuitem', { name: visible })).toBeVisible()
+    await expect.element(page.getByRole('menuitem', { name: hidden })).not.toBeInTheDocument()
   })
 
   it('网格视图只为路径仍可达的游戏显示打开文件夹操作', async () => {
