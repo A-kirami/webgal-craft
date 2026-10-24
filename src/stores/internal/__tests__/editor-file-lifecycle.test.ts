@@ -143,15 +143,13 @@ function createContextHarness(options: ContextHarnessOptions = {}) {
     },
     getPreferredProjection: () => 'text' as const,
     getPreviewBaseUrl: () => undefined,
+    waitForPreviewInitialization: async () => undefined,
     getSceneRuntimeCapabilities: () => LEGACY_ENGINE_RUNTIME_CAPABILITIES,
     getSceneSelection: () => undefined,
     getSession(path: string) {
       return sessions.get(path)
     },
     getWorkspaceRootPath: () => undefined,
-    hasSession(path: string) {
-      return sessions.has(path)
-    },
     messages: {
       fileSyncFailed: 'file sync failed',
       previewUnavailable: 'preview unavailable',
@@ -364,7 +362,7 @@ describe('编辑器文件生命周期', () => {
       })),
     })
 
-    await loadEditorState(context, targetPath)
+    await loadEditorState(context, targetPath, new AbortController().signal)
 
     const session = context.getEditableSession(targetPath)
     expect(session?.document.model.kind).toBe('plaintext')
@@ -382,7 +380,7 @@ describe('编辑器文件生命周期', () => {
       })),
     })
 
-    await loadEditorState(context, targetPath)
+    await loadEditorState(context, targetPath, new AbortController().signal)
 
     const session = context.getEditableSession(targetPath)
     expect(session?.document.model.kind).toBe('plaintext')

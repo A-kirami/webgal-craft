@@ -79,6 +79,18 @@ describe('usePreviewSessionStore', () => {
     }))
   })
 
+  it('刷新会重试此前启动失败的预览会话', async () => {
+    const store = usePreviewSessionStore()
+    ensureServeUrlMock.mockResolvedValueOnce(undefined).mockResolvedValue('http://preview/game-1/')
+    await store.syncCurrentGame(createTestGame({ path: AbsPath.from('/games/game-1') }))
+    expect(store.serveStatus).toBe('failed')
+
+    await store.refresh()
+
+    expect(store.serveStatus).toBe('ready')
+    expect(store.currentGameServeUrl).toBe('http://preview/game-1/')
+  })
+
   it('syncCurrentGame 会先解析预览站点配置再获取 serve url，并在清空会话时重置 reloadVersion', async () => {
     const store = usePreviewSessionStore()
 
@@ -102,7 +114,7 @@ describe('usePreviewSessionStore', () => {
     expect(store.serveStatus).toBe('ready')
     expect(store.reloadVersion).toBe(0)
 
-    store.refresh()
+    await store.refresh()
     expect(store.reloadVersion).toBe(1)
 
     await store.syncCurrentGame(undefined)
@@ -112,7 +124,7 @@ describe('usePreviewSessionStore', () => {
     expect(store.serveStatus).toBe('idle')
     expect(store.reloadVersion).toBe(0)
 
-    store.refresh()
+    await store.refresh()
     expect(store.reloadVersion).toBe(0)
   })
 
@@ -124,14 +136,14 @@ describe('usePreviewSessionStore', () => {
       path: AbsPath.from('/games/game-1'),
     }))
 
-    store.refreshIfCurrentGame(AbsPath.from('/games/other'))
+    await store.refreshIfCurrentGame(AbsPath.from('/games/other'))
     expect(store.reloadVersion).toBe(0)
 
-    store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
+    await store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
     expect(store.reloadVersion).toBe(1)
   })
 
-  it('syncCurrentGame 在预览地址缺失时会记录错误，并保留当前会话路径用于后续刷新判断', async () => {
+  it('预览地址不可用时启动和刷新都保留失败状态', async () => {
     const store = usePreviewSessionStore()
 
     ensureServeUrlMock.mockResolvedValue(undefined)
@@ -143,8 +155,10 @@ describe('usePreviewSessionStore', () => {
     expect(store.serveStatus).toBe('failed')
     expect(loggerErrorMock).toHaveBeenCalledWith('获取预览链接失败: 预览链接不存在')
 
-    store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
-    expect(store.reloadVersion).toBe(1)
+    await store.refreshIfCurrentGame(AbsPath.from('/games/game-1'))
+    expect(store.serveStatus).toBe('failed')
+    expect(store.currentGameServeUrl).toBeUndefined()
+    expect(store.reloadVersion).toBe(0)
   })
 
   it('syncCurrentGame 会忽略过期的异步预览地址结果', async () => {

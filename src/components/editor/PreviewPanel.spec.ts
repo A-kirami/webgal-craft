@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { page } from 'vitest/browser'
 import { nextTick, reactive, ref } from 'vue'
 
+// 几何命中测试需要真实布局；浏览器测试的按需样式生成必须显式保留这些类。
+// @unocss-safelist flex flex-col flex-1 flex-shrink-0 h-full min-h-0 min-w-0 relative absolute inset-0 left-0 top-0 overflow-hidden origin-top-left border-0 size-full truncate sr-only h-6.5
+import 'virtual:uno.css'
+
 import { createBrowserLiteI18n } from '~/__tests__/browser'
 import { createBrowserClickStub, createBrowserContainerStub, renderInBrowser } from '~/__tests__/browser-render'
 import {
@@ -139,9 +143,22 @@ const globalStubs = {
   Button: createBrowserClickStub('StubButton'),
   Slider: createBrowserContainerStub('StubSlider'),
   Tooltip: createBrowserContainerStub('StubTooltip'),
-  TooltipContent: createBrowserContainerStub('StubTooltipContent'),
+  TooltipContent: true,
   TooltipProvider: createBrowserContainerStub('StubTooltipProvider'),
   TooltipTrigger: createBrowserContainerStub('StubTooltipTrigger'),
+}
+
+async function renderPreviewPanel(provide: Record<symbol, unknown> = {}) {
+  const rendered = await renderInBrowser(PreviewPanel, {
+    attrs: { style: { height: '500px', width: '400px' } },
+    global: {
+      plugins: [createPreviewPanelLiteI18n()],
+      provide,
+      stubs: globalStubs,
+    },
+  })
+  rendered.container.style.width = '400px'
+  return rendered
 }
 
 let workspaceStoreState: {
@@ -155,7 +172,7 @@ let workspaceStoreState: {
 }
 
 let previewSessionStoreState: {
-  currentGameServeUrl: string
+  currentGameServeUrl: string | undefined
   reloadVersion: number
   serveStatus: 'idle' | 'connecting' | 'ready' | 'failed'
   refresh: () => void
@@ -409,12 +426,7 @@ describe('PreviewPanel', () => {
   })
 
   it('挂载时会读取预览宽高比并渲染 iframe', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     expect(document.body).not.toHaveTextContent('http://127.0.0.1:8899')
     await expect.element(page.getByText('edit.previewPanel.connecting')).toBeVisible()
@@ -437,12 +449,7 @@ describe('PreviewPanel', () => {
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'connecting')
 
@@ -453,15 +460,23 @@ describe('PreviewPanel', () => {
     await expect.element(page.getByTestId('preview-connection-status')).toHaveAttribute('data-status', 'failed')
   })
 
+  it('预览会话失败且没有地址时仍可刷新重试', async () => {
+    previewSessionStoreState.currentGameServeUrl = undefined
+    previewSessionStoreState.serveStatus = 'failed'
+    const refresh = vi.fn()
+    previewSessionStoreState.refresh = refresh
+    await renderPreviewPanel()
+
+    await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).click()
+
+    expect(refresh).toHaveBeenCalledOnce()
+    await expect.element(page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' })).toBeDisabled()
+  })
+
   it('缺少规范入口时只显示错误遮罩且不展示连接状态，入口恢复后重新挂载预览', async () => {
     sceneEntryStatusState.status.value = 'missing'
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await expect.element(page.getByTestId('preview-missing-entry-overlay')).toHaveRole('alert')
     expect(document.querySelector('iframe')).toBeNull()
@@ -487,12 +502,7 @@ describe('PreviewPanel', () => {
   it('入口校验期间不显示缺失遮罩与连接状态，校验通过后挂载预览', async () => {
     sceneEntryStatusState.status.value = 'checking'
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     expect(document.querySelector('[data-testid="preview-missing-entry-overlay"]')).toBeNull()
     expect(document.querySelector('[data-testid="preview-connection-status"]')).toBeNull()
@@ -505,12 +515,7 @@ describe('PreviewPanel', () => {
   })
 
   it('收到同源 iframe 转发的空格按键消息时会让 iframe 上的拖拽交给外层视口平移', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -531,42 +536,30 @@ describe('PreviewPanel', () => {
   })
 
   it('放大预览后 viewport 外的编辑器区域不会命中 iframe', async () => {
-    const rendered = await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
-    rendered.container.style.height = '500px'
+    const rendered = await renderPreviewPanel()
     rendered.container.style.position = 'relative'
-    rendered.container.style.width = '200px'
-
+    rendered.container.style.zIndex = '0'
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
     })
 
-    const viewport = document.querySelector<HTMLElement>('[data-testid="preview-viewport"]')
-    const outputSurface = document.querySelector<HTMLElement>('[data-testid="preview-output-surface"]')
-    const canvas = document.querySelector<HTMLElement>('[data-testid="preview-canvas"]')
-    const { iframe, iframeWindow } = getPreviewIframe()
-    expect(viewport).not.toBeNull()
-    expect(outputSurface).not.toBeNull()
-    expect(canvas).not.toBeNull()
+    const viewport = page.getByTestId('preview-viewport').element()
+    const canvas = page.getByTestId('preview-canvas').element()
+    const { iframeWindow } = getPreviewIframe()
 
     await vi.waitFor(() => {
-      expect(parsePreviewTransform(canvas?.style.transform ?? '').zoom).not.toBe(1)
+      expect(parsePreviewTransform(canvas.style.transform).zoom).not.toBe(1)
     })
 
     const editor = document.createElement('div')
     editor.dataset.testid = 'editor-hit-sentinel'
     editor.style.position = 'fixed'
-    editor.style.left = `${viewport?.getBoundingClientRect().right ?? 0}px`
     editor.style.top = '0'
     editor.style.width = '32px'
     editor.style.height = '100vh'
     // 哨兵必须位于预览画布下方，命中断言才能证明 iframe 越界已被裁剪
     editor.style.zIndex = '-1'
-    document.body.append(editor)
+    rendered.container.append(editor)
 
     try {
       for (let index = 0; index < 32; index++) {
@@ -580,28 +573,25 @@ describe('PreviewPanel', () => {
       }
       await nextTick()
 
-      const viewportRect = viewport?.getBoundingClientRect()
-      const canvasRect = canvas?.getBoundingClientRect()
-      expect(canvasRect?.right).toBeGreaterThan(viewportRect?.right ?? 0)
+      const viewportRect = viewport.getBoundingClientRect()
+      const canvasRect = canvas.getBoundingClientRect()
+      const hitX = viewportRect.right + 8
+      const hitY = viewportRect.top + viewportRect.height / 2
+      editor.style.left = `${viewportRect.right}px`
 
-      const hitTarget = document.elementFromPoint(
-        (viewportRect?.right ?? 0) + 8,
-        8,
-      )
-      expect(hitTarget).toBe(editor)
-      expect(hitTarget).not.toBe(iframe)
+      // 取样点必须在视口外、放大后的画布内，才能检测 iframe 的越界命中。
+      expect(hitX).toBeGreaterThan(canvasRect.left)
+      expect(hitX).toBeLessThan(canvasRect.right)
+      expect(hitY).toBeGreaterThan(canvasRect.top)
+      expect(hitY).toBeLessThan(canvasRect.bottom)
+      expect(document.elementFromPoint(hitX, hitY)).toBe(editor)
     } finally {
       editor.remove()
     }
   })
 
   it('iframe 内松开空格后会立即用 auto 光标重置覆盖层', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -627,12 +617,7 @@ describe('PreviewPanel', () => {
   })
 
   it('底部工具栏固定在视口下方并使用画布区域背景色', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     const viewport = page.getByTestId('preview-viewport').element()
     const toolbar = page.getByTestId('preview-bottom-toolbar').element()
@@ -649,12 +634,7 @@ describe('PreviewPanel', () => {
     ['缩放百分比读数', (root: HTMLElement) => root.querySelector('[data-testid="preview-bottom-toolbar"] output')],
     ['工具栏空白处', (root: HTMLElement) => root.querySelector<HTMLElement>('[data-testid="preview-bottom-toolbar"]')],
   ])('空格平移模式下按在底部工具栏的%s上不会启动视口平移', async (_name, resolveTarget) => {
-    const rendered = await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    const rendered = await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -685,12 +665,7 @@ describe('PreviewPanel', () => {
   })
 
   it('按下 Ctrl 不会进入抓手交互态', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -709,12 +684,7 @@ describe('PreviewPanel', () => {
   })
 
   it('收到同源 iframe 转发的 Cmd 或 Ctrl 滚轮消息时会缩放视口', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -748,12 +718,7 @@ describe('PreviewPanel', () => {
   })
 
   it('收到同源 iframe 转发的中键指针消息时会平移视口', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -812,12 +777,7 @@ describe('PreviewPanel', () => {
   })
 
   it('点击浏览器打开按钮会调用外部打开动作', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await page.getByRole('button', { name: 'edit.previewPanel.openInBrowser' }).click()
 
@@ -825,14 +785,8 @@ describe('PreviewPanel', () => {
   })
 
   it('变换浮层开启时点击预览空白区域和底部工具栏会保持浮层快捷键上下文', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        provide: {
-          [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(),
-        },
-        stubs: globalStubs,
-      },
+    await renderPreviewPanel({
+      [TRANSFORM_OVERLAY_BRIDGE_KEY as symbol]: createTransformOverlayBridge(),
     })
 
     await expect.element(page.getByTestId('transform-overlay')).toBeVisible()
@@ -862,12 +816,7 @@ describe('PreviewPanel', () => {
   })
 
   it('抽屉可交互区域只覆盖预览工作区，不含刷新所在的顶部工具栏', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     const drawerRegion = document.querySelector<HTMLElement>('[data-drawer-interactive-region]')
     const refreshButton = await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).element()
@@ -880,12 +829,7 @@ describe('PreviewPanel', () => {
   })
 
   it('点击刷新按钮会重新读取游戏配置并刷新内嵌预览槽位', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await page.getByRole('button', { name: 'edit.previewPanel.refreshPreview' }).click()
 
@@ -909,12 +853,7 @@ describe('PreviewPanel', () => {
       })
     })
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledTimes(1)
@@ -944,12 +883,7 @@ describe('PreviewPanel', () => {
     const sameOriginPreviewUrl = new URL('/__webgal_preview_bootstrap_test__', globalThis.location.href)
     previewSessionStoreState.currentGameServeUrl = sameOriginPreviewUrl.href
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(setEmbeddedPreviewLaunchIdMock).toHaveBeenCalledWith(expect.any(String))
@@ -987,12 +921,7 @@ describe('PreviewPanel', () => {
   })
 
   it('亮度调整作用于预览视口视觉层', async () => {
-    const rendered = await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    const rendered = await renderPreviewPanel()
     const preferenceStore = usePreferenceStore(rendered.pinia)
 
     preferenceStore.previewBrightness = [65]
@@ -1012,12 +941,7 @@ describe('PreviewPanel', () => {
   })
 
   it('预览 iframe 全屏时让开画布变换与亮度滤镜，并让窗口进入全屏', async () => {
-    const rendered = await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    const rendered = await renderPreviewPanel()
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
     })
@@ -1064,12 +988,7 @@ describe('PreviewPanel', () => {
     const sameOriginPreviewUrl = new URL('/__webgal_preview_output_settings_test__', globalThis.location.href)
     previewSessionStoreState.currentGameServeUrl = sameOriginPreviewUrl.href
 
-    const rendered = await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    const rendered = await renderPreviewPanel()
     const { iframeWindow } = getPreviewIframe()
     const postMessageSpy = vi.spyOn(iframeWindow, 'postMessage').mockImplementation(() => undefined)
     const preferenceStore = usePreferenceStore(rendered.pinia)
@@ -1108,12 +1027,7 @@ describe('PreviewPanel', () => {
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     previewSyncStore.isPreviewReady = true
     await new Promise(resolve => setTimeout(resolve, 0))
@@ -1127,12 +1041,7 @@ describe('PreviewPanel', () => {
   })
 
   it('当前游戏快照更新时间变化时不会自动重新读取游戏配置', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -1145,12 +1054,7 @@ describe('PreviewPanel', () => {
   })
 
   it('预览 reloadVersion 变化时会自动重新读取游戏配置', async () => {
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     await vi.waitFor(() => {
       expect(getGameConfigMock).toHaveBeenCalledTimes(1)
@@ -1181,12 +1085,7 @@ describe('PreviewPanel', () => {
     })
     usePreviewSyncStoreMock.mockReturnValue(previewSyncStore)
 
-    await renderInBrowser(PreviewPanel, {
-      global: {
-        plugins: [createPreviewPanelLiteI18n()],
-        stubs: globalStubs,
-      },
-    })
+    await renderPreviewPanel()
 
     previewSyncStore.fastPreviewTimeout = {
       sceneName: 'scene/start.txt',

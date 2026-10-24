@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive, toRaw } from 'vue'
 
 import { encodeTextFile } from '~/domain/document/file-codec'
@@ -15,6 +15,7 @@ type WriteDocumentFile = typeof import('~/services/game-fs').gameFs.writeDocumen
 
 const {
   fileStoreInitializedRef,
+  previewSessionInitializedRef,
   handleErrorMock,
   isBinaryFileMock,
   loggerDebugMock,
@@ -28,11 +29,11 @@ const {
   resolveProjectFilePathMock,
   statMock,
   syncSceneMock,
-  tabsWatcherCloseHandlerRef,
   writeDocumentFileMock,
 } = vi.hoisted(() => ({
   // 文件视图的就绪状态可被单个用例替换，用于复现「进入工程时文档读取早于文件视图初始化」的时序
   fileStoreInitializedRef: { current: Promise.resolve() as Promise<void> },
+  previewSessionInitializedRef: { current: Promise.resolve() as Promise<void> },
   handleErrorMock: vi.fn(),
   isBinaryFileMock: vi.fn(async () => false),
   loggerDebugMock: vi.fn(),
@@ -45,9 +46,6 @@ const {
   refetchTemplatesMock: vi.fn(async () => undefined),
   statMock: vi.fn(async () => ({ size: 5 })),
   syncSceneMock: vi.fn(async () => undefined),
-  tabsWatcherCloseHandlerRef: {
-    current: undefined as ((path: string) => void) | undefined,
-  },
   resolveProjectFilePathMock: vi.fn(async (path: string) => path),
   writeDocumentFileMock: vi.fn<WriteDocumentFile>(async () => undefined),
 }))
@@ -83,6 +81,9 @@ const preferenceStoreMock = reactive({
 
 const previewSessionStoreMock = reactive({
   currentGameServeUrl: 'http://127.0.0.1:8899' as string | undefined,
+  get initialized() {
+    return previewSessionInitializedRef.current
+  },
 })
 
 const workspaceStoreMock = reactive({
@@ -140,12 +141,6 @@ vi.mock('~/composables/useFileSystemEvents', () => ({
         fileSystemEventHandlers.delete(event)
       }
     }),
-  }),
-}))
-
-vi.mock('~/features/editor/shared/useTabsWatcher', () => ({
-  useTabsWatcher: vi.fn((onTabClosed: (path: string) => void) => {
-    tabsWatcherCloseHandlerRef.current = onTabClosed
   }),
 }))
 
@@ -286,6 +281,10 @@ beforeAll(async () => {
   ({ useEditorStore } = await import('../editor'))
 }, asyncFixtureTimeoutMs * 3)
 
+afterEach(() => {
+  useEditorStore().$dispose()
+})
+
 describe('编辑器文本与文档流程', () => {
   beforeEach(() => {
     const tabsStore = useTabsStore()
@@ -310,7 +309,6 @@ describe('编辑器文本与文档流程', () => {
     syncSceneMock.mockImplementation(async () => undefined)
     mimeGetTypeMock.mockReturnValue('text/plain')
     fileSystemEventHandlers.clear()
-    tabsWatcherCloseHandlerRef.current = undefined
     modalOpenMock.mockReset()
     externalDocumentModalAction = { type: 'cancel' }
     modalOpenMock.mockImplementation((_name: string, payload: {
@@ -339,6 +337,7 @@ describe('编辑器文本与文档流程', () => {
     })
 
     fileStoreInitializedRef.current = Promise.resolve()
+    previewSessionInitializedRef.current = Promise.resolve()
     resolveProjectFilePathMock.mockClear()
     tabsStore.projectTabsMap = {}
     tabsStore.runtimeTabStateMap = {}
@@ -371,30 +370,99 @@ describe('编辑器文本与文档流程', () => {
     expect(readFileMock).toHaveBeenCalledTimes(1)
   })
 
-  it('重绑运行时后可以重新加载此前加载失败的当前标签页', async () => {
+  it('运行时恢复后可重试失败文档，已加载的编辑内容不会被重试覆盖', async () => {
     const tabsStore = useTabsStore()
     const path = AbsPath.from('/game/docs/retry-after-rebind.txt')
     const editorStore = useEditorStore()
 
-    // 首次加载时文件视图还没就绪：加载被挂起，没有文档状态
-    const fileViewReady = createDeferred<void>()
-    fileStoreInitializedRef.current = fileViewReady.promise
+    resolveProjectFilePathMock.mockRejectedValueOnce(new Error('引擎不可用'))
     tabsStore.openTab('retry-after-rebind.txt', path, { forceNormal: true })
-    await flushEditorWatchers()
+    await vi.waitFor(() => expect(tabsStore.activeTab?.error).toBe('检测文件类型失败: 引擎不可用'))
     expect(editorStore.hasState(path)).toBe(false)
     expect(readFileMock).not.toHaveBeenCalled()
 
-    // 重绑完成后文件视图可用，显式重试当前标签页
-    fileStoreInitializedRef.current = Promise.resolve()
     await editorStore.retryActiveDocument()
-    await waitForEditorFixture('retry active document', () => editorStore.hasState(path))
-
-    expect(editorStore.hasState(path)).toBe(true)
+    expect(editorStore.currentTextProjection?.textContent).toBe('hello')
+    expect(tabsStore.activeTab?.error).toBeUndefined()
     expect(readFileMock).toHaveBeenCalledTimes(1)
 
-    // 已经加载过的文档不重复读盘，避免重试把编辑状态重置掉
+    editorStore.applyTextDocumentContent(path, '未保存的内容')
     await editorStore.retryActiveDocument()
+    expect(editorStore.currentTextProjection?.textContent).toBe('未保存的内容')
     expect(readFileMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('恢复资源标签页会等待预览会话就绪后显示内容', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/video/restored.mp4')
+    const previewReady = createDeferred<void>()
+    previewSessionInitializedRef.current = previewReady.promise
+    previewSessionStoreMock.currentGameServeUrl = undefined
+    mimeGetTypeMock.mockReturnValue('video/mp4')
+    tabsStore.openTab('restored.mp4', path, { forceNormal: true })
+
+    const editorStore = useEditorStore()
+    await flushEditorWatchers()
+    expect(editorStore.currentState).toBeUndefined()
+    expect(tabsStore.activeTab?.error).toBeUndefined()
+    expect(tabsStore.activeTab?.isLoading).toBe(true)
+
+    previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
+    previewReady.resolve()
+    await vi.waitFor(() => expect(editorStore.currentState).toMatchObject({ path, view: 'preview' }))
+    expect(tabsStore.activeTab?.error).toBeUndefined()
+  })
+
+  it.each(['成功', '失败'] as const)('重复关闭和重开时旧读取%s不会覆盖新状态或复活会话', async (result) => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/docs/reopened.txt')
+    const oldRead = createDeferred<Uint8Array<ArrayBuffer>>()
+    const newRead = createDeferred<Uint8Array<ArrayBuffer>>()
+    readFileMock.mockReturnValueOnce(oldRead.promise).mockReturnValueOnce(newRead.promise)
+    const editorStore = useEditorStore()
+    tabsStore.openTab('reopened.txt', path, { forceNormal: true })
+    await vi.waitFor(() => expect(readFileMock).toHaveBeenCalledTimes(1))
+    tabsStore.closeTab(0)
+    await nextTick()
+    tabsStore.openTab('reopened.txt', path, { forceNormal: true })
+    await vi.waitFor(() => expect(readFileMock).toHaveBeenCalledTimes(2))
+
+    if (result === '成功') {
+      oldRead.resolve(new TextEncoder().encode('旧内容'))
+    } else {
+      oldRead.reject(new Error('旧请求读取失败'))
+    }
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(editorStore.currentState).toBeUndefined()
+    expect(tabsStore.activeTab?.isLoading).toBe(true)
+    expect(tabsStore.activeTab?.error).toBeUndefined()
+
+    tabsStore.closeTab(0)
+    await nextTick()
+    newRead.resolve(new TextEncoder().encode('再次关闭前的内容'))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(editorStore.hasState(path)).toBe(false)
+
+    readFileMock.mockResolvedValueOnce(new TextEncoder().encode('重新读盘的最新内容'))
+    tabsStore.openTab('reopened.txt', path, { forceNormal: true })
+    await vi.waitFor(() => expect(editorStore.currentTextProjection?.textContent).toBe('重新读盘的最新内容'))
+  })
+
+  it('预览会话失败后重试成功会恢复当前资源标签页', async () => {
+    const tabsStore = useTabsStore()
+    const path = AbsPath.from('/game/video/retry.mp4')
+    previewSessionStoreMock.currentGameServeUrl = undefined
+    mimeGetTypeMock.mockReturnValue('video/mp4')
+    const editorStore = useEditorStore()
+    tabsStore.openTab('retry.mp4', path, { forceNormal: true })
+    await vi.waitFor(() => expect(tabsStore.activeTab?.error).toBe('edit.errors.previewUnavailable'))
+    expect(editorStore.currentState).toBeUndefined()
+    expect(tabsStore.activeTab?.isLoading).toBe(false)
+
+    previewSessionStoreMock.currentGameServeUrl = 'http://127.0.0.1:8899'
+
+    await vi.waitFor(() => expect(editorStore.currentState).toMatchObject({ path, view: 'preview' }))
+    expect(tabsStore.activeTab?.error).toBeUndefined()
   })
 
   it('加载纯文本文件后可应用补丁、保存并支持撤销重做', async () => {
@@ -566,11 +634,8 @@ describe('编辑器文本与文档流程', () => {
 
     const savePromise = editorStore.saveFile(AbsPath.from(path))
 
-    expect(tabsWatcherCloseHandlerRef.current).toBeDefined()
-    if (!tabsWatcherCloseHandlerRef.current) {
-      throw new TypeError('missing tabs watcher close handler')
-    }
-    tabsWatcherCloseHandlerRef.current(path)
+    tabsStore.closeTab(0)
+    await nextTick()
     expect(refetchTemplatesMock).not.toHaveBeenCalled()
     writeDeferred.resolve()
 
@@ -652,27 +717,6 @@ describe('编辑器文本与文档流程', () => {
       volume: 0.4,
       muted: true,
     })
-  })
-
-  it('预览资源缺少预览 URL 时直接暴露错误而不是无限等待', async () => {
-    const tabsStore = useTabsStore()
-    const path = AbsPath.from('/game/video/preview-unavailable.mp4')
-
-    previewSessionStoreMock.currentGameServeUrl = undefined
-    mimeGetTypeMock.mockReturnValue('video/mp4')
-
-    const editorStore = useEditorStore()
-
-    await openTabAndWaitFor(
-      tabsStore,
-      'preview-unavailable.mp4',
-      path,
-      () => tabsStore.activeTab?.path === path && tabsStore.activeTab?.isLoading === false,
-      'load preview asset without preview url',
-    )
-
-    expect(editorStore.hasState(path)).toBe(false)
-    expect(tabsStore.activeTab?.error).toBe('edit.errors.previewUnavailable')
   })
 
   it('工作区不可用时直接暴露错误而不是静默降级文档类型', async () => {
@@ -1905,6 +1949,37 @@ describe('编辑器文本与文档流程', () => {
       message: '同步预览失败',
       cause: syncError,
     })
+  })
+
+  it.each(['首次加载', '显式重试'])('%s在切换标签页后完成时不会切回旧场景预览', async (trigger) => {
+    const tabsStore = useTabsStore()
+    const firstPath = AbsPath.from('/game/scene/pending.txt')
+    const secondPath = AbsPath.from('/game/scene/active.txt')
+    const pendingRead = createDeferred<Uint8Array<ArrayBuffer>>()
+    if (trigger === '显式重试') {
+      readFileMock.mockRejectedValueOnce(new Error('首次读取失败'))
+    }
+    readFileMock
+      .mockReturnValueOnce(pendingRead.promise)
+      .mockResolvedValueOnce(new TextEncoder().encode('当前场景'))
+    const editorStore = useEditorStore()
+    tabsStore.openTab('pending.txt', firstPath, { forceNormal: true })
+    let retry: Promise<void> | undefined
+    if (trigger === '显式重试') {
+      await vi.waitFor(() => expect(tabsStore.activeTab?.error).toBe('首次读取失败'))
+      retry = editorStore.retryActiveDocument()
+    }
+    await vi.waitFor(() => expect(readFileMock).toHaveBeenCalledTimes(trigger === '首次加载' ? 1 : 2))
+    tabsStore.openTab('active.txt', secondPath, { forceNormal: true })
+    await vi.waitFor(() => expect(editorStore.currentTextProjection?.textContent).toBe('当前场景'))
+    expect(syncSceneMock).toHaveBeenLastCalledWith(secondPath, 1, '当前场景', { force: false })
+
+    pendingRead.resolve(new TextEncoder().encode('先前场景'))
+    await retry
+    await vi.waitFor(() => expect(editorStore.hasState(firstPath)).toBe(true))
+
+    expect(editorStore.currentTextProjection?.textContent).toBe('当前场景')
+    expect(syncSceneMock).toHaveBeenCalledTimes(1)
   })
 
   it('切换场景标签页时重新同步当前预览行', async () => {

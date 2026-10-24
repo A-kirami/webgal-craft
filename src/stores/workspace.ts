@@ -90,10 +90,6 @@ export const useWorkspaceStore = defineStore(
 
       currentGame = game
       await previewSessionStore.syncCurrentGame(game)
-      if (isStale) {
-        currentGame = undefined
-        await previewSessionStore.syncCurrentGame(undefined)
-      }
     })
 
     return $$({

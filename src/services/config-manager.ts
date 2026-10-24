@@ -29,7 +29,7 @@ async function getConfig(gamePath: AbsPath): Promise<GameConfigReadResult> {
 async function setConfig(gamePath: AbsPath, config: GameConfigWritePayload) {
   await gameCmds.setGameConfig(gamePath, config)
   await gameManager.refreshRegisteredGameSnapshot(gamePath)
-  usePreviewSessionStore().refreshIfCurrentGame(gamePath)
+  await usePreviewSessionStore().refreshIfCurrentGame(gamePath)
   // 监听器可能重新加载工程内容，不属于配置写入事务。
   void configChanged.trigger({ gamePath, config }).catch((error: unknown) => {
     logger.error(`通知游戏配置变更失败: ${error}`)

@@ -66,6 +66,7 @@ export const useSceneEntryStatus = createGlobalState(() => {
     'file:removed',
     'file:renamed',
     'directory:created',
+    'directory:modified',
     'directory:removed',
     'directory:renamed',
   ] as const
@@ -79,7 +80,7 @@ export const useSceneEntryStatus = createGlobalState(() => {
     const paths = 'oldPath' in event
       ? [event.oldPath, event.newPath]
       : [event.path]
-    if (paths.some(path => isPathWithin(path, root))) {
+    if (paths.some(path => isPathWithin(path, root) || isPathWithin(root, path))) {
       void refresh()
     }
   }))

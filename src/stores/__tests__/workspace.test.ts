@@ -1,6 +1,6 @@
 import '~/__tests__/setup'
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createTestGame } from '~/__tests__/factories'
 import { AbsPath } from '~/domain/path'
@@ -75,12 +75,35 @@ describe('useWorkspaceStore', () => {
     previewSessionStoreState.syncCurrentGame = syncCurrentGameMock
   })
 
-  it('不再暴露预览服务器状态与启动方法', async () => {
-    const store = useWorkspaceStore()
+  afterEach(() => {
+    useWorkspaceStore().$dispose()
+  })
 
-    expect('serverUrl' in store).toBe(false)
-    expect('runServer' in store).toBe(false)
-    expect('currentGameServeUrl' in store).toBe(false)
+  it('旧工程的预览初始化迟到时不会清空新工作区', async () => {
+    const store = useWorkspaceStore()
+    let finishFirst!: () => void
+    const firstSync = new Promise<void>((resolve) => {
+      finishFirst = resolve
+    })
+    dbGetMock.mockImplementation(async (id: string) => createTestGame({ id, path: AbsPath.from(`/games/${id}`) }))
+    syncCurrentGameMock.mockImplementation(async (game?: { id: string }) => {
+      if (game?.id === 'first') {
+        await firstSync
+        return
+      }
+      previewSessionStoreState.currentGameServeUrl = game ? `http://preview/${game.id}` : undefined
+    })
+
+    routeState.params = { gameId: 'first' }
+    await vi.waitFor(() => expect(store.currentGame?.id).toBe('first'))
+    routeState.params = { gameId: 'second' }
+    await vi.waitFor(() => expect(previewSessionStoreState.currentGameServeUrl).toBe('http://preview/second'))
+    finishFirst()
+    await flushWorkspaceWatchers()
+    await flushWorkspaceWatchers()
+
+    expect(store.currentGame?.id).toBe('second')
+    expect(previewSessionStoreState.currentGameServeUrl).toBe('http://preview/second')
   })
 
   it('refreshCurrentGameSnapshot 会把最新快照合并回 currentGame', async () => {

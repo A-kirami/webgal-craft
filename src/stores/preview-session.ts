@@ -25,33 +25,31 @@ async function resolvePreviewGameId(gamePath: AbsPath): Promise<string | undefin
 }
 
 export const usePreviewSessionStore = defineStore('previewSession', () => {
-  let currentGamePath = $ref<AbsPath>()
+  let currentGame: PreviewGameTarget | undefined
   let currentGameServeUrl = $ref<string>()
   let serveStatus = $ref<PreviewServeStatus>('idle')
   let reloadVersion = $ref(0)
+  // 初始化尝试结束不代表成功，调用方仍需检查预览 URL。
+  let initialized = $shallowRef<Promise<void>>(Promise.resolve())
   let syncToken = 0
 
   const previewRuntimeStore = usePreviewRuntimeStore()
 
-  function resetState(): void {
-    currentGamePath = undefined
+  function syncCurrentGame(game?: PreviewGameTarget): Promise<void> {
+    const currentToken = ++syncToken
+    currentGame = game
     currentGameServeUrl = undefined
-    serveStatus = 'idle'
+    serveStatus = game ? 'connecting' : 'idle'
     reloadVersion = 0
+    initialized = initializePreviewSession(game, currentToken)
+    return initialized
   }
 
-  async function syncCurrentGame(game?: PreviewGameTarget): Promise<void> {
-    const currentToken = ++syncToken
+  async function initializePreviewSession(game: PreviewGameTarget | undefined, currentToken: number): Promise<void> {
     if (!game) {
-      resetState()
       await previewRuntimeStore.setActivePreviewSession(undefined)
       return
     }
-
-    currentGamePath = game.path
-    currentGameServeUrl = undefined
-    serveStatus = 'connecting'
-    reloadVersion = 0
 
     try {
       await previewRuntimeStore.setActivePreviewSession(undefined)
@@ -87,35 +85,40 @@ export const usePreviewSessionStore = defineStore('previewSession', () => {
     }
   }
 
-  function refresh(): void {
-    if (!currentGamePath) {
+  async function refresh(): Promise<void> {
+    if (!currentGame) {
+      return
+    }
+
+    if (serveStatus === 'failed') {
+      await syncCurrentGame(currentGame)
       return
     }
 
     reloadVersion++
   }
 
-  function refreshIfCurrentGame(gamePath: AbsPath): void {
-    if (!gamePath || currentGamePath !== gamePath) {
+  async function refreshIfCurrentGame(gamePath: AbsPath): Promise<void> {
+    if (currentGame?.path !== gamePath) {
       return
     }
 
-    refresh()
+    await refresh()
   }
 
   async function syncIfCurrentGame(game: PreviewGameTarget): Promise<void> {
-    if (!game.path || currentGamePath !== game.path) {
+    if (currentGame?.path !== game.path) {
       return
     }
 
     await syncCurrentGame(game)
-    refresh()
   }
 
   return $$({
     currentGameServeUrl,
     serveStatus,
     reloadVersion,
+    initialized,
     syncCurrentGame,
     refresh,
     refreshIfCurrentGame,
