@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Folder, Scroll, Trash2, TriangleAlert } from '@lucide/vue'
+import { EllipsisVertical, Folder, Scroll, Trash2, TriangleAlert } from '@lucide/vue'
 
 import { useTauriDropZone } from '~/composables/useTauriDropZone'
 import dayjs from '~/plugins/dayjs'
@@ -108,16 +108,40 @@ const LIST_COVER_THUMBNAIL: AssetThumbnailOptions = {
                   :alt="$t('home.games.gameIcon', { name: item.game.metadata.name })"
                   :cache-version="item.game.previewAssets.icon.cacheVersion"
                   :thumbnail="GRID_ICON_THUMBNAIL"
-                  class="rounded-md size-8"
+                  class="rounded-md shrink-0 size-8"
                 />
-                <div>
-                  <h3 class="font-medium">
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-medium truncate">
                     {{ item.game.metadata.name }}
                   </h3>
                   <p class="text-xs text-muted-foreground/80">
                     {{ hasGameProgress(item.game) ? $t('home.games.creating') : $t('home.games.modifiedAt', { time: dayjs(item.game.lastModified).fromNow() }) }}
                   </p>
                 </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button :aria-label="$t('common.more')" variant="ghost" size="icon-sm" class="shrink-0 self-start" @click.stop>
+                      <EllipsisVertical />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" @click.stop>
+                    <DropdownMenuItem
+                      v-if="item.game.availability !== 'missing'"
+                      @click="emit('openFolder', item.game)"
+                    >
+                      <Folder />
+                      {{ $t('common.openFolder') }}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      v-if="!hasGameProgress(item.game)"
+                      variant="destructive"
+                      @click="emit('deleteGame', item.game)"
+                    >
+                      <Trash2 />
+                      {{ $t('home.games.deleteGame') }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </CardContent>
             <Progress v-if="hasGameProgress(item.game)" :model-value="getGameProgress(item.game)" class="rounded-none inset-x-0 bottom-0 absolute" />
