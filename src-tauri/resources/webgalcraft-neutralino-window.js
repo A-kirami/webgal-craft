@@ -1,6 +1,8 @@
 (() => {
   let fullscreenActive = false;
 
+  window.close = Neutralino.app.exit;
+
   function notifyFullscreenChange(active) {
     if (fullscreenActive === active) return;
 
