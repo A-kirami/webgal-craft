@@ -70,11 +70,11 @@ const NEUTRALINO_RUNTIME_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(5 * 60
 const MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES: u64 = 16 * 1024 * 1024;
 const NEUTRALINO_CLIENT: &[u8] = include_bytes!("../../resources/neutralino/6.9.0/neutralino.js");
 const NEUTRALINO_CLIENT_LICENSE: &[u8] = include_bytes!("../../resources/neutralino/6.9.0/LICENSE");
-const NEUTRALINO_FULLSCREEN_BRIDGE: &[u8] =
-    include_bytes!("../../resources/webgalcraft-neutralino-fullscreen.js");
+const NEUTRALINO_WINDOW_BRIDGE: &[u8] =
+    include_bytes!("../../resources/webgalcraft-neutralino-window.js");
 const NEUTRALINO_CLIENT_PATH: &str = "webgalcraft-neutralino.js";
 const NEUTRALINO_CLIENT_LICENSE_PATH: &str = "webgalcraft-neutralino-LICENSE.txt";
-const NEUTRALINO_FULLSCREEN_BRIDGE_PATH: &str = "webgalcraft-neutralino-fullscreen.js";
+const NEUTRALINO_WINDOW_BRIDGE_PATH: &str = "webgalcraft-neutralino-window.js";
 static EXPORT_WORK_ID: AtomicU64 = AtomicU64::new(0);
 
 const PC_ICON_FALLBACKS: [&str; 4] = [
@@ -728,8 +728,8 @@ pub(super) fn export_pc_to_directory(
             NEUTRALINO_CLIENT_LICENSE,
         )?;
         fs::write(
-            site_root.join(NEUTRALINO_FULLSCREEN_BRIDGE_PATH),
-            NEUTRALINO_FULLSCREEN_BRIDGE,
+            site_root.join(NEUTRALINO_WINDOW_BRIDGE_PATH),
+            NEUTRALINO_WINDOW_BRIDGE,
         )?;
         let mut window_config = serde_json::json!({
             "title": game_name,
@@ -740,7 +740,7 @@ pub(super) fn export_pc_to_directory(
             "fullScreen": window.full_screen,
             "resizable": window.resizable,
             "injectClientLibrary": true,
-            "injectScript": format!("/{NEUTRALINO_FULLSCREEN_BRIDGE_PATH}"),
+            "injectScript": format!("/{NEUTRALINO_WINDOW_BRIDGE_PATH}"),
         });
         if icon_path.is_some() {
             window_config["icon"] = serde_json::Value::String("/icon.png".into());
@@ -752,6 +752,7 @@ pub(super) fn export_pc_to_directory(
             "enableNativeAPI": true,
             "tokenSecurity": "one-time",
             "nativeAllowList": [
+                "app.exit",
                 "window.setFullScreen",
                 "window.exitFullScreen",
                 "window.isFullScreen",
@@ -2399,6 +2400,7 @@ mod tests {
         assert_eq!(
             config["nativeAllowList"],
             serde_json::json!([
+                "app.exit",
                 "window.setFullScreen",
                 "window.exitFullScreen",
                 "window.isFullScreen",
@@ -2408,12 +2410,12 @@ mod tests {
         assert_eq!(config["modes"]["window"]["injectClientLibrary"], true);
         assert_eq!(
             config["modes"]["window"]["injectScript"],
-            "/webgalcraft-neutralino-fullscreen.js"
+            "/webgalcraft-neutralino-window.js"
         );
         assert_eq!(config["cli"]["clientLibrary"], "/webgalcraft-neutralino.js");
         assert!(read_asar_file(&bundle, "webgalcraft-neutralino.js").is_some());
         assert!(read_asar_file(&bundle, "webgalcraft-neutralino-LICENSE.txt").is_some());
-        assert!(read_asar_file(&bundle, "webgalcraft-neutralino-fullscreen.js").is_some());
+        assert!(read_asar_file(&bundle, "webgalcraft-neutralino-window.js").is_some());
     }
 
     #[test]

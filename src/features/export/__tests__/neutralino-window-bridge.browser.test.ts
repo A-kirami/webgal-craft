@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import fullscreenBridge from '../../../../src-tauri/resources/webgalcraft-neutralino-fullscreen.js?raw'
+import windowBridge from '../../../../src-tauri/resources/webgalcraft-neutralino-window.js?raw'
 
 interface NeutralinoStub {
+  app: {
+    exit: () => Promise<void>
+  }
   events: {
     on: (event: string, listener: () => void | Promise<void>) => void
   }
@@ -16,13 +19,15 @@ interface NeutralinoStub {
 
 const neutralinoGlobal = globalThis as typeof globalThis & { Neutralino?: NeutralinoStub }
 
-describe('Neutralino 全屏桥接', () => {
+describe('Neutralino 窗口桥接', () => {
+  const originalClose = Object.getOwnPropertyDescriptor(globalThis, 'close')
   const originalFullscreenElement = Object.getOwnPropertyDescriptor(document, 'fullscreenElement')
   const originalFullscreenEnabled = Object.getOwnPropertyDescriptor(document, 'fullscreenEnabled')
   const originalExitFullscreen = Object.getOwnPropertyDescriptor(document, 'exitFullscreen')
   const originalRequestFullscreen = Object.getOwnPropertyDescriptor(Element.prototype, 'requestFullscreen')
 
   afterEach(() => {
+    restoreProperty(globalThis, 'close', originalClose)
     restoreProperty(document, 'fullscreenElement', originalFullscreenElement)
     restoreProperty(document, 'fullscreenEnabled', originalFullscreenEnabled)
     restoreProperty(document, 'exitFullscreen', originalExitFullscreen)
@@ -43,6 +48,7 @@ describe('Neutralino 全屏桥接', () => {
     const isFullScreen = vi.fn(async () => nativeFullscreen)
     const init = vi.fn(() => undefined)
     neutralinoGlobal.Neutralino = {
+      app: { exit: vi.fn(async () => undefined) },
       events: {
         on: vi.fn((event, listener) => {
           expect(event).toBe('ready')
@@ -55,7 +61,7 @@ describe('Neutralino 全屏桥接', () => {
     const fullscreenChanges = vi.fn(() => undefined)
     document.addEventListener('fullscreenchange', fullscreenChanges)
 
-    new Function(fullscreenBridge)()
+    new Function(windowBridge)()
     expect(init).toHaveBeenCalledOnce()
 
     await readyListener?.()
@@ -80,6 +86,7 @@ describe('Neutralino 全屏桥接', () => {
       throw nativeError
     })
     neutralinoGlobal.Neutralino = {
+      app: { exit: vi.fn(async () => undefined) },
       events: { on: vi.fn(() => undefined) },
       init: vi.fn(() => undefined),
       window: {
@@ -91,13 +98,32 @@ describe('Neutralino 全屏桥接', () => {
     const fullscreenChanges = vi.fn(() => undefined)
     document.addEventListener('fullscreenchange', fullscreenChanges)
 
-    new Function(fullscreenBridge)()
+    new Function(windowBridge)()
 
     await expect(document.documentElement.requestFullscreen()).rejects.toBe(nativeError)
     expect(document.fullscreenElement).toBeNull()
     expect(fullscreenChanges).not.toHaveBeenCalled()
 
     document.removeEventListener('fullscreenchange', fullscreenChanges)
+  })
+
+  it('将游戏的 window.close 调用映射到原生应用退出', () => {
+    const exit = vi.fn(async () => undefined)
+    neutralinoGlobal.Neutralino = {
+      app: { exit },
+      events: { on: vi.fn(() => undefined) },
+      init: vi.fn(() => undefined),
+      window: {
+        exitFullScreen: vi.fn(async () => undefined),
+        isFullScreen: vi.fn(async () => false),
+        setFullScreen: vi.fn(async () => undefined),
+      },
+    }
+
+    new Function(windowBridge)()
+    window.close()
+
+    expect(exit).toHaveBeenCalledExactlyOnceWith()
   })
 })
 
