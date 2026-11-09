@@ -36,7 +36,7 @@ let executableName = 'Game.exe'
 let child
 let socket
 
-async function launch() {
+async function launch(ready = '!!document.querySelector("button")') {
   const probe = createServer()
   await new Promise(resolve => probe.listen(0, '127.0.0.1', resolve))
   const { port } = probe.address()
@@ -91,18 +91,23 @@ async function launch() {
     assert.equal(message.result?.exceptionDetails, undefined, JSON.stringify(message))
     return message.result.result.value
   }
+  await waitFor(evaluate, ready)
+  return evaluate
+}
+
+async function waitFor(evaluate, expression) {
   for (let attempt = 0; attempt < 100; attempt++) {
-    if (await evaluate('!!document.querySelector("button")')) {
-      return evaluate
+    if (await evaluate(expression)) {
+      return
     }
     await delay(100)
   }
-  throw new Error(`Game page did not load: ${logs}`)
+  throw new Error(`Game page did not become ready: ${expression}; ${await evaluate('document.body.innerText.slice(0, 2000)')}`)
 }
 
-async function close() {
+async function close(expression = 'window.close()') {
   const exited = new Promise(resolve => child.once('exit', resolve))
-  socket.send(JSON.stringify({ id: 99_9999, method: 'Runtime.evaluate', params: { expression: 'window.close()' } }))
+  socket.send(JSON.stringify({ id: 99_9999, method: 'Runtime.evaluate', params: { expression } }))
   await Promise.race([exited, delay(5000).then(() => {
     throw new Error('Native exit timed out')
   })])
@@ -177,6 +182,63 @@ try {
   assert.deepEqual(await evaluate('indexedDB.databases().then(dbs=>dbs.map(db=>db.name))'), [])
   await close()
   process.stdout.write('PASS: resources, root/startup fullscreen, native exit, storage isolation, and persistence after directory/executable/title changes\n')
+  if (process.argv[3]) {
+    await cp(resolve(process.argv[3]), join(directory, 'resources'), { recursive: true })
+    const configPath = join(directory, 'resources/game/config.txt')
+    const originalConfig = await readFile(configPath, 'utf8')
+    const gameConfig = originalConfig.replace(/Game_key:[^;]*;/, `Game_key:${config.gameKey};`)
+    await writeFile(configPath, gameConfig)
+    // WebGAL replaces its title CSS classes after loading custom styles; select the clickable label.
+    const exitButton = 'Array.from(document.querySelectorAll("div")).find(element => element.onclick && element.textContent.startsWith("退出游戏"))'
+    const ready = `!!document.querySelector(".title__enter-game-target") && !!(${exitButton})`
+    evaluate = await launch(ready)
+    await evaluate('document.documentElement.requestFullscreen().then(()=>true)')
+    await evaluate('document.exitFullscreen().then(()=>true)')
+    const writeVolume = `(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('localforage');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const volume = await new Promise((resolve, reject) => {
+        const transaction = db.transaction('keyvaluepairs', 'readwrite');
+        const store = transaction.objectStore('keyvaluepairs');
+        const request = store.get(${JSON.stringify(config.gameKey)});
+        request.onsuccess = () => {
+          const value = request.result;
+          value.optionData.volumeMain = 37;
+          store.put(value, ${JSON.stringify(config.gameKey)});
+          transaction.oncomplete = () => resolve(value.optionData.volumeMain);
+        };
+        transaction.onerror = () => reject(transaction.error);
+      });
+      db.close();
+      return volume;
+    })()`
+    assert.equal(await evaluate(writeVolume), 37)
+    await close()
+    evaluate = await launch(ready)
+    const restored = await evaluate(`(async () => {
+      const db = await new Promise((resolve, reject) => {
+        const request = indexedDB.open('localforage');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      const value = await new Promise((resolve, reject) => {
+        const request = db.transaction('keyvaluepairs').objectStore('keyvaluepairs').get(${JSON.stringify(config.gameKey)});
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return value.optionData.volumeMain;
+    })()`)
+    assert.equal(restored, 37, 'Real engine data must survive restart without being reset')
+    await waitFor(evaluate, `!!(${exitButton})`)
+    await evaluate(`(${exitButton}).click()`)
+    await waitFor(evaluate, '!!document.querySelector("#globalDialogContainer [class*=button_list]")')
+    await close('document.querySelector("#globalDialogContainer [class*=button_list]").firstElementChild.click()')
+    process.stdout.write('PASS: real WebGAL engine loading, fullscreen, localforage persistence, and exit through its confirmation dialog\n')
+  }
 } finally {
   socket?.close()
   if (child && child.exitCode === null) {

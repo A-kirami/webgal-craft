@@ -9,10 +9,10 @@
 构建与验证：
 
 ```sh
-cargo build --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime
+bun run build:game-runtime
 cargo test --locked --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime
 bun run test:browser -- src/features/export/__tests__/game-window-bridge.browser.test.ts
-node scripts/verify-game-runtime.mjs
+node scripts/verify-game-runtime.mjs src-tauri/resources/game-runtimes/webgal-game-runtime-windows-x64.exe
 ```
 
 最后一项在 Windows 实际启动 WebView2，验证资源范围、Range 响应、JSON 下载与 FileReader、全屏、退出、存储隔离，以及改名和移动后的存档持久化。测试只清理自身创建的临时游戏、下载文件和随机游戏标识对应的数据目录。
@@ -24,3 +24,7 @@ node scripts/verify-game-runtime.mjs
 Build 和 Release 工作流先构建 Windows x64、macOS x64/arm64、Linux x64 四个运行时，再将全部产物内置到每份桌面编辑器发行包。Linux 使用 Ubuntu 22.04 构建以约束 glibc 基线，运行仍需目标系统的 WebKitGTK 4.1。Windows 需要 WebView2 Runtime。Android 不携带这些桌面二进制。本地开发默认只有宿主目标；导出其他目标之前需提供该目标的构建产物，缺失时明确报错。
 
 导出目录内为游戏可执行文件、`webgal-runtime.json` 和完整的 `resources/` 目录；三者必须一起分发。macOS 位于 `.app/Contents/MacOS/`，图标位于 `.app/Contents/Resources/`。资源目录可正常读取和修改，不提供资源加密。开发者发行前仍需在相应系统执行签名、公证与原生验收。
+
+验证真实引擎时可传入已构建的 WebGAL dist：`node scripts/verify-game-runtime.mjs <runtime.exe> <WebGAL dist>`。脚本仅复制该目录到临时游戏，检查引擎加载、localforage 数据重启保留，以及从引擎退出确认弹窗关闭进程，不修改源引擎。
+
+生产构建由脚本显式启用 `custom-protocol`，workspace 测试默认只启用 `desktop`。Clippy 分别检查编辑器和游戏壳，避免 Cargo 合并 Tauri 生产特性后让编辑器的 Rust 检查隐式依赖前端 `dist`。
