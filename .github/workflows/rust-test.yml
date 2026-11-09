@@ -46,4 +46,4 @@ jobs:
           workspaces: ./src-tauri -> target
 
       - name: Run rust tests
-        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+        run: cargo test --workspace --locked --manifest-path src-tauri/Cargo.toml
