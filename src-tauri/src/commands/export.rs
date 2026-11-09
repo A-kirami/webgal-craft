@@ -739,6 +739,7 @@ pub(super) fn export_pc_to_directory(
             "minHeight": window.min_height,
             "fullScreen": window.full_screen,
             "resizable": window.resizable,
+            "newWindowPolicy": "browser",
             "injectClientLibrary": true,
             "injectScript": format!("/{NEUTRALINO_WINDOW_BRIDGE_PATH}"),
         });
@@ -2407,6 +2408,7 @@ mod tests {
             ])
         );
         assert_eq!(config["modes"]["window"]["width"], 1280);
+        assert_eq!(config["modes"]["window"]["newWindowPolicy"], "browser");
         assert_eq!(config["modes"]["window"]["injectClientLibrary"], true);
         assert_eq!(
             config["modes"]["window"]["injectScript"],
