@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -20,7 +20,6 @@ const key = randomUUID()
 const identity = `com.webgalcraft.game.${createHash('sha256').update(key).digest('hex')}`
 const installation = join(scratch, 'installed game')
 const profile = resolve(process.env.LOCALAPPDATA, identity)
-const marker = join(profile, 'save-preservation-check.txt')
 const registry = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${identity}`
 const options = { windowsHide: true, encoding: 'utf8', timeout: 12_0000 }
 let child
@@ -92,15 +91,13 @@ try {
   execFileSync('cargo', ['test', '--locked', '--manifest-path', 'src-tauri/Cargo.toml', '--lib',
     'commands::export::tests::builds_native_installers_for_smoke_test', '--', '--ignored', '--exact', '--nocapture'], {
     ...options, timeout: 60_0000, stdio: 'inherit',
-    env: { ...process.env, WEBGAL_INSTALLER_SMOKE_RUNTIME: runtime, WEBGAL_INSTALLER_SMOKE_DIR: scratch, WEBGAL_INSTALLER_SMOKE_KEY: key, WEBGAL_INSTALLER_SMOKE_PACKAGER: packager },
+    env: { ...process.env, WEBGAL_INSTALLER_SMOKE_RUNTIME: runtime, WEBGAL_INSTALLER_SMOKE_ARCH: 'x64', WEBGAL_INSTALLER_SMOKE_DIR: scratch, WEBGAL_INSTALLER_SMOKE_KEY: key, WEBGAL_INSTALLER_SMOKE_PACKAGER: packager },
   })
   runInstaller(join(scratch, 'first/setup.exe'), ['/S', '/NS', `/D=${installation}`])
   installed = true
   const first = await launch()
   await first.evaluate(() => localStorage.setItem('installer-save', 'preserved'))
   await closeGame(first)
-  await mkdir(profile, { recursive: true })
-  await writeFile(marker, key)
   const playerFile = join(installation, 'player-note.txt')
   await writeFile(playerFile, key)
   await access(join(installation, 'resources/game/scene/obsolete.txt'))
@@ -111,8 +108,7 @@ try {
   assert.match(registration, /1\.1\.0/)
   assert.match(registration, /Studio B/)
   await access(join(installation, `${identity}.exe`))
-  await assert.rejects(access(join(installation, 'resources/game/scene/obsolete.txt')))
-  assert.equal(await readFile(marker, 'utf8'), key)
+  await assert.rejects(access(join(installation, 'resources/game/scene/obsolete.txt')), { code: 'ENOENT' })
   assert.equal(await readFile(playerFile, 'utf8'), key)
   const upgraded = await launch()
   assert.equal(await upgraded.evaluate(() => localStorage.getItem('installer-save')), 'preserved')
@@ -123,8 +119,7 @@ try {
   runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS', '/UPDATE'])
   assert.equal(await readFile(playerFile, 'utf8'), key)
   uninstall()
-  await assert.rejects(access(join(installation, `${identity}.exe`)))
-  assert.equal(await readFile(marker, 'utf8'), key)
+  await assert.rejects(access(join(installation, `${identity}.exe`)), { code: 'ENOENT' })
   assert.equal(await readFile(playerFile, 'utf8'), key)
   runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS', `/D=${installation}`])
   installed = true
@@ -132,7 +127,7 @@ try {
   assert.equal(await reinstalled.evaluate(() => localStorage.getItem('installer-save')), 'preserved')
   await closeGame(reinstalled)
   uninstall()
-  process.stdout.write('PASS: install, native startup/exit, rename/publisher upgrade, retired assets, stable storage, uninstall preserves saves\n')
+  process.stdout.write('PASS: install, native startup/exit, rename/publisher upgrade, same-version reinstall, retired assets, player files, stable storage, uninstall preserves saves\n')
 } finally {
   if (child?.exitCode === null) {
     child.kill()
@@ -147,7 +142,7 @@ try {
   // All recursive cleanup targets are this run's scratch directory or its random identity.
   assert.equal(dirname(scratch), resolve(tmpdir()))
   assert.ok(scratch.startsWith(`${resolve(tmpdir())}${sep}webgal-installer-smoke-`))
-  assert.equal(profile, resolve(process.env.LOCALAPPDATA, identity))
+  assert.equal(dirname(profile), resolve(process.env.LOCALAPPDATA))
   await rm(scratch, { recursive: true, force: true })
   await rm(profile, { recursive: true, force: true })
 }

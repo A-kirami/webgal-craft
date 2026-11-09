@@ -2468,6 +2468,7 @@ mod tests {
     #[ignore = "Builds real installers; invoked by scripts/verify-game-installer.mjs with an explicit runtime and scratch directory"]
     fn builds_native_installers_for_smoke_test() {
         let runtime = std::env::var("WEBGAL_INSTALLER_SMOKE_RUNTIME").unwrap();
+        let arch = std::env::var("WEBGAL_INSTALLER_SMOKE_ARCH").unwrap();
         let destination = std::env::var("WEBGAL_INSTALLER_SMOKE_DIR").unwrap();
         let key = std::env::var("WEBGAL_INSTALLER_SMOKE_KEY").unwrap();
         let fixture = tempdir().unwrap();
@@ -2499,11 +2500,7 @@ mod tests {
                     output_path: &Path::new(&destination).join(directory),
                     game_name: title,
                     target_os: std::env::consts::OS,
-                    target_arch: if std::env::consts::ARCH == "aarch64" {
-                        "arm64"
-                    } else {
-                        "x64"
-                    },
+                    target_arch: &arch,
                     window: &PcWindowConfig {
                         width: 800,
                         height: 600,
