@@ -10,16 +10,6 @@
     document.dispatchEvent(new Event('fullscreenchange'));
   }
 
-  async function enterFullscreen() {
-    await Neutralino.window.setFullScreen();
-    notifyFullscreenChange(true);
-  }
-
-  async function exitFullscreen() {
-    await Neutralino.window.exitFullScreen();
-    notifyFullscreenChange(false);
-  }
-
   Object.defineProperties(document, {
     fullscreenElement: {
       configurable: true,
@@ -33,15 +23,17 @@
 
   Object.defineProperty(Element.prototype, 'requestFullscreen', {
     configurable: true,
-    value: enterFullscreen,
+    value: Neutralino.window.setFullScreen,
     writable: true,
   });
   Object.defineProperty(document, 'exitFullscreen', {
     configurable: true,
-    value: exitFullscreen,
+    value: Neutralino.window.exitFullScreen,
     writable: true,
   });
 
+  Neutralino.events.on('windowFullScreenEnter', () => notifyFullscreenChange(true));
+  Neutralino.events.on('windowFullScreenExit', () => notifyFullscreenChange(false));
   Neutralino.events.on('ready', async () => {
     notifyFullscreenChange(await Neutralino.window.isFullScreen());
   });
