@@ -162,11 +162,10 @@ async function exportAndroidWebZip(config: AndroidWebExportConfig): Promise<void
 
 async function exportPc(config: PcExportConfig): Promise<AbsPath> {
   const gameName = config.gameName.trim()
-  const directoryName = createExportDirectoryName(gameName)
-  if (!gameName || !directoryName) {
+  const outputPath = resolvePcExportOutputPath(config.outputRoot, gameName, config.targetOs, config.targetArch, config.packaging.type)
+  if (!gameName || !outputPath) {
     throw new AppError('INVALID_CONFIG', '游戏名称不能生成有效的导出目录')
   }
-  const outputPath = resolvePcExportOutputPath(config.outputRoot, gameName, config.targetOs, config.targetArch, config.packaging.type)!
   const site = await gameManager.resolvePreviewSite(config.game)
   const exportId = crypto.randomUUID()
   const unlisten = await listen<ExportProgress>('export-progress', (event) => {

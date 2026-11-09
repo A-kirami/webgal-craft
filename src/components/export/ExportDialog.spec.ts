@@ -579,11 +579,11 @@ describe('ExportDialog', () => {
 
   it('安装包仅允许本机平台且校验发行信息后导出到独立目录', async () => {
     existsMock.mockResolvedValue(true)
-    let completeExport: (() => void) | undefined
-    exportPcMock.mockImplementation(config => new Promise<AbsPath>((resolve) => {
+    const pendingExport = Promise.withResolvers<AbsPath>()
+    exportPcMock.mockImplementation((config) => {
       config.onProgress({ exportId: 'installer', percentage: 85, platform: 'windows-x64', step: 'export.progress.buildingInstaller' })
-      completeExport = () => resolve(AbsPath.from('/exports/Demo Game/windows-x64-installer'))
-    }))
+      return pendingExport.promise
+    })
     await renderExportDialog({ localizedI18n: true })
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -604,7 +604,8 @@ describe('ExportDialog', () => {
     })))
     expect(confirmExportOverwriteMock).toHaveBeenCalledWith('/exports/Demo Game/windows-x64-installer', expect.any(Function))
     await expect.element(page.getByText('正在生成安装包……')).toBeInTheDocument()
-    completeExport?.()
+    pendingExport.resolve(AbsPath.from('/exports/Demo Game/windows-x64-installer'))
+    await expect.element(page.getByText('导出完成', { exact: true })).toBeInTheDocument()
   })
 
   it('返回配置并切换到安装包后，须填写发行者才能从步骤条进入导出', async () => {

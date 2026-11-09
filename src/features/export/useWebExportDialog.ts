@@ -86,10 +86,11 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     if (value.type === 'portable') {
       return true
     }
+    const versionParts = value.version.split('.')
     return selectedDesktopTargets.value.every(target => installerTargets.includes(target))
       && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)
-      && value.version.split('.').every(part => Number(part) <= 6_5535)
-      && (platform() !== 'macos' || value.version.split('.').every((part, index) => Number(part) <= (index === 0 ? 9999 : 99)))
+      && versionParts.every(part => Number(part) <= 6_5535)
+      && (platform() !== 'macos' || versionParts.every((part, index) => Number(part) <= (index === 0 ? 9999 : 99)))
       && value.publisher.trim().length > 0 && !/\p{Cc}/u.test(value.publisher)
   })
   watch(() => packaging.value.type, (format) => {
@@ -221,10 +222,6 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     }
   }
 
-  function desktopOutputPath(root: AbsPath, name: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath {
-    return resolvePcExportOutputPath(root, name, targetOs, targetArch, packaging.value.type)!
-  }
-
   function parsePcTarget(target: PcTarget): [PcTargetOs, PcTargetArch] {
     switch (target) {
       case 'windows-x64': {
@@ -318,13 +315,18 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       completeTask(platform, outputPath)
     }
     const runWithOverwrite = async (platform: ExportPlatform): Promise<boolean> => {
-      const target = platform === 'web' ? undefined : parsePcTarget(platform)
-      const targetPath = selectedOutputRoot && !android
-        ? (platform === 'web' ? resolveWebExportOutputPath(selectedOutputRoot, selectedGameName) : desktopOutputPath(selectedOutputRoot, selectedGameName, target![0], target![1]))
-        : undefined
-      const existingDesktopOutput = platform !== 'web' && targetPath && await exists(targetPath)
+      let targetPath: AbsPath | undefined
+      if (selectedOutputRoot && !android) {
+        if (platform === 'web') {
+          targetPath = resolveWebExportOutputPath(selectedOutputRoot, selectedGameName)
+        } else {
+          const [targetOs, targetArch] = parsePcTarget(platform)
+          targetPath = resolvePcExportOutputPath(selectedOutputRoot, selectedGameName, targetOs, targetArch, packaging.value.type)
+        }
+      }
+      let replaceExisting = false
       try {
-        if (existingDesktopOutput) {
+        if (platform !== 'web' && targetPath && await exists(targetPath)) {
           pendingOverwriteConfirmations.value++
           let confirmed: boolean
           try {
@@ -335,8 +337,9 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
           if (!confirmed) {
             return false
           }
+          replaceExisting = true
         }
-        await runOne(platform, Boolean(existingDesktopOutput))
+        await runOne(platform, replaceExisting)
         return true
       } catch (error) {
         if (!(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !targetPath) {
