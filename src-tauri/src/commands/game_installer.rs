@@ -116,7 +116,7 @@ pub(super) fn build(
         .arg(WORKER_ARGUMENT)
         .current_dir(portable)
         .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
+        .stdout(Stdio::null())
         .stderr(Stdio::piped());
     #[cfg(windows)]
     {

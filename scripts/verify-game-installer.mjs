@@ -101,6 +101,8 @@ try {
   await closeGame(first)
   await mkdir(profile, { recursive: true })
   await writeFile(marker, key)
+  const playerFile = join(installation, 'player-note.txt')
+  await writeFile(playerFile, key)
   await access(join(installation, 'resources/game/scene/obsolete.txt'))
 
   runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS'])
@@ -111,15 +113,19 @@ try {
   await access(join(installation, `${identity}.exe`))
   await assert.rejects(access(join(installation, 'resources/game/scene/obsolete.txt')))
   assert.equal(await readFile(marker, 'utf8'), key)
+  assert.equal(await readFile(playerFile, 'utf8'), key)
   const upgraded = await launch()
   assert.equal(await upgraded.evaluate(() => localStorage.getItem('installer-save')), 'preserved')
   await closeGame(upgraded)
   // NSIS returns 2 when .onInit aborts installation.
   assert.throws(() => runInstaller(join(scratch, 'first/setup.exe'), ['/S', '/NS']), error => error.status === 2)
   assert.match(execFileSync('reg.exe', ['query', registry, '/v', 'DisplayVersion'], options), /1\.1\.0/)
+  runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS', '/UPDATE'])
+  assert.equal(await readFile(playerFile, 'utf8'), key)
   uninstall()
   await assert.rejects(access(join(installation, `${identity}.exe`)))
   assert.equal(await readFile(marker, 'utf8'), key)
+  assert.equal(await readFile(playerFile, 'utf8'), key)
   runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS', `/D=${installation}`])
   installed = true
   const reinstalled = await launch()

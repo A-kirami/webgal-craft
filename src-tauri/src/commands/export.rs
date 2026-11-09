@@ -563,13 +563,13 @@ pub(super) fn export_pc_to_directory(
             use std::os::unix::fs::PermissionsExt;
             fs::set_permissions(&executable_path, fs::Permissions::from_mode(0o755))?;
         }
-        let icon_root = if target_os == "macos" {
+        let data_directory = if target_os == "macos" {
             app_root.join("Resources")
         } else {
             executable_directory.clone()
         };
-        fs::create_dir_all(&icon_root)?;
-        let icon_path = write_desktop_icon(game_path, &site_root, &icon_root)?;
+        fs::create_dir_all(&data_directory)?;
+        let icon_path = write_desktop_icon(game_path, &site_root, &data_directory)?;
         if let Some(icon_path) = &icon_path {
             fs::copy(icon_path, site_root.join("icon.png"))?;
         }
@@ -580,7 +580,7 @@ pub(super) fn export_pc_to_directory(
         }
         if target_os == "macos" {
             if let Some(icon_path) = &icon_path {
-                write_macos_icns(icon_path, &icon_root)?;
+                write_macos_icns(icon_path, &data_directory)?;
                 fs::remove_file(icon_path)?;
             }
             write_macos_bundle_info(
@@ -594,12 +594,6 @@ pub(super) fn export_pc_to_directory(
         let mut bytes = serde_json::to_vec_pretty(&runtime_config)
             .map_err(|error| export_error(error.to_string()))?;
         bytes.push(b'\n');
-        // macOS app resources follow the standard bundle layout for both formats.
-        let data_directory = if target_os == "macos" {
-            app_root.join("Resources")
-        } else {
-            executable_directory.clone()
-        };
         fs::write(data_directory.join(CONFIG_FILE), bytes)?;
         report(STEP_PREPARING_RESOURCES, 80)?;
         fs::rename(&site_root, data_directory.join(RESOURCE_DIRECTORY))?;
