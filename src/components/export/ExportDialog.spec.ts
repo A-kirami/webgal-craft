@@ -180,7 +180,7 @@ describe('ExportDialog', () => {
     vi.clearAllMocks()
     exportWebMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/web'))
     exportPcMock.mockResolvedValue(AbsPath.from('/exports/Demo Game/windows-x64'))
-    ensurePcRuntimeMock.mockResolvedValue(AbsPath.from('/app-data/cache/runtime.exe'))
+    ensurePcRuntimeMock.mockResolvedValue(AbsPath.from('/resources/game-runtimes/webgal-game-runtime-windows-x64.exe'))
     androidExportMock.mockResolvedValue({
       kind: 'published',
       contentUri: 'content://media/external/downloads/42',
@@ -515,11 +515,12 @@ describe('ExportDialog', () => {
     await expect.element(page.getByText('export.desktopOnly')).toBeInTheDocument()
   })
 
-  it('桌面端为每个选中的目标独立下载运行时并导出', async () => {
+  it('桌面端为每个选中的目标准备内置运行时并导出', async () => {
     await renderExportDialog({ localizedI18n: true })
 
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
+    await expect.element(page.getByText('桌面端导出不支持 Steam 初始化和成就功能。')).toBeInTheDocument()
     await page.getByRole('checkbox', { name: 'macOS x64' }).click()
     await expect.element(page.getByText('最终输出位置: /exports/Demo Game')).toBeInTheDocument()
 
@@ -538,8 +539,8 @@ describe('ExportDialog', () => {
       expect(exportPcMock).toHaveBeenCalledTimes(2)
     })
     expect(ensurePcRuntimeMock.mock.calls).toEqual(expect.arrayContaining([
-      ['windows', 'x64', ''],
-      ['macos', 'x64', ''],
+      ['windows', 'x64'],
+      ['macos', 'x64'],
     ]))
     expect(exportPcMock.mock.calls.map(([config]) => [config.targetOs, config.targetArch])).toEqual(expect.arrayContaining([
       ['windows', 'x64'],
@@ -548,7 +549,7 @@ describe('ExportDialog', () => {
     expect(exportPcMock.mock.calls.every(([config]) => config.windowConfig.height === 760)).toBe(true)
   })
 
-  it('桌面端存在目标目录时在下载运行时前确认覆盖', async () => {
+  it('桌面端存在目标目录时在准备运行时前确认覆盖', async () => {
     existsMock.mockResolvedValue(true)
     let confirmOverwrite: (() => void) | undefined
     confirmExportOverwriteMock.mockImplementationOnce(() => new Promise<boolean>((resolve) => {

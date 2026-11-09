@@ -47,7 +47,6 @@ export interface PcExportParams {
 export interface EnsurePcRuntimeParams {
   targetArch: 'x64' | 'arm64'
   targetOs: 'windows' | 'macos' | 'linux'
-  proxyPrefix?: string
 }
 
 export interface PublishedAndroidExport {

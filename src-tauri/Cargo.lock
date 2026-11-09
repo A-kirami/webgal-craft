@@ -5778,6 +5778,7 @@ dependencies = [
  "tower",
  "tower-http 0.7.1",
  "trash",
+ "webgal-game-runtime",
  "zip 8.6.0",
 ]
 

@@ -22,7 +22,7 @@ if (!platform) {
 }
 execFileSync('cargo', [
   'build', '--locked', '--manifest-path', 'src-tauri/Cargo.toml',
-  '-p', 'webgal-game-runtime', '--target', target,
+  '-p', 'webgal-game-runtime', '--features', 'custom-protocol', '--target', target,
   ...(values.release ? ['--release'] : []),
 ], { cwd: root, stdio: 'inherit' })
 const targetRoot = path.resolve(root, process.env.CARGO_TARGET_DIR ?? 'src-tauri/target')

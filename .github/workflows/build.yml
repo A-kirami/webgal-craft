@@ -93,7 +93,7 @@ jobs:
       # 构建环境准备统一在 .github/actions/prepare-build，勿在此复制等价步骤
       - name: Prepare build environment
         id: prepare
-        uses: $/.github/actions/prepare-build
+        uses: ./.github/actions/prepare-build
         with:
           platform: ${{ matrix.platform }}
           mobile: ${{ matrix.mobile }}

@@ -27,8 +27,9 @@ fn open_external(app: &tauri::AppHandle, url: &tauri::Url) {
 }
 
 fn is_game_resource_url(url: &tauri::Url) -> bool {
-    (url.scheme() == "asset" && url.host_str() == Some("localhost"))
-        || (matches!(url.scheme(), "http" | "https") && url.host_str() == Some("asset.localhost"))
+    url.port().is_none()
+        && ((url.scheme() == "asset" && url.host_str() == Some("localhost"))
+            || (url.scheme() == "https" && url.host_str() == Some("asset.localhost")))
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
@@ -109,6 +110,13 @@ fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn main() {
+    if let Err(error) = run() {
+        eprintln!("Cannot start game: {error}");
+        std::process::exit(1);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::is_game_resource_url;
@@ -124,18 +132,13 @@ mod tests {
         for url in [
             "https://example.com/",
             "https://asset.localhost.example.com/",
+            "https://asset.localhost:1234/index.html",
+            "http://asset.localhost/index.html",
             "file:///tmp/index.html",
             "javascript:alert(1)",
             "asset://other/index.html",
         ] {
             assert!(!is_game_resource_url(&url.parse().unwrap()));
         }
-    }
-}
-
-fn main() {
-    if let Err(error) = run() {
-        eprintln!("Cannot start game: {error}");
-        std::process::exit(1);
     }
 }

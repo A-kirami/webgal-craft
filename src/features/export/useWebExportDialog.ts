@@ -12,7 +12,6 @@ import {
 } from '~/services/export-manager'
 import { fromExternalAbsPath } from '~/services/platform/path-boundary'
 import { isAndroidRuntime } from '~/services/platform/runtime'
-import { useGeneralSettingsStore } from '~/stores/general-settings'
 import { AppError } from '~/types/errors'
 import { handleError } from '~/utils/error-handler'
 
@@ -76,7 +75,6 @@ function currentDevicePcTarget(): PcTarget[] {
 
 export function useWebExportDialog(options: UseWebExportDialogOptions) {
   const android = options.android ?? isAndroidRuntime()
-  const generalSettingsStore = useGeneralSettingsStore()
   const androidWorkflow = createAndroidWebExportWorkflow()
   const currentGame = computed(() => toValue(options.game))
   const gameName = computed(() => currentGame.value.metadata.name)
@@ -203,10 +201,6 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     }
   }
 
-  async function runtimePath(targetOs: PcTargetOs, targetArch: PcTargetArch): Promise<AbsPath> {
-    return exportManager.ensurePcRuntime(targetOs, targetArch, generalSettingsStore.officialEngineDownloadProxy)
-  }
-
   function desktopOutputPath(root: AbsPath, name: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath {
     return resolvePcExportOutputPath(root, name, targetOs, targetArch)!
   }
@@ -287,8 +281,8 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
         return
       }
       const [targetOs, targetArch] = parsePcTarget(platform)
-      updateTask(platform, { status: 'running', stepKey: 'export.progress.downloadingRuntime' })
-      const runtimePathForTarget = await runtimePath(targetOs, targetArch)
+      updateTask(platform, { status: 'running', stepKey: 'export.progress.preparingRuntime' })
+      const runtimePathForTarget = await exportManager.ensurePcRuntime(targetOs, targetArch)
       const outputPath = await exportManager.exportPc({
         game: selectedGame,
         gameName: selectedGameName,

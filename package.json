@@ -36,8 +36,8 @@
     "lint:style:fix": "stylelint 'src/**/*.{css,vue}' --fix",
     "lint:i18n": "eslint 'src/locales/*.{json,json5,yaml,yml}'",
     "lint:i18n:fix": "eslint 'src/locales/*.{json,json5,yaml,yml}' --fix",
-    "lint:rs": "cargo clippy --workspace --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
-    "lint:rs:fix": "cargo clippy --workspace --manifest-path src-tauri/Cargo.toml --all-targets --all-features --fix --allow-dirty --allow-staged",
+    "lint:rs": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings && cargo clippy --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime --all-targets --all-features -- -D warnings",
+    "lint:rs:fix": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --fix --allow-dirty --allow-staged && cargo clippy --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime --all-targets --all-features --fix --allow-dirty --allow-staged",
     "format:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --all",
     "build:game-runtime": "node scripts/build-game-runtime.mjs"
   },

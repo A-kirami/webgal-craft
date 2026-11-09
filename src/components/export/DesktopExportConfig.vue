@@ -85,6 +85,10 @@ function updateSize(key: SizeKey, value: unknown): void {
       {{ $t('export.desktopConfig.targetRequired') }}
     </p>
 
+    <p class="text-xs text-muted-foreground">
+      {{ $t('export.desktopConfig.steamUnsupported') }}
+    </p>
+
     <div class="p-3 border rounded-md flex flex-col gap-3">
       <div class="flex gap-2 items-center">
         <MonitorCog class="text-muted-foreground size-4" aria-hidden="true" />
