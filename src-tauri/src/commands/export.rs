@@ -674,6 +674,17 @@ pub(super) fn export_pc_to_directory(
             },
             |step, percentage| report(step, percentage.min(30)),
         )?;
+        let game_config = read_game_config(&site_root)?;
+        let game_key = game_config
+            .entries
+            .iter()
+            .find(|entry| entry.key == "Game_key")
+            .map(|entry| entry.value.trim())
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| export_error("游戏缺少 Game_key，在游戏配置中生成标识后重新导出"))?;
+        // 端口属于存档 origin 的一部分；此映射必须保持稳定，不能按运行时可用端口回退。
+        let key_hash = Sha256::digest(game_key.as_bytes());
+        let storage_port = 49152 + u16::from_le_bytes([key_hash[0], key_hash[1]]) % 16384;
         fs::create_dir(&staged_output)?;
         report(STEP_COPYING_RUNTIME, 32)?;
         let executable_stem = sanitize_desktop_name(game_name);
@@ -750,6 +761,7 @@ pub(super) fn export_pc_to_directory(
             "applicationId": format!("com.webgalcraft.{}", sanitize_application_id(game_name)),
             "defaultMode": "window",
             "enableServer": true,
+            "port": storage_port,
             "enableNativeAPI": true,
             "tokenSecurity": "one-time",
             "nativeAllowList": [
@@ -1663,7 +1675,7 @@ mod tests {
 
         write_file(
             &root.join("game/game/config.txt"),
-            "Game_name: Demo;\nDescription: A visual novel;",
+            "Game_name: Demo;\nGame_key: demo-key;\nDescription: A visual novel;",
         );
         write_file(&root.join("game/game/scene/start.txt"), "say: hello;");
         write_file(&root.join("game/game/template/base.txt"), "upper-override");
@@ -1791,7 +1803,7 @@ mod tests {
         );
         assert_eq!(
             fs::read_to_string(output.join("game/config.txt")).unwrap(),
-            "Game_name: Demo;\nDescription: A visual novel;"
+            "Game_name: Demo;\nGame_key: demo-key;\nDescription: A visual novel;"
         );
         assert_eq!(
             fs::read_to_string(output.join("game/template/base.txt")).unwrap(),
@@ -2390,7 +2402,7 @@ mod tests {
         );
         assert_eq!(
             read_asar_file(&bundle, "game/config.txt"),
-            Some(b"Game_name: Demo;\nDescription: A visual novel;".to_vec())
+            Some(b"Game_name: Demo;\nGame_key: demo-key;\nDescription: A visual novel;".to_vec())
         );
         let config: Value =
             serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
@@ -2418,6 +2430,67 @@ mod tests {
         assert!(read_asar_file(&bundle, "webgalcraft-neutralino.js").is_some());
         assert!(read_asar_file(&bundle, "webgalcraft-neutralino-LICENSE.txt").is_some());
         assert!(read_asar_file(&bundle, "webgalcraft-neutralino-window.js").is_some());
+    }
+
+    #[test]
+    fn keeps_desktop_storage_origin_across_exports_and_separates_game_keys() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        for (directory, game_key, expected_port) in [
+            ("first", "demo-key", 51908),
+            ("reexport", "demo-key", 51908),
+            ("other-game", "other-key", 51288),
+        ] {
+            write_file(
+                &root.path().join("game/game/config.txt"),
+                &format!("Game_name: Renamed;\nGame_key: {game_key};"),
+            );
+            let output = root.path().join(directory);
+            export_pc_fixture(root.path(), "linux", "x64", &output);
+            let bundle = fs::read(output.join("resources.neu")).unwrap();
+            let config: Value =
+                serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
+                    .unwrap();
+            assert_eq!(config["port"], expected_port);
+        }
+    }
+
+    #[test]
+    fn rejects_desktop_export_without_a_storage_identity() {
+        let root = tempdir().expect("temp root should be created");
+        create_export_fixture(root.path());
+        let runtime = root.path().join("neutralino-runtime");
+        write_file(&runtime, "runtime");
+        let output = root.path().join("output/Demo");
+        for config in ["Game_name: Demo;", "Game_name: Demo;\nGame_key:   ;"] {
+            write_file(&root.path().join("game/game/config.txt"), config);
+            let error = export_pc_to_directory(
+                PcExportRequest {
+                    engine_path: &root.path().join("engine"),
+                    game_path: &root.path().join("game"),
+                    template_path: Some(&root.path().join("template")),
+                    runtime_path: &runtime,
+                    output_path: &output,
+                    game_name: "My Game",
+                    target_os: "linux",
+                    target_arch: "x64",
+                    window: &PcWindowConfig {
+                        width: 1280,
+                        height: 720,
+                        min_width: 800,
+                        min_height: 600,
+                        full_screen: false,
+                        resizable: true,
+                    },
+                    replace_existing: false,
+                },
+                |_, _| Ok(()),
+            )
+            .expect_err("missing game key should be rejected");
+            assert!(matches!(error, AppError::Export(message) if message.contains("Game_key")));
+            assert!(!output.exists());
+            assert_no_export_work_directories(output.parent().unwrap());
+        }
     }
 
     #[test]
