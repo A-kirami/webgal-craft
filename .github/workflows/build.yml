@@ -17,6 +17,7 @@ on:
       - ".github/workflows/build.yml"
       - ".github/workflows/game-runtimes.yml"
       - "scripts/build-game-runtime.mjs"
+      - "scripts/verify-game-installer.mjs"
       - ".github/actions/**"
   pull_request:
     paths:
@@ -33,6 +34,7 @@ on:
       - ".github/workflows/build.yml"
       - ".github/workflows/game-runtimes.yml"
       - "scripts/build-game-runtime.mjs"
+      - "scripts/verify-game-installer.mjs"
       - ".github/actions/**"
   workflow_dispatch:
 

@@ -14,6 +14,7 @@ const { dirname, join, resolve, sep } = path
 /* eslint-disable no-await-in-loop -- Install, launch, upgrade, and uninstall depend on previous results. */
 assert.equal(process.platform, 'win32', 'This lifecycle test uses Windows NSIS and WebView2')
 const runtime = resolve(process.argv[2] ?? 'src-tauri/resources/game-runtimes/webgal-game-runtime-windows-x64.exe')
+const packager = resolve(process.argv[3] ?? 'src-tauri/target/debug/webgal-craft.exe')
 const scratch = await mkdtemp(join(tmpdir(), 'webgal-installer-smoke-'))
 const key = randomUUID()
 const identity = `com.webgalcraft.game.${createHash('sha256').update(key).digest('hex')}`
@@ -83,13 +84,15 @@ async function closeGame(page) {
 }
 
 try {
-  execFileSync('cargo', ['build', '--locked', '--manifest-path', 'src-tauri/Cargo.toml', '--bin', 'webgal-craft'], {
-    ...options, timeout: 60_0000, stdio: 'inherit',
-  })
+  if (!process.argv[3]) {
+    execFileSync('cargo', ['build', '--locked', '--manifest-path', 'src-tauri/Cargo.toml', '--bin', 'webgal-craft'], {
+      ...options, timeout: 60_0000, stdio: 'inherit',
+    })
+  }
   execFileSync('cargo', ['test', '--locked', '--manifest-path', 'src-tauri/Cargo.toml', '--lib',
     'commands::export::tests::builds_native_installers_for_smoke_test', '--', '--ignored', '--exact', '--nocapture'], {
     ...options, timeout: 60_0000, stdio: 'inherit',
-    env: { ...process.env, WEBGAL_INSTALLER_SMOKE_RUNTIME: runtime, WEBGAL_INSTALLER_SMOKE_DIR: scratch, WEBGAL_INSTALLER_SMOKE_KEY: key, WEBGAL_INSTALLER_SMOKE_PACKAGER: resolve('src-tauri/target/debug/webgal-craft.exe') },
+    env: { ...process.env, WEBGAL_INSTALLER_SMOKE_RUNTIME: runtime, WEBGAL_INSTALLER_SMOKE_DIR: scratch, WEBGAL_INSTALLER_SMOKE_KEY: key, WEBGAL_INSTALLER_SMOKE_PACKAGER: packager },
   })
   runInstaller(join(scratch, 'first/setup.exe'), ['/S', '/NS', `/D=${installation}`])
   installed = true
