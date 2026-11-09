@@ -5,7 +5,7 @@ use std::io;
 pub const CONFIG_FILE: &str = "webgal-runtime.json";
 pub const RESOURCE_DIRECTORY: &str = "resources";
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GameConfig {
     pub game_key: String,

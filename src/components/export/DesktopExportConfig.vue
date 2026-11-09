@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { Monitor, MonitorCog } from '@lucide/vue'
 
-import type { PcTarget, PcWindowConfig } from '~/services/export-manager'
+import type { PcPackaging, PcTarget, PcWindowConfig } from '~/services/export-manager'
 
 interface Props {
   disabled?: boolean
+  installerTargets: PcTarget[]
 }
 
 defineProps<Props>()
 const { t } = useI18n()
 
 const targets = defineModel<PcTarget[]>('targets', { required: true })
+const packaging = defineModel<PcPackaging>('packaging', { required: true })
 const windowConfig = defineModel<PcWindowConfig>('windowConfig', { required: true })
 type SizeKey = 'width' | 'height' | 'minWidth' | 'minHeight'
 
@@ -63,6 +65,33 @@ function updateSize(key: SizeKey, value: unknown): void {
       </h3>
     </div>
 
+    <div class="gap-2 grid">
+      <span class="text-sm font-medium">{{ $t('export.desktopConfig.format') }}</span>
+      <div class="flex gap-4">
+        <label class="text-sm flex gap-2 items-center">
+          <input type="radio" name="desktop-format" :checked="packaging.type === 'portable'" :disabled="disabled" @change="packaging = { type: 'portable' }">
+          {{ $t('export.desktopConfig.portable') }}
+        </label>
+        <label class="text-sm flex gap-2 items-center">
+          <input type="radio" name="desktop-format" :checked="packaging.type === 'installer'" :disabled="disabled" @change="packaging = { type: 'installer', version: '1.0.0', publisher: '' }">
+          {{ $t('export.desktopConfig.installer') }}
+        </label>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        {{ packaging.type === 'installer' ? $t('export.desktopConfig.installerHint') : $t('export.desktopConfig.portableHint') }}
+      </p>
+      <div v-if="packaging.type === 'installer'" class="gap-3 grid grid-cols-2">
+        <label class="text-xs text-muted-foreground gap-1 grid">
+          {{ $t('export.desktopConfig.version') }}
+          <Input v-model="packaging.version" :disabled="disabled" placeholder="1.0.0" />
+        </label>
+        <label class="text-xs text-muted-foreground gap-1 grid">
+          {{ $t('export.desktopConfig.publisher') }}
+          <Input v-model="packaging.publisher" :disabled="disabled" />
+        </label>
+      </div>
+    </div>
+
     <div class="gap-2 grid grid-cols-2 sm:grid-cols-4" data-testid="desktop-target-grid">
       <label
         v-for="option in platformOptions"
@@ -72,7 +101,7 @@ function updateSize(key: SizeKey, value: unknown): void {
         <Checkbox
           class="sr-only"
           :model-value="targets.includes(option.value)"
-          :disabled="disabled"
+          :disabled="disabled || (packaging.type === 'installer' && !installerTargets.includes(option.value))"
           @update:model-value="updateTarget(option.value, $event === true)"
         />
         <span v-if="option.value === 'windows-x64'" class="i-simple-icons-windows text-foreground size-7" aria-hidden="true" />

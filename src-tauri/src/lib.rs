@@ -19,6 +19,14 @@ const LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(desktop)]
+    if let Some(result) = commands::game_installer::run_worker_if_requested() {
+        if let Err(error) = result {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
     let builder = tauri::Builder::default().setup(|app| {
         let app_handle = app.handle();
         #[cfg(desktop)]

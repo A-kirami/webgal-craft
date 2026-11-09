@@ -30,6 +30,7 @@ const selectedPlatform = shallowRef<ExportType>()
 
 const {
   canStart,
+  desktopConfigValid,
   desktopOutputPreview,
   elapsedMs,
   exportTasks,
@@ -39,9 +40,11 @@ const {
   isAndroid,
   isBusy,
   isRunning,
+  installerTargets,
   openExportDirectory,
   outputPreview,
   outputRoot,
+  packaging,
   prepareExportTasks,
   selectOutputRoot,
   selectedDesktopTargets,
@@ -66,7 +69,7 @@ watch(open, (isOpen) => {
 }, { immediate: true })
 
 const selectedPlatformValid = computed(() => selectedPlatform.value === 'web' || (selectedPlatform.value === 'desktop' && hasDesktopTargets.value))
-const canAdvance = computed(() => currentStep.value === 1 ? selectedPlatformValid.value : hasOutputTarget.value)
+const canAdvance = computed(() => currentStep.value === 1 ? selectedPlatformValid.value : hasOutputTarget.value && (selectedPlatform.value !== 'desktop' || desktopConfigValid.value))
 const hasFinishedTasks = computed(() => exportTasks.value.length > 0
   && !isBusy.value
   && exportTasks.value.every(task => task.status === 'completed' || task.status === 'failed'))
@@ -157,6 +160,9 @@ function progressLabel(key: ExportTask['stepKey']): string {
     }
     case 'export.progress.copyingRuntime': {
       return t('export.progress.copyingRuntime')
+    }
+    case 'export.progress.buildingInstaller': {
+      return t('export.progress.buildingInstaller')
     }
     case 'export.progress.writingConfig': {
       return t('export.progress.writingConfig')
@@ -251,7 +257,9 @@ function progressIndicatorClass(task: ExportTask): string {
           <DesktopExportConfig
             v-if="selectedPlatform === 'desktop'"
             v-model:targets="selectedDesktopTargets"
+            v-model:packaging="packaging"
             v-model:window-config="windowConfig"
+            :installer-targets="installerTargets"
             :disabled="isBusy"
           />
           <p v-else class="text-sm text-muted-foreground">

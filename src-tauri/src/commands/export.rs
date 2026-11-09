@@ -139,6 +139,14 @@ pub struct PcExportRequest<'a> {
     pub target_arch: &'a str,
     pub window: &'a PcWindowConfig,
     pub replace_existing: bool,
+    pub packaging: &'a PcPackaging,
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase", deny_unknown_fields)]
+pub enum PcPackaging {
+    Portable,
+    Installer { version: String, publisher: String },
 }
 
 fn pc_runtime_entry(target_os: &str, target_arch: &str) -> AppResult<&'static str> {
@@ -432,7 +440,16 @@ pub(super) fn export_pc_to_directory(
         target_arch,
         window,
         replace_existing,
+        packaging,
     } = request;
+    #[cfg(desktop)]
+    if let PcPackaging::Installer { version, publisher } = packaging {
+        super::game_installer::validate(target_os, target_arch, version, publisher)?;
+    }
+    #[cfg(not(desktop))]
+    if matches!(packaging, PcPackaging::Installer { .. }) {
+        return Err(export_error("当前平台不支持生成桌面安装包"));
+    }
     if !engine_path.is_dir() {
         return Err(export_error("引擎目录不存在或不可访问"));
     }
@@ -577,13 +594,33 @@ pub(super) fn export_pc_to_directory(
         let mut bytes = serde_json::to_vec_pretty(&runtime_config)
             .map_err(|error| export_error(error.to_string()))?;
         bytes.push(b'\n');
-        fs::write(executable_directory.join(CONFIG_FILE), bytes)?;
+        // macOS app resources follow the standard bundle layout for both formats.
+        let data_directory = if target_os == "macos" {
+            app_root.join("Resources")
+        } else {
+            executable_directory.clone()
+        };
+        fs::write(data_directory.join(CONFIG_FILE), bytes)?;
         report(STEP_PREPARING_RESOURCES, 80)?;
-        fs::rename(&site_root, executable_directory.join(RESOURCE_DIRECTORY))?;
+        fs::rename(&site_root, data_directory.join(RESOURCE_DIRECTORY))?;
         if target_os == "windows" || target_os == "linux" {
             if let Some(icon_path) = icon_path {
                 fs::remove_file(icon_path)?;
             }
+        }
+        #[cfg(desktop)]
+        if let PcPackaging::Installer { version, publisher } = packaging {
+            report("export.progress.buildingInstaller", 85)?;
+            let portable = work_directory.join("portable");
+            fs::rename(&staged_output, &portable)?;
+            super::game_installer::build(
+                &portable,
+                target_os,
+                target_arch,
+                &runtime_config,
+                version,
+                publisher,
+            )?;
         }
         Ok(())
     })();
@@ -605,7 +642,7 @@ pub(super) fn export_pc_to_directory(
     report(STEP_FINISHED, 100)
 }
 
-fn sanitize_desktop_name(value: &str) -> String {
+pub(super) fn sanitize_desktop_name(value: &str) -> String {
     let mut sanitized = value
         .chars()
         .map(|character| {
@@ -1289,6 +1326,7 @@ pub async fn export_pc(
     target_arch: String,
     window_config: PcWindowConfig,
     replace_existing: bool,
+    packaging: PcPackaging,
 ) -> AppResult<()> {
     tauri::async_runtime::spawn_blocking(move || {
         export_pc_to_directory(
@@ -1303,6 +1341,7 @@ pub async fn export_pc(
                 target_arch: &target_arch,
                 window: &window_config,
                 replace_existing,
+                packaging: &packaging,
             },
             |step, percentage| {
                 app.emit(
@@ -1344,7 +1383,7 @@ mod tests {
     use super::{
         bundled_pc_runtime, copy_web_icons, export_pc_to_directory, export_web_to_directory,
         is_precompressible, pc_runtime_entry, precompress_file, resolve_pc_icon,
-        sanitize_desktop_name, AppError, CachedCanonicals, OverlayFs, PcExportRequest,
+        sanitize_desktop_name, AppError, CachedCanonicals, OverlayFs, PcExportRequest, PcPackaging,
         PcWindowConfig, WebExportOptions, STEP_COPYING_ICONS, STEP_COPYING_RUNTIME, STEP_FINISHED,
         STEP_PREPARING_RESOURCES,
     };
@@ -1476,6 +1515,7 @@ mod tests {
                     resizable: true,
                 },
                 replace_existing: false,
+                packaging: &PcPackaging::Portable,
             },
             |_, _| Ok(()),
         )
@@ -2258,6 +2298,7 @@ mod tests {
                         resizable: true,
                     },
                     replace_existing: false,
+                    packaging: &PcPackaging::Portable,
                 },
                 |_, _| Ok(()),
             )
@@ -2296,6 +2337,7 @@ mod tests {
                     resizable: true,
                 },
                 replace_existing: false,
+                packaging: &PcPackaging::Portable,
             },
             |step, percentage| {
                 progress.push((step.to_owned(), percentage));
@@ -2415,15 +2457,77 @@ mod tests {
         let info = fs::read_to_string(contents.join("Info.plist")).unwrap();
         assert!(info.contains("<key>CFBundleExecutable</key><string>My Game</string>"));
         assert!(info.contains("My Game"));
-        assert!(contents.join("MacOS/resources/index.html").is_file());
-        assert!(contents.join("MacOS/resources/icon.png").is_file());
-        let config: GameConfig =
-            serde_json::from_slice(&fs::read(contents.join("MacOS").join(CONFIG_FILE)).unwrap())
-                .unwrap();
+        assert!(contents.join("Resources/resources/index.html").is_file());
+        assert!(contents.join("Resources/resources/icon.png").is_file());
+        let config: GameConfig = serde_json::from_slice(
+            &fs::read(contents.join("Resources").join(CONFIG_FILE)).unwrap(),
+        )
+        .unwrap();
         assert!(info.contains(&format!(
             "<key>CFBundleIdentifier</key><string>{}</string>",
             config.application_id()
         )));
+    }
+
+    #[cfg(desktop)]
+    #[test]
+    #[ignore = "Builds real installers; invoked by scripts/verify-game-installer.mjs with an explicit runtime and scratch directory"]
+    fn builds_native_installers_for_smoke_test() {
+        let runtime = std::env::var("WEBGAL_INSTALLER_SMOKE_RUNTIME").unwrap();
+        let destination = std::env::var("WEBGAL_INSTALLER_SMOKE_DIR").unwrap();
+        let key = std::env::var("WEBGAL_INSTALLER_SMOKE_KEY").unwrap();
+        let fixture = tempdir().unwrap();
+        create_export_fixture(fixture.path());
+        write_file(&fixture.path().join("engine/index.html"), "<!doctype html><title>Installer smoke</title><button onclick=\"window.close()\">Exit</button>");
+        write_file(
+            &fixture.path().join("game/game/config.txt"),
+            &format!("Game_name: Installer smoke;\nGame_key: {key};"),
+        );
+        image::RgbaImage::from_pixel(32, 32, image::Rgba([32, 128, 240, 255]))
+            .save(fixture.path().join("game/icons/icon-192.png"))
+            .unwrap();
+        for (directory, version, title, publisher) in [
+            ("first", "1.0.0", "Installer smoke", "Studio A"),
+            ("upgrade", "1.1.0", "Installer smoke renamed", "Studio B"),
+        ] {
+            let obsolete = fixture.path().join("game/game/scene/obsolete.txt");
+            if directory == "first" {
+                write_file(&obsolete, "old packaged resource");
+            } else {
+                fs::remove_file(obsolete).unwrap();
+            }
+            export_pc_to_directory(
+                PcExportRequest {
+                    engine_path: &fixture.path().join("engine"),
+                    game_path: &fixture.path().join("game"),
+                    template_path: None,
+                    runtime_path: Path::new(&runtime),
+                    output_path: &Path::new(&destination).join(directory),
+                    game_name: title,
+                    target_os: std::env::consts::OS,
+                    target_arch: if std::env::consts::ARCH == "aarch64" {
+                        "arm64"
+                    } else {
+                        "x64"
+                    },
+                    window: &PcWindowConfig {
+                        width: 800,
+                        height: 600,
+                        min_width: 400,
+                        min_height: 300,
+                        full_screen: false,
+                        resizable: true,
+                    },
+                    replace_existing: false,
+                    packaging: &PcPackaging::Installer {
+                        version: version.into(),
+                        publisher: publisher.into(),
+                    },
+                },
+                |_, _| Ok(()),
+            )
+            .unwrap();
+        }
     }
 
     #[test]

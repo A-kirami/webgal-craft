@@ -139,6 +139,7 @@ describe('exportManager', () => {
   it('PC 导出把窗口配置、运行时和独立平台进度传给命令', async () => {
     const onProgress = vi.fn()
     const pending = exportManager.exportPc({
+      packaging: { type: 'portable' },
       game: createTestGame({ engineId: 'engine-1' }),
       gameName: ' Demo/Game ',
       onProgress,
@@ -177,6 +178,7 @@ describe('exportManager', () => {
       exportId: expect.any(String),
       gameName: 'Demo/Game',
       gamePath: '/games/demo',
+      packaging: { type: 'portable' },
       outputPath: '/exports/Demo_Game/windows-x64',
       replaceExisting: false,
       runtimePath: '/resources/game-runtimes/webgal-game-runtime-windows-x64.exe',
@@ -203,6 +205,19 @@ describe('exportManager', () => {
       targetArch: 'arm64',
       targetOs: 'macos',
     })
+  })
+
+  it('安装包使用独立输出目录并将版本和发行者传到原生命令', async () => {
+    const packaging = { type: 'installer', version: '1.2.3', publisher: 'Studio' } as const
+    await expect(exportManager.exportPc({
+      game: createTestGame({ engineId: 'engine-1' }), gameName: 'Demo',
+      packaging, outputRoot: AbsPath.from('/exports'),
+      runtimePath: AbsPath.from('/runtimes/game.exe'), targetArch: 'x64', targetOs: 'windows',
+      windowConfig: { width: 1280, height: 720, minWidth: 800, minHeight: 600, fullScreen: false, resizable: true },
+    })).resolves.toBe('/exports/Demo/windows-x64-installer')
+    expect(exportPcCommandMock).toHaveBeenCalledWith(expect.objectContaining({
+      packaging, outputPath: '/exports/Demo/windows-x64-installer',
+    }))
   })
 
   it('Android 导出把站点写入受控 session 且复用进度事件', async () => {

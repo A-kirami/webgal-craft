@@ -18,7 +18,7 @@ import { handleError } from '~/utils/error-handler'
 import { useExportElapsedTimer } from './useExportElapsedTimer'
 
 import type { Game } from '~/database/model'
-import type { ExportPlatform, ExportProgress, PcTarget, PcTargetArch, PcTargetOs, PcWindowConfig } from '~/services/export-manager'
+import type { ExportPlatform, ExportProgress, PcPackaging, PcTarget, PcTargetArch, PcTargetOs, PcWindowConfig } from '~/services/export-manager'
 
 export type WebExportStatus = 'idle' | 'running' | 'completed' | 'failed'
 export type ExportType = 'web' | 'desktop'
@@ -79,6 +79,25 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   const currentGame = computed(() => toValue(options.game))
   const gameName = computed(() => currentGame.value.metadata.name)
   const selectedDesktopTargets = ref<PcTarget[]>(currentDevicePcTarget())
+  const packaging = ref<PcPackaging>({ type: 'portable' })
+  const installerTargets: PcTarget[] = platform() === 'macos' ? ['macos-x64', 'macos-arm64'] : currentDevicePcTarget()
+  const desktopConfigValid = computed(() => {
+    const value = packaging.value
+    if (value.type === 'portable') {
+      return true
+    }
+    return selectedDesktopTargets.value.every(target => installerTargets.includes(target))
+      && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)
+      && value.version.split('.').every(part => Number(part) <= 6_5535)
+      && (platform() !== 'macos' || value.version.split('.').every((part, index) => Number(part) <= (index === 0 ? 9999 : 99)))
+      && value.publisher.trim().length > 0 && !/\p{Cc}/u.test(value.publisher)
+  })
+  watch(() => packaging.value.type, (format) => {
+    if (format === 'installer') {
+      const supported = selectedDesktopTargets.value.filter(target => installerTargets.includes(target))
+      selectedDesktopTargets.value = supported.length > 0 ? supported : currentDevicePcTarget()
+    }
+  })
   const windowConfig = ref<PcWindowConfig>({ ...DEFAULT_WINDOW_CONFIG })
   const exportTasks = ref<ExportTask[]>([])
   const { elapsedMs, reset: resetElapsedTimer, start: startElapsedTimer, stop: stopElapsedTimer } = useExportElapsedTimer()
@@ -106,7 +125,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       return
     }
     const [targetOs, targetArch] = parsePcTarget(target)
-    const outputPath = resolvePcExportOutputPath(outputRoot.value, gameName.value, targetOs, targetArch)
+    const outputPath = resolvePcExportOutputPath(outputRoot.value, gameName.value, targetOs, targetArch, packaging.value.type)
     return outputPath && AbsPath.parent(outputPath)
   })
 
@@ -129,6 +148,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     resetElapsedTimer()
     outputRoot.value = configuredOutputRoot()
     selectedDesktopTargets.value = currentDevicePcTarget()
+    packaging.value = { type: 'portable' }
     publishedExport.value = undefined
     exportTasks.value = []
     pendingOverwriteConfirmations.value = 0
@@ -202,7 +222,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   }
 
   function desktopOutputPath(root: AbsPath, name: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath {
-    return resolvePcExportOutputPath(root, name, targetOs, targetArch)!
+    return resolvePcExportOutputPath(root, name, targetOs, targetArch, packaging.value.type)!
   }
 
   function parsePcTarget(target: PcTarget): [PcTargetOs, PcTargetArch] {
@@ -242,7 +262,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     const platforms = failedPlatforms.length > 0
       ? failedPlatforms
       : selectedPlatforms(selectedPlatform)
-    if (selectedPlatform === 'desktop' && !hasDesktopTargets.value) {
+    if (selectedPlatform === 'desktop' && (!hasDesktopTargets.value || !desktopConfigValid.value)) {
       return
     }
 
@@ -284,6 +304,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       updateTask(platform, { status: 'running', stepKey: 'export.progress.preparingRuntime' })
       const runtimePathForTarget = await exportManager.ensurePcRuntime(targetOs, targetArch)
       const outputPath = await exportManager.exportPc({
+        packaging: packaging.value,
         game: selectedGame,
         gameName: selectedGameName,
         onProgress: updateProgress,
@@ -390,6 +411,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
 
   return {
     canStart,
+    desktopConfigValid,
     desktopOutputPreview,
     elapsedMs,
     exportTasks,
@@ -399,9 +421,11 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     isAndroid: android,
     isBusy,
     isRunning,
+    installerTargets,
     openExportDirectory,
     outputPreview,
     outputRoot,
+    packaging,
     prepareExportTasks,
     selectOutputRoot,
     selectedDesktopTargets,

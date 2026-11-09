@@ -92,7 +92,7 @@ vi.mock('~/services/export-manager', () => ({
     exportPc: exportPcMock,
     exportWeb: exportWebMock,
   },
-  resolvePcExportOutputPath: (outputRoot: string, gameName: string, targetOs: string, targetArch: string) => `${outputRoot}/${gameName}/${targetOs}-${targetArch}`,
+  resolvePcExportOutputPath: (outputRoot: string, gameName: string, targetOs: string, targetArch: string, format: string) => `${outputRoot}/${gameName}/${targetOs}-${targetArch}${format === 'installer' ? '-installer' : ''}`,
   resolveWebExportOutputPath: (outputRoot: string, gameName: string) => `${outputRoot}/${gameName}/web`,
 }))
 
@@ -575,6 +575,46 @@ describe('ExportDialog', () => {
       expect(ensurePcRuntimeMock).toHaveBeenCalledOnce()
       expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({ replaceExisting: true }))
     })
+  })
+
+  it('安装包仅允许本机平台且校验发行信息后导出到独立目录', async () => {
+    existsMock.mockResolvedValue(true)
+    let completeExport: (() => void) | undefined
+    exportPcMock.mockImplementation(config => new Promise<AbsPath>((resolve) => {
+      config.onProgress({ exportId: 'installer', percentage: 85, platform: 'windows-x64', step: 'export.progress.buildingInstaller' })
+      completeExport = () => resolve(AbsPath.from('/exports/Demo Game/windows-x64-installer'))
+    }))
+    await renderExportDialog({ localizedI18n: true })
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('checkbox', { name: 'macOS x64' }).click()
+    await page.getByRole('radio', { name: '安装包', exact: true }).click()
+    await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).not.toBeChecked()
+    await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).toBeDisabled()
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
+    await page.getByRole('textbox', { name: '发行者' }).fill('Studio')
+    await page.getByRole('textbox', { name: '版本号' }).fill('1.2.3-beta')
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
+    await page.getByRole('textbox', { name: '版本号' }).fill('1.2.3')
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('button', { name: '开始导出' }).click()
+    await vi.waitFor(() => expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({
+      packaging: { type: 'installer', version: '1.2.3', publisher: 'Studio' },
+      targetOs: 'windows',
+    })))
+    expect(confirmExportOverwriteMock).toHaveBeenCalledWith('/exports/Demo Game/windows-x64-installer', expect.any(Function))
+    await expect.element(page.getByText('正在生成安装包……')).toBeInTheDocument()
+    completeExport?.()
+  })
+
+  it('切回便携版后恢复跨平台目标选择', async () => {
+    await renderExportDialog({ localizedI18n: true })
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('radio', { name: '安装包', exact: true }).click()
+    await page.getByRole('radio', { name: '便携版' }).click()
+    await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).toBeEnabled()
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeEnabled()
   })
 
   it('重试仅重新导出失败的桌面目标', async () => {
