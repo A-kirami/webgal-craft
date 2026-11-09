@@ -23,6 +23,12 @@ import type { ExportPlatform, ExportProgress, PcPackaging, PcTarget, PcTargetArc
 export type WebExportStatus = 'idle' | 'running' | 'completed' | 'failed'
 export type ExportType = 'web' | 'desktop'
 
+export interface DesktopConfigErrors {
+  publisher?: string
+  targets?: string
+  version?: string
+}
+
 interface UseWebExportDialogOptions {
   android?: boolean
   confirmOverwrite: (outputPath: AbsPath) => Promise<boolean>
@@ -81,18 +87,34 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   const selectedDesktopTargets = ref<PcTarget[]>(currentDevicePcTarget())
   const packaging = ref<PcPackaging>({ type: 'portable' })
   const installerTargets: PcTarget[] = platform() === 'macos' ? ['macos-x64', 'macos-arm64'] : currentDevicePcTarget()
-  const desktopConfigValid = computed(() => {
+  const desktopConfigErrors = computed<DesktopConfigErrors>(() => {
+    const errors: DesktopConfigErrors = {}
+    if (selectedDesktopTargets.value.length === 0) {
+      errors.targets = options.t('export.desktopConfig.targetRequired')
+    }
     const value = packaging.value
     if (value.type === 'portable') {
-      return true
+      return errors
+    }
+    if (selectedDesktopTargets.value.some(target => !installerTargets.includes(target))) {
+      errors.targets = options.t('export.desktopConfig.installerTargetInvalid')
     }
     const versionParts = value.version.split('.')
-    return selectedDesktopTargets.value.every(target => installerTargets.includes(target))
-      && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)
-      && versionParts.every(part => Number(part) <= 6_5535)
-      && (platform() !== 'macos' || versionParts.every((part, index) => Number(part) <= (index === 0 ? 9999 : 99)))
-      && value.publisher.trim().length > 0 && !/\p{Cc}/u.test(value.publisher)
+    if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)) {
+      errors.version = options.t('export.desktopConfig.versionFormatInvalid')
+    } else if (versionParts.some(part => Number(part) > 6_5535)) {
+      errors.version = options.t('export.desktopConfig.versionOutOfRange')
+    } else if (platform() === 'macos' && versionParts.some((part, index) => Number(part) > (index === 0 ? 9999 : 99))) {
+      errors.version = options.t('export.desktopConfig.macosVersionOutOfRange')
+    }
+    if (!value.publisher.trim()) {
+      errors.publisher = options.t('export.desktopConfig.publisherRequired')
+    } else if (/\p{Cc}/u.test(value.publisher)) {
+      errors.publisher = options.t('export.desktopConfig.publisherInvalid')
+    }
+    return errors
   })
+  const desktopConfigValid = computed(() => Object.keys(desktopConfigErrors.value).length === 0)
   watch(() => packaging.value.type, (format) => {
     if (format === 'installer') {
       const supported = selectedDesktopTargets.value.filter(target => installerTargets.includes(target))
@@ -259,7 +281,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     const platforms = failedPlatforms.length > 0
       ? failedPlatforms
       : selectedPlatforms(selectedPlatform)
-    if (selectedPlatform === 'desktop' && (!hasDesktopTargets.value || !desktopConfigValid.value)) {
+    if (selectedPlatform === 'desktop' && !desktopConfigValid.value) {
       return
     }
 
@@ -414,6 +436,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
 
   return {
     canStart,
+    desktopConfigErrors,
     desktopConfigValid,
     desktopOutputPreview,
     elapsedMs,

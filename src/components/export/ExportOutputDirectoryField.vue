@@ -47,7 +47,7 @@ const emit = defineEmits<{
       </TooltipContent>
     </Tooltip>
     <p
-      v-else
+      v-else-if="!outputRoot"
       class="text-xs text-muted-foreground"
       role="status"
     >

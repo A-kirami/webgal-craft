@@ -731,10 +731,15 @@ export:
     format: Export format
     portable: Portable
     installer: Installer
-    portableHint: Run directly from the exported folder. Export for any supported desktop platform.
-    installerHint: Creates a Windows installer, macOS DMG, or Linux DEB on the matching operating system. Enter a publisher and a version in major.minor.patch format (0–65535 per part). macOS limits the first part to 9999 and the last two to 99. Windows downloads packaging tools on first use. No distribution signing or notarization is configured; player saves are preserved during upgrades and uninstallation.
     version: Version
     publisher: Publisher
+    versionFormatInvalid: Use three numbers, such as 1.2.3, without leading zeros
+    versionOutOfRange: Each number must be at most 65535
+    macosVersionOutOfRange: macOS allows at most 9999 for the first number and 99 for the last two
+    publisherRequired: Enter a publisher name
+    publisherInvalid: Publisher names cannot contain control characters
+    installerSystemRequired: Build on {system}
+    installerTargetInvalid: Select an installer target that matches your operating system
     steamUnsupported: Desktop exports do not support Steam initialization or achievements.
     title: Desktop targets
     notSelected: No desktop-specific configuration is needed

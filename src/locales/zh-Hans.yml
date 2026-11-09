@@ -731,10 +731,15 @@ export:
     format: 导出格式
     portable: 便携版
     installer: 安装包
-    portableHint: 从导出的文件夹直接运行，可导出到任一受支持的桌面平台。
-    installerHint: 在对应操作系统上生成 Windows 安装程序、macOS DMG 或 Linux DEB。请填写发行者和 major.minor.patch 格式的版本号（每段 0–65535）。macOS 第一段最大为 9999，后两段最大为 99。Windows 首次使用需要下载打包工具。未配置发行签名或公证，升级和卸载均保留玩家存档。
     version: 版本号
     publisher: 发行者
+    versionFormatInvalid: 使用三段数字，如 1.2.3，各段不加前导零
+    versionOutOfRange: 每段数字不能超过 65535
+    macosVersionOutOfRange: macOS 第一段不能超过 9999，后两段不能超过 99
+    publisherRequired: 输入发行者名称
+    publisherInvalid: 发行者名称不能包含控制字符
+    installerSystemRequired: 需在 {system} 上生成
+    installerTargetInvalid: 选择与当前操作系统一致的安装包目标
     steamUnsupported: 桌面端导出不支持 Steam 初始化和成就功能。
     title: 桌面端目标
     notSelected: 未选择桌面端，无需额外配置
