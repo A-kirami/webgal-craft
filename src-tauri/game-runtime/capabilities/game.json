@@ -1,0 +1,8 @@
+{
+  "identifier": "game",
+  "windows": ["game"],
+  "remote": {
+    "urls": ["asset://localhost/**", "http://asset.localhost/**", "https://asset.localhost/**"]
+  },
+  "permissions": ["allow-exit-game", "allow-set-window-fullscreen"]
+}

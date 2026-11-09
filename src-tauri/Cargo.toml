@@ -5,6 +5,10 @@ description = "WebGAL Visual Novel Studio"
 authors = ["akirami"]
 edition = "2021"
 
+[workspace]
+members = ["game-runtime"]
+resolver = "2"
+
 [lib]
 name = "webgal_craft_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
