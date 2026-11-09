@@ -626,6 +626,28 @@ describe('ExportDialog', () => {
     await expect.element(page.getByRole('button', { name: '开始导出' })).toBeEnabled()
   })
 
+  it('返回修改安装包信息后不能跳过无效配置', async () => {
+    await renderExportDialog()
+    await page.getByRole('button', { name: /export\.platformDesktop/ }).click()
+    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('radio', { name: 'export.desktopConfig.installer', exact: true }).click()
+    await page.getByRole('textbox', { name: 'export.desktopConfig.publisher' }).fill('Studio')
+    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: 'export.previousStep' }).click()
+
+    const exportStep = page.getByRole('button', { name: /export\.steps\.export/ })
+    const version = page.getByRole('textbox', { name: 'export.desktopConfig.version' })
+    await version.fill('invalid')
+    await expect.element(page.getByRole('button', { name: 'export.next' })).toBeDisabled()
+    await expect.element(exportStep).toBeDisabled()
+
+    await version.fill('1.2.3')
+    await expect.element(exportStep).toBeEnabled()
+    await exportStep.click()
+    await expect.element(page.getByRole('button', { name: 'export.start' })).toBeEnabled()
+    expect(exportPcMock).not.toHaveBeenCalled()
+  })
+
   it('切回便携版后恢复跨平台目标选择', async () => {
     await renderExportDialog({ localizedI18n: true })
     await page.getByRole('button', { name: '桌面端' }).click()
