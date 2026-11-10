@@ -37,13 +37,15 @@ describe('Neutralino 窗口桥接', () => {
   })
 
   it('将 Web Fullscreen API 映射到 Neutralino 窗口并同步状态事件', async () => {
-    let readyListener: (() => void | Promise<void>) | undefined
+    const listeners = new Map<string, () => void | Promise<void>>()
     let nativeFullscreen = true
     const setFullScreen = vi.fn(async () => {
       nativeFullscreen = true
+      await listeners.get('windowFullScreenEnter')?.()
     })
     const exitFullScreen = vi.fn(async () => {
       nativeFullscreen = false
+      await listeners.get('windowFullScreenExit')?.()
     })
     const isFullScreen = vi.fn(async () => nativeFullscreen)
     const init = vi.fn(() => undefined)
@@ -51,8 +53,7 @@ describe('Neutralino 窗口桥接', () => {
       app: { exit: vi.fn(async () => undefined) },
       events: {
         on: vi.fn((event, listener) => {
-          expect(event).toBe('ready')
-          readyListener = listener
+          listeners.set(event, listener)
         }),
       },
       init,
@@ -64,7 +65,7 @@ describe('Neutralino 窗口桥接', () => {
     new Function(windowBridge)()
     expect(init).toHaveBeenCalledOnce()
 
-    await readyListener?.()
+    await listeners.get('ready')!()
     expect(document.fullscreenElement).toBe(document.documentElement)
     expect(fullscreenChanges).toHaveBeenCalledTimes(1)
 
@@ -78,6 +79,46 @@ describe('Neutralino 窗口桥接', () => {
     expect(fullscreenChanges).toHaveBeenCalledTimes(3)
 
     document.removeEventListener('fullscreenchange', fullscreenChanges)
+  })
+
+  it('同步原生窗口全屏变化并忽略重复事件', async () => {
+    const listeners = new Map<string, () => void | Promise<void>>()
+    neutralinoGlobal.Neutralino = {
+      app: { exit: vi.fn(async () => undefined) },
+      events: {
+        on: (event, listener) => {
+          listeners.set(event, listener)
+        },
+      },
+      init: vi.fn(() => undefined),
+      window: {
+        exitFullScreen: vi.fn(async () => undefined),
+        isFullScreen: vi.fn(async () => false),
+        setFullScreen: vi.fn(async () => undefined),
+      },
+    }
+    const fullscreenChanges = vi.fn(() => undefined)
+    document.addEventListener('fullscreenchange', fullscreenChanges)
+
+    try {
+      new Function(windowBridge)()
+      await listeners.get('ready')!()
+      await document.documentElement.requestFullscreen()
+      expect(document.fullscreenElement).toBeNull()
+
+      await listeners.get('windowFullScreenEnter')!()
+      expect(document.fullscreenElement).toBe(document.documentElement)
+      await listeners.get('windowFullScreenEnter')!()
+      expect(fullscreenChanges).toHaveBeenCalledOnce()
+
+      await document.exitFullscreen()
+      expect(document.fullscreenElement).toBe(document.documentElement)
+      await listeners.get('windowFullScreenExit')!()
+      expect(document.fullscreenElement).toBeNull()
+      expect(fullscreenChanges).toHaveBeenCalledTimes(2)
+    } finally {
+      document.removeEventListener('fullscreenchange', fullscreenChanges)
+    }
   })
 
   it('原生全屏调用失败时不伪造 Web Fullscreen 状态', async () => {
