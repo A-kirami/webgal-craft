@@ -528,11 +528,17 @@ pub(super) fn export_pc_to_directory(
             app_root.clone()
         };
         fs::create_dir_all(&executable_directory)?;
-        let executable_name = if target_os == "windows" {
+        let mut executable_name = if target_os == "windows" {
             format!("{executable_stem}.exe")
         } else {
             executable_stem.clone()
         };
+        if [CONFIG_FILE, RESOURCE_DIRECTORY, "icon.png"]
+            .iter()
+            .any(|name| executable_name.eq_ignore_ascii_case(name))
+        {
+            executable_name.push('_');
+        }
         let executable_path = executable_directory.join(&executable_name);
         fs::copy(runtime_path, &executable_path)?;
         #[cfg(unix)]
@@ -2122,6 +2128,81 @@ mod tests {
         );
         assert!(!config.full_screen);
         assert!(config.resizable);
+    }
+
+    #[test]
+    fn preserves_runtime_files_when_game_name_conflicts() {
+        for target_os in ["linux", "macos"] {
+            for (game_name, executable_name) in [
+                ("webgal-runtime.json", "webgal-runtime.json_"),
+                ("resources", "resources_"),
+                ("icon.png", "icon.png_"),
+                ("WebGAL-Runtime.JSON", "WebGAL-Runtime.JSON_"),
+                ("Resources", "Resources_"),
+                ("ICON.PNG", "ICON.PNG_"),
+                (" resources. ", "resources_"),
+                ("resources_", "resources_"),
+            ] {
+                let root = tempdir().unwrap();
+                create_export_fixture(root.path());
+                let runtime = root.path().join("game-runtime");
+                write_file(&runtime, "runtime");
+                image::RgbaImage::from_pixel(16, 16, image::Rgba([1, 2, 3, 255]))
+                    .save(root.path().join("game/icons/icon-192.png"))
+                    .unwrap();
+                let output = root.path().join("output");
+
+                export_pc_to_directory(
+                    PcExportRequest {
+                        engine_path: &root.path().join("engine"),
+                        game_path: &root.path().join("game"),
+                        template_path: Some(&root.path().join("template")),
+                        runtime_path: &runtime,
+                        output_path: &output,
+                        game_name,
+                        target_os,
+                        target_arch: "x64",
+                        window: &PcWindowConfig {
+                            width: 1280,
+                            height: 720,
+                            min_width: 800,
+                            min_height: 600,
+                            full_screen: false,
+                            resizable: true,
+                        },
+                        replace_existing: false,
+                    },
+                    |_, _| Ok(()),
+                )
+                .unwrap();
+
+                let executable_directory = if target_os == "macos" {
+                    let contents =
+                        output.join(format!("{}.app/Contents", sanitize_desktop_name(game_name)));
+                    let info = fs::read_to_string(contents.join("Info.plist")).unwrap();
+                    assert!(info.contains(&format!(
+                        "<key>CFBundleExecutable</key><string>{executable_name}</string>"
+                    )));
+                    assert!(contents.join("Resources/icon.icns").is_file());
+                    contents.join("MacOS")
+                } else {
+                    output
+                };
+                assert_eq!(
+                    fs::read_to_string(executable_directory.join(executable_name)).unwrap(),
+                    "runtime",
+                    "{target_os}: {game_name}"
+                );
+                let config: GameConfig = serde_json::from_slice(
+                    &fs::read(executable_directory.join(CONFIG_FILE)).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(config.title, game_name);
+                assert_eq!(config.game_key, "demo-key");
+                assert!(executable_directory.join("resources/index.html").is_file());
+                assert!(executable_directory.join("resources/icon.png").is_file());
+            }
+        }
     }
 
     #[test]
