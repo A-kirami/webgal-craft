@@ -11,6 +11,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  game-runtimes:
+    uses: ./.github/workflows/game-runtimes.yml
+    permissions:
+      contents: read
+
   validate:
     runs-on: ubuntu-latest
     permissions:
@@ -55,7 +60,7 @@ jobs:
 
   release:
     name: ${{ matrix.platform }}
-    needs: changelog
+    needs: [changelog, game-runtimes]
     environment: release
     runs-on: ${{ matrix.os }}
     permissions:
@@ -123,11 +128,19 @@ jobs:
       # 构建环境准备统一在 .github/actions/prepare-build，勿在此复制等价步骤
       - name: Prepare build environment
         id: prepare
-        uses: $/.github/actions/prepare-build
+        uses: ./.github/actions/prepare-build
         with:
           platform: ${{ matrix.platform }}
           mobile: ${{ matrix.mobile }}
           rust-targets: ${{ matrix.rustTargets }}
+
+      - name: Download game runtimes
+        if: matrix.mobile != 'android'
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          pattern: game-runtime-*
+          path: src-tauri/resources/game-runtimes
+          merge-multiple: true
 
       - name: Build and create release
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # action-v1.0.0

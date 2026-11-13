@@ -4,13 +4,13 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tauri dev",
+    "dev": "bun build:game-runtime && tauri dev",
     "dev:web": "vite dev",
     "dev:android": "tauri android dev",
     "dev:android:open": "tauri android dev --open",
     "generate:protocol": "bun scripts/generate-editor-preview-protocol-rs.mjs",
     "generate:protocol:check": "bun scripts/generate-editor-preview-protocol-rs.mjs --check",
-    "build": "tauri build",
+    "build": "bun build:game-runtime --release && tauri build",
     "build:web": "bun typecheck:app && bun typecheck:node && vite build",
     "build:android": "tauri android build",
     "build:android:debug": "tauri android build --debug",
@@ -22,7 +22,7 @@
     "typecheck:node": "vue-tsc -p tsconfig.node.json",
     "typecheck:test": "vue-tsc -p tsconfig.test.json",
     "test": "bun test:unit && bun test:browser && bun test:integration",
-    "test:rust": "cargo test --locked --manifest-path src-tauri/Cargo.toml",
+    "test:rust": "cargo test --locked --workspace --manifest-path src-tauri/Cargo.toml",
     "test:coverage": "vitest run --project unit --coverage",
     "test:unit": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
@@ -36,9 +36,10 @@
     "lint:style:fix": "stylelint 'src/**/*.{css,vue}' --fix",
     "lint:i18n": "eslint 'src/locales/*.{json,json5,yaml,yml}'",
     "lint:i18n:fix": "eslint 'src/locales/*.{json,json5,yaml,yml}' --fix",
-    "lint:rs": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
-    "lint:rs:fix": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --fix --allow-dirty --allow-staged",
-    "format:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --all"
+    "lint:rs": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings && cargo clippy --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime --all-targets --all-features -- -D warnings",
+    "lint:rs:fix": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features --fix --allow-dirty --allow-staged && cargo clippy --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime --all-targets --all-features --fix --allow-dirty --allow-staged",
+    "format:rs": "cargo fmt --manifest-path src-tauri/Cargo.toml --all",
+    "build:game-runtime": "node scripts/build-game-runtime.mjs"
   },
   "dependencies": {
     "@floating-ui/vue": "^2.0.1",

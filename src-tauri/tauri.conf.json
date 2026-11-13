@@ -18,6 +18,7 @@
   },
   "bundle": {
     "active": true,
+    "resources": { "resources/game-runtimes/": "game-runtimes/" },
     "targets": ["nsis", "app", "dmg", "appimage", "deb"],
     "publisher": "Akirami",
     "category": "DeveloperTool",

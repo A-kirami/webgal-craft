@@ -1,18 +1,16 @@
 use std::{
     collections::HashSet,
     fs,
-    io::{BufWriter, Cursor, ErrorKind, Read, Write},
+    io::{BufWriter, ErrorKind, Write},
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
-    time::Duration,
 };
 
 use flate2::{write::GzEncoder, Compression};
-use futures_util::StreamExt;
 use image::{imageops, DynamicImage, RgbaImage};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager};
+use webgal_game_runtime::{GameConfig, CONFIG_FILE, RESOURCE_DIRECTORY};
 
 use super::{game::read_game_config, AppError, AppResult};
 use crate::vfs::{CachedCanonicals, OverlayFs, VfsDirEntry, VfsError};
@@ -57,24 +55,9 @@ const PRECOMPRESSIBLE_EXTENSIONS: [&str; 19] = [
     "wasm",
     "webmanifest",
 ];
-const STEP_PACKING_RESOURCES: &str = "export.progress.packingResources";
+const STEP_PREPARING_RESOURCES: &str = "export.progress.preparingResources";
 const STEP_COPYING_RUNTIME: &str = "export.progress.copyingRuntime";
 const STEP_WRITING_CONFIG: &str = "export.progress.writingConfig";
-const NEUTRALINO_RUNTIME_VERSION: &str = "6.9.0";
-const NEUTRALINO_RUNTIME_ARCHIVE_URL: &str =
-    "https://github.com/neutralinojs/neutralinojs/releases/download/v6.9.0/neutralinojs-v6.9.0.zip";
-const NEUTRALINO_RUNTIME_ARCHIVE_SHA256: &str =
-    "ff33dd68979cffc36e4e7e73d1bab4cbcdf2c036aad72ca32876fde51a32df14";
-const NEUTRALINO_RUNTIME_CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
-const NEUTRALINO_RUNTIME_DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(5 * 60);
-const MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES: u64 = 16 * 1024 * 1024;
-const NEUTRALINO_CLIENT: &[u8] = include_bytes!("../../resources/neutralino/6.9.0/neutralino.js");
-const NEUTRALINO_CLIENT_LICENSE: &[u8] = include_bytes!("../../resources/neutralino/6.9.0/LICENSE");
-const NEUTRALINO_WINDOW_BRIDGE: &[u8] =
-    include_bytes!("../../resources/webgalcraft-neutralino-window.js");
-const NEUTRALINO_CLIENT_PATH: &str = "webgalcraft-neutralino.js";
-const NEUTRALINO_CLIENT_LICENSE_PATH: &str = "webgalcraft-neutralino-LICENSE.txt";
-const NEUTRALINO_WINDOW_BRIDGE_PATH: &str = "webgalcraft-neutralino-window.js";
 static EXPORT_WORK_ID: AtomicU64 = AtomicU64::new(0);
 
 const PC_ICON_FALLBACKS: [&str; 4] = [
@@ -158,196 +141,35 @@ pub struct PcExportRequest<'a> {
     pub replace_existing: bool,
 }
 
-fn neutralino_runtime_entry(target_os: &str, target_arch: &str) -> AppResult<&'static str> {
+fn pc_runtime_entry(target_os: &str, target_arch: &str) -> AppResult<&'static str> {
     match (target_os, target_arch) {
-        ("windows", "x64") => Ok("neutralino-win_x64.exe"),
-        ("macos", "x64") => Ok("neutralino-mac_x64"),
-        ("macos", "arm64") => Ok("neutralino-mac_arm64"),
-        ("linux", "x64") => Ok("neutralino-linux_x64"),
+        ("windows", "x64") => Ok("webgal-game-runtime-windows-x64.exe"),
+        ("macos", "x64") => Ok("webgal-game-runtime-macos-x64"),
+        ("macos", "arm64") => Ok("webgal-game-runtime-macos-arm64"),
+        ("linux", "x64") => Ok("webgal-game-runtime-linux-x64"),
         _ => Err(export_error("不支持的 PC 目标平台或架构")),
     }
 }
 
 fn pc_platform(target_os: &str, target_arch: &str) -> AppResult<String> {
-    neutralino_runtime_entry(target_os, target_arch)?;
+    pc_runtime_entry(target_os, target_arch)?;
     Ok(format!("{target_os}-{target_arch}"))
 }
 
-fn pc_runtime_cache_path(
-    app: &AppHandle,
+fn bundled_pc_runtime(
+    resource_root: &Path,
     target_os: &str,
     target_arch: &str,
 ) -> AppResult<PathBuf> {
-    let entry = neutralino_runtime_entry(target_os, target_arch)?;
-    let app_data_dir = app.path().app_data_dir()?;
-    Ok(app_data_dir
-        .join("cache")
-        .join("runtimes")
-        .join(format!("neutralinojs-v{NEUTRALINO_RUNTIME_VERSION}"))
-        .join(format!("{target_os}-{target_arch}"))
-        .join(entry))
-}
-
-fn extract_neutralino_runtime(archive: &[u8], entry_name: &str) -> AppResult<Vec<u8>> {
-    let mut archive = zip::ZipArchive::new(Cursor::new(archive))
-        .map_err(|error| export_error(format!("Neutralinojs 运行时压缩包无效: {error}")))?;
-    let mut entry = archive
-        .by_name(entry_name)
-        .map_err(|error| export_error(format!("Neutralinojs 运行时缺少目标二进制: {error}")))?;
-    let mut bytes = Vec::with_capacity(entry.size() as usize);
-    entry.read_to_end(&mut bytes)?;
-    Ok(bytes)
-}
-
-fn verify_neutralino_runtime_archive(archive: &[u8]) -> AppResult<()> {
-    let actual_sha256 = Sha256::digest(archive)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
-    if actual_sha256 != NEUTRALINO_RUNTIME_ARCHIVE_SHA256 {
-        return Err(export_error(
-            "Neutralinojs 运行时校验失败，文件可能已被篡改",
-        ));
+    let path = resource_root
+        .join("game-runtimes")
+        .join(pc_runtime_entry(target_os, target_arch)?);
+    if !path.is_file() {
+        return Err(export_error(format!(
+            "编辑器缺少 {target_os}-{target_arch} 游戏运行时，重新安装完整发行包后重试"
+        )));
     }
-    Ok(())
-}
-
-fn cache_pc_runtime(runtime_path: &Path, runtime: &[u8]) -> AppResult<()> {
-    let temporary = runtime_path.with_extension(format!(
-        "download-{}-{}",
-        std::process::id(),
-        EXPORT_WORK_ID.fetch_add(1, Ordering::Relaxed),
-    ));
-    let result = (|| {
-        fs::write(&temporary, runtime)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&temporary, fs::Permissions::from_mode(0o755))?;
-        }
-        match fs::rename(&temporary, runtime_path) {
-            Ok(()) => Ok(()),
-            Err(_) if runtime_path.is_file() => Ok(()),
-            Err(error) => Err(error.into()),
-        }
-    })();
-    if temporary.exists() {
-        let _ = fs::remove_file(temporary);
-    }
-    result
-}
-
-fn resolve_neutralino_runtime_url(proxy_prefix: Option<&str>) -> AppResult<String> {
-    let Some(raw_prefix) = proxy_prefix
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    else {
-        return Ok(NEUTRALINO_RUNTIME_ARCHIVE_URL.to_owned());
-    };
-    let prefix_url = reqwest::Url::parse(raw_prefix)
-        .map_err(|error| export_error(format!("Neutralino 运行时下载代理地址无效: {error}")))?;
-    if prefix_url.scheme() != "https"
-        || prefix_url.host_str().is_none()
-        || !prefix_url.username().is_empty()
-        || prefix_url.password().is_some()
-        || prefix_url.query().is_some()
-        || prefix_url.fragment().is_some()
-    {
-        return Err(export_error(
-            "Neutralino 运行时下载代理必须是无凭据的 HTTPS 地址",
-        ));
-    }
-
-    let prefix = if raw_prefix.ends_with('/') {
-        raw_prefix.to_owned()
-    } else {
-        format!("{raw_prefix}/")
-    };
-    let proxied_url = format!("{prefix}{NEUTRALINO_RUNTIME_ARCHIVE_URL}");
-    let parsed_url = reqwest::Url::parse(&proxied_url)
-        .map_err(|error| export_error(format!("Neutralino 运行时代理下载地址无效: {error}")))?;
-    if parsed_url.scheme() != "https" || parsed_url.host_str().is_none() {
-        return Err(export_error("Neutralino 运行时代理下载地址必须使用 HTTPS"));
-    }
-    Ok(proxied_url)
-}
-
-fn package_resources(
-    root: &Path,
-    archive_path: &Path,
-    report: &mut impl FnMut(&str, u8) -> AppResult<()>,
-) -> AppResult<()> {
-    let mut files = Vec::new();
-    collect_files(root, root, &mut files)?;
-    let total = files.len().max(1);
-    let mut header_files = serde_json::Map::new();
-    let mut offset = 0_u64;
-
-    for (path, relative) in &files {
-        let size = fs::metadata(path)?.len();
-        add_asar_file(&mut header_files, relative, size, offset)?;
-        offset += size;
-    }
-
-    let mut header = serde_json::to_vec(&serde_json::json!({ "files": header_files }))
-        .map_err(|error| export_error(format!("resources.neu 头信息序列化失败: {error}")))?;
-    let header_size =
-        u32::try_from(header.len()).map_err(|_| export_error("resources.neu 头信息过大"))?;
-    let aligned_header_size = (header_size + 3) & !3;
-    header.resize(aligned_header_size as usize, 0);
-
-    let mut archive = BufWriter::new(fs::File::create(archive_path)?);
-    archive.write_all(&4_u32.to_le_bytes())?;
-    archive.write_all(&(aligned_header_size + 8).to_le_bytes())?;
-    archive.write_all(&(aligned_header_size + 4).to_le_bytes())?;
-    archive.write_all(&header_size.to_le_bytes())?;
-    archive.write_all(&header)?;
-    report(STEP_PACKING_RESOURCES, 35)?;
-    let mut last_percentage = 35;
-    for (index, (path, _)) in files.into_iter().enumerate() {
-        let mut source = fs::File::open(path)?;
-        std::io::copy(&mut source, &mut archive)?;
-        let percentage = 35 + ((index + 1) * 45 / total) as u8;
-        if percentage > last_percentage {
-            report(STEP_PACKING_RESOURCES, percentage)?;
-            last_percentage = percentage;
-        }
-    }
-    archive.flush()?;
-    if last_percentage < 80 {
-        report(STEP_PACKING_RESOURCES, 80)?;
-    }
-    Ok(())
-}
-
-fn add_asar_file(
-    directory: &mut serde_json::Map<String, serde_json::Value>,
-    path: &Path,
-    size: u64,
-    offset: u64,
-) -> AppResult<()> {
-    let mut components = path.components();
-    let Some(component) = components.next() else {
-        return Err(export_error("resources.neu 文件路径为空"));
-    };
-    let component = component.as_os_str().to_string_lossy().into_owned();
-
-    if components.as_path().as_os_str().is_empty() {
-        directory.insert(
-            component,
-            serde_json::json!({ "size": size, "offset": offset.to_string() }),
-        );
-        return Ok(());
-    }
-
-    let entry = directory
-        .entry(component)
-        .or_insert_with(|| serde_json::json!({ "files": {} }));
-    let files = entry
-        .get_mut("files")
-        .and_then(serde_json::Value::as_object_mut)
-        .ok_or_else(|| export_error("resources.neu 目录结构冲突"))?;
-    add_asar_file(files, components.as_path(), size, offset)
+    Ok(path)
 }
 
 fn resolve_icon_in(root: &Path) -> Option<PathBuf> {
@@ -624,9 +446,9 @@ pub(super) fn export_pc_to_directory(
         return Err(export_error("游戏名称不能为空"));
     }
     if !runtime_path.is_file() {
-        return Err(export_error("Neutralinojs 运行时不存在或不可访问"));
+        return Err(export_error("游戏运行时不存在或不可访问"));
     }
-    neutralino_runtime_entry(target_os, target_arch)?;
+    pc_runtime_entry(target_os, target_arch)?;
     if window.width < window.min_width
         || window.height < window.min_height
         || window.min_width == 0
@@ -682,9 +504,16 @@ pub(super) fn export_pc_to_directory(
             .map(|entry| entry.value.trim())
             .filter(|value| !value.is_empty())
             .ok_or_else(|| export_error("游戏缺少 Game_key，在游戏配置中生成标识后重新导出"))?;
-        // 端口属于存档 origin 的一部分；此映射必须保持稳定，不能按运行时可用端口回退。
-        let key_hash = Sha256::digest(game_key.as_bytes());
-        let storage_port = 49152 + u16::from_le_bytes([key_hash[0], key_hash[1]]) % 16384;
+        let runtime_config = GameConfig {
+            game_key: game_key.to_owned(),
+            title: game_name.to_owned(),
+            width: window.width,
+            height: window.height,
+            min_width: window.min_width,
+            min_height: window.min_height,
+            full_screen: window.full_screen,
+            resizable: window.resizable,
+        };
         fs::create_dir(&staged_output)?;
         report(STEP_COPYING_RUNTIME, 32)?;
         let executable_stem = sanitize_desktop_name(game_name);
@@ -699,21 +528,28 @@ pub(super) fn export_pc_to_directory(
             app_root.clone()
         };
         fs::create_dir_all(&executable_directory)?;
-        let executable_name = if target_os == "windows" {
+        let mut executable_name = if target_os == "windows" {
             format!("{executable_stem}.exe")
         } else {
             executable_stem.clone()
         };
+        if [CONFIG_FILE, RESOURCE_DIRECTORY, "icon.png"]
+            .iter()
+            .any(|name| executable_name.eq_ignore_ascii_case(name))
+        {
+            executable_name.push('_');
+        }
         let executable_path = executable_directory.join(&executable_name);
         fs::copy(runtime_path, &executable_path)?;
         #[cfg(unix)]
-        fs::set_permissions(&executable_path, fs::metadata(runtime_path)?.permissions())?;
-        let resource_root = executable_directory.clone();
-        fs::create_dir_all(&resource_root)?;
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&executable_path, fs::Permissions::from_mode(0o755))?;
+        }
         let icon_root = if target_os == "macos" {
             app_root.join("Resources")
         } else {
-            resource_root.clone()
+            executable_directory.clone()
         };
         fs::create_dir_all(&icon_root)?;
         let icon_path = write_desktop_icon(game_path, &site_root, &icon_root)?;
@@ -730,61 +566,20 @@ pub(super) fn export_pc_to_directory(
                 write_macos_icns(icon_path, &icon_root)?;
                 fs::remove_file(icon_path)?;
             }
-            write_macos_bundle_info(&app_root, game_name, &executable_name)?;
+            write_macos_bundle_info(
+                &app_root,
+                game_name,
+                &executable_name,
+                &runtime_config.application_id(),
+            )?;
         }
         report(STEP_WRITING_CONFIG, 34)?;
-        fs::write(site_root.join(NEUTRALINO_CLIENT_PATH), NEUTRALINO_CLIENT)?;
-        fs::write(
-            site_root.join(NEUTRALINO_CLIENT_LICENSE_PATH),
-            NEUTRALINO_CLIENT_LICENSE,
-        )?;
-        fs::write(
-            site_root.join(NEUTRALINO_WINDOW_BRIDGE_PATH),
-            NEUTRALINO_WINDOW_BRIDGE,
-        )?;
-        let mut window_config = serde_json::json!({
-            "title": game_name,
-            "width": window.width,
-            "height": window.height,
-            "minWidth": window.min_width,
-            "minHeight": window.min_height,
-            "fullScreen": window.full_screen,
-            "resizable": window.resizable,
-            "newWindowPolicy": "browser",
-            "injectClientLibrary": true,
-            "injectScript": format!("/{NEUTRALINO_WINDOW_BRIDGE_PATH}"),
-        });
-        if icon_path.is_some() {
-            window_config["icon"] = serde_json::Value::String("/icon.png".into());
-        }
-        let config = serde_json::json!({
-            "applicationId": format!("com.webgalcraft.{}", sanitize_application_id(game_name)),
-            "defaultMode": "window",
-            "enableServer": true,
-            "port": storage_port,
-            "enableNativeAPI": true,
-            "tokenSecurity": "one-time",
-            "nativeAllowList": [
-                "app.exit",
-                "window.setFullScreen",
-                "window.exitFullScreen",
-                "window.isFullScreen",
-            ],
-            "url": "/index.html",
-            "modes": { "window": window_config },
-            "cli": {
-                "clientLibrary": format!("/{NEUTRALINO_CLIENT_PATH}"),
-            },
-        });
-        let mut bytes =
-            serde_json::to_vec_pretty(&config).map_err(|error| export_error(error.to_string()))?;
+        let mut bytes = serde_json::to_vec_pretty(&runtime_config)
+            .map_err(|error| export_error(error.to_string()))?;
         bytes.push(b'\n');
-        fs::write(site_root.join("neutralino.config.json"), bytes)?;
-        package_resources(
-            &site_root,
-            &resource_root.join("resources.neu"),
-            &mut report,
-        )?;
+        fs::write(executable_directory.join(CONFIG_FILE), bytes)?;
+        report(STEP_PREPARING_RESOURCES, 80)?;
+        fs::rename(&site_root, executable_directory.join(RESOURCE_DIRECTORY))?;
         if target_os == "windows" || target_os == "linux" {
             if let Some(icon_path) = icon_path {
                 fs::remove_file(icon_path)?;
@@ -808,20 +603,6 @@ pub(super) fn export_pc_to_directory(
     }
 
     report(STEP_FINISHED, 100)
-}
-
-fn sanitize_application_id(value: &str) -> String {
-    let mut result = String::new();
-    for part in value.split(|character: char| !character.is_ascii_alphanumeric()) {
-        if !part.is_empty() {
-            result.push_str(&part.to_ascii_lowercase());
-        }
-    }
-    if result.is_empty() {
-        "game".into()
-    } else {
-        result
-    }
 }
 
 fn sanitize_desktop_name(value: &str) -> String {
@@ -886,6 +667,7 @@ fn write_macos_bundle_info(
     contents: &Path,
     game_name: &str,
     executable_name: &str,
+    bundle_identifier: &str,
 ) -> AppResult<()> {
     let escaped_name = game_name
         .replace('&', "&amp;")
@@ -895,7 +677,6 @@ fn write_macos_bundle_info(
         .replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;");
-    let bundle_identifier = format!("com.webgalcraft.{}", sanitize_application_id(game_name));
     let info = format!(
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\"><dict><key>CFBundleDisplayName</key><string>{escaped_name}</string><key>CFBundleExecutable</key><string>{escaped_executable_name}</string><key>CFBundleIconFile</key><string>icon</string><key>CFBundleIdentifier</key><string>{bundle_identifier}</string><key>CFBundleName</key><string>{escaped_name}</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>1.0.0</string></dict></plist>\n"
     );
@@ -1546,84 +1327,30 @@ pub async fn ensure_pc_runtime(
     app: AppHandle,
     target_os: String,
     target_arch: String,
-    proxy_prefix: Option<String>,
 ) -> AppResult<String> {
-    let runtime_path = pc_runtime_cache_path(&app, &target_os, &target_arch)?;
-    if runtime_path.is_file() {
-        return Ok(runtime_path.to_string_lossy().into_owned());
-    }
-
-    let download_url = resolve_neutralino_runtime_url(proxy_prefix.as_deref())?;
-    let client = reqwest::Client::builder()
-        .user_agent("WebGALCraft PC exporter")
-        .connect_timeout(NEUTRALINO_RUNTIME_CONNECT_TIMEOUT)
-        .timeout(NEUTRALINO_RUNTIME_DOWNLOAD_TIMEOUT)
-        .build()
-        .map_err(|error| export_error(format!("无法初始化运行时下载: {error}")))?;
-    let response = client
-        .get(download_url)
-        .send()
-        .await
-        .map_err(|error| export_error(format!("运行时下载失败: {error}")))?
-        .error_for_status()
-        .map_err(|error| export_error(format!("运行时下载失败: {error}")))?;
-    if response
-        .content_length()
-        .is_some_and(|size| size > MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES)
-    {
-        return Err(export_error("Neutralinojs 运行时压缩包超过允许大小"));
-    }
-    let mut archive = Vec::new();
-    let mut stream = response.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|error| export_error(format!("运行时读取失败: {error}")))?;
-        if archive.len().saturating_add(chunk.len()) > MAX_NEUTRALINO_RUNTIME_ARCHIVE_BYTES as usize
-        {
-            return Err(export_error("Neutralinojs 运行时压缩包超过允许大小"));
-        }
-        archive.extend_from_slice(&chunk);
-    }
-    verify_neutralino_runtime_archive(&archive)?;
-    let entry_name = neutralino_runtime_entry(&target_os, &target_arch)?;
-    let runtime = tauri::async_runtime::spawn_blocking(move || {
-        extract_neutralino_runtime(&archive, entry_name)
-    })
-    .await
-    .map_err(|error| export_error(format!("运行时解压任务执行失败: {error}")))??;
-    let parent = runtime_path
-        .parent()
-        .expect("runtime cache path should have parent");
-    if !parent.exists() {
-        fs::create_dir_all(parent)?;
-    }
-    cache_pc_runtime(&runtime_path, &runtime)?;
-    Ok(runtime_path.to_string_lossy().into_owned())
+    let runtime = bundled_pc_runtime(&app.path().resource_dir()?, &target_os, &target_arch)?;
+    Ok(runtime.to_string_lossy().into_owned())
 }
 
 #[cfg(test)]
 mod tests {
     #[cfg(windows)]
     use std::process::Command;
-    use std::{
-        fs,
-        io::{Read, Write},
-        path::Path,
-    };
+    use std::{fs, io::Read, path::Path};
 
     use flate2::read::GzDecoder;
     use sha2::{Digest, Sha256};
 
     use super::{
-        cache_pc_runtime, copy_web_icons, export_pc_to_directory, export_web_to_directory,
-        extract_neutralino_runtime, is_precompressible, neutralino_runtime_entry, precompress_file,
-        resolve_neutralino_runtime_url, resolve_pc_icon, sanitize_desktop_name,
-        verify_neutralino_runtime_archive, AppError, CachedCanonicals, OverlayFs, PcExportRequest,
-        PcWindowConfig, WebExportOptions, NEUTRALINO_RUNTIME_ARCHIVE_URL, STEP_COPYING_ICONS,
-        STEP_COPYING_RUNTIME, STEP_FINISHED, STEP_PACKING_RESOURCES,
+        bundled_pc_runtime, copy_web_icons, export_pc_to_directory, export_web_to_directory,
+        is_precompressible, pc_runtime_entry, precompress_file, resolve_pc_icon,
+        sanitize_desktop_name, AppError, CachedCanonicals, OverlayFs, PcExportRequest,
+        PcWindowConfig, WebExportOptions, STEP_COPYING_ICONS, STEP_COPYING_RUNTIME, STEP_FINISHED,
+        STEP_PREPARING_RESOURCES,
     };
     use serde_json::Value;
     use tempfile::tempdir;
-    use zip::{write::SimpleFileOptions, ZipWriter};
+    use webgal_game_runtime::{GameConfig, CONFIG_FILE};
 
     fn write_file(path: &Path, content: &str) {
         fs::create_dir_all(path.parent().expect("fixture file should have parent"))
@@ -1727,25 +1454,8 @@ mod tests {
         );
     }
 
-    fn read_asar_file(archive: &[u8], path: &str) -> Option<Vec<u8>> {
-        let header_size = u32::from_le_bytes(archive.get(12..16)?.try_into().ok()?) as usize;
-        let aligned_header_size = (header_size + 3) & !3;
-        let header: Value = serde_json::from_slice(archive.get(16..16 + header_size)?).ok()?;
-        let mut entry = header.get("files")?;
-        for (index, component) in path.split('/').enumerate() {
-            entry = entry.get(component)?;
-            if index + 1 < path.split('/').count() {
-                entry = entry.get("files")?;
-            }
-        }
-        let offset = entry.get("offset")?.as_str()?.parse::<usize>().ok()?;
-        let size = entry.get("size")?.as_u64()? as usize;
-        let start = 16 + aligned_header_size + offset;
-        Some(archive.get(start..start + size)?.to_vec())
-    }
-
     fn export_pc_fixture(root: &Path, target_os: &str, target_arch: &str, output: &Path) {
-        let runtime = root.join("neutralino-runtime");
+        let runtime = root.join("game-runtime");
         write_file(&runtime, "runtime");
         export_pc_to_directory(
             PcExportRequest {
@@ -2063,7 +1773,7 @@ mod tests {
     }
 
     #[test]
-    fn skips_precompression_for_embedded_runtime_bundles() {
+    fn skips_precompression_for_desktop_resources() {
         let root = tempdir().expect("temp root should be created");
         create_export_fixture(root.path());
         write_compressible_file(&root.path().join("engine/assets/runtime.js"), 200);
@@ -2071,9 +1781,8 @@ mod tests {
 
         export_pc_fixture(root.path(), "windows", "x64", &output);
 
-        let bundle = fs::read(output.join("resources.neu")).expect("bundle should be readable");
-        assert!(read_asar_file(&bundle, "assets/runtime.js").is_some());
-        assert!(read_asar_file(&bundle, "assets/runtime.js.gz").is_none());
+        assert!(output.join("resources/assets/runtime.js").is_file());
+        assert!(!output.join("resources/assets/runtime.js.gz").exists());
     }
 
     #[test]
@@ -2386,8 +2095,8 @@ mod tests {
     }
 
     #[test]
-    fn exports_pc_runtime_resources_and_neutralino_config() {
-        let root = tempdir().expect("temp root should be created");
+    fn exports_pc_runtime_resources_and_config() {
+        let root = tempdir().unwrap();
         create_export_fixture(root.path());
         let output = root.path().join("output/Demo/windows");
         export_pc_fixture(root.path(), "windows", "x64", &output);
@@ -2395,51 +2104,116 @@ mod tests {
             fs::read_to_string(output.join("My Game.exe")).unwrap(),
             "runtime"
         );
-        let bundle = fs::read(output.join("resources.neu")).unwrap();
         assert_eq!(
-            read_asar_file(&bundle, "index.html"),
-            Some(b"<html></html>".to_vec())
+            fs::read_to_string(output.join("resources/index.html")).unwrap(),
+            "<html></html>"
         );
         assert_eq!(
-            read_asar_file(&bundle, "game/config.txt"),
-            Some(b"Game_name: Demo;\nGame_key: demo-key;\nDescription: A visual novel;".to_vec())
+            fs::read_to_string(output.join("resources/game/config.txt")).unwrap(),
+            "Game_name: Demo;\nGame_key: demo-key;\nDescription: A visual novel;"
         );
-        let config: Value =
-            serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
-                .unwrap();
-        assert_eq!(config["enableServer"], true);
-        assert_eq!(config["enableNativeAPI"], true);
-        assert_eq!(config["tokenSecurity"], "one-time");
+        let config: GameConfig =
+            serde_json::from_slice(&fs::read(output.join(CONFIG_FILE)).unwrap()).unwrap();
+        config.validate().unwrap();
+        assert_eq!(config.game_key, "demo-key");
+        assert_eq!(config.title, "My Game");
         assert_eq!(
-            config["nativeAllowList"],
-            serde_json::json!([
-                "app.exit",
-                "window.setFullScreen",
-                "window.exitFullScreen",
-                "window.isFullScreen",
-            ])
+            (
+                config.width,
+                config.height,
+                config.min_width,
+                config.min_height
+            ),
+            (1280, 720, 800, 600)
         );
-        assert_eq!(config["modes"]["window"]["width"], 1280);
-        assert_eq!(config["modes"]["window"]["newWindowPolicy"], "browser");
-        assert_eq!(config["modes"]["window"]["injectClientLibrary"], true);
-        assert_eq!(
-            config["modes"]["window"]["injectScript"],
-            "/webgalcraft-neutralino-window.js"
-        );
-        assert_eq!(config["cli"]["clientLibrary"], "/webgalcraft-neutralino.js");
-        assert!(read_asar_file(&bundle, "webgalcraft-neutralino.js").is_some());
-        assert!(read_asar_file(&bundle, "webgalcraft-neutralino-LICENSE.txt").is_some());
-        assert!(read_asar_file(&bundle, "webgalcraft-neutralino-window.js").is_some());
+        assert!(!config.full_screen);
+        assert!(config.resizable);
     }
 
     #[test]
-    fn keeps_desktop_storage_origin_across_exports_and_separates_game_keys() {
-        let root = tempdir().expect("temp root should be created");
+    fn preserves_runtime_files_when_game_name_conflicts() {
+        for target_os in ["linux", "macos"] {
+            for (game_name, executable_name) in [
+                ("webgal-runtime.json", "webgal-runtime.json_"),
+                ("resources", "resources_"),
+                ("icon.png", "icon.png_"),
+                ("WebGAL-Runtime.JSON", "WebGAL-Runtime.JSON_"),
+                ("Resources", "Resources_"),
+                ("ICON.PNG", "ICON.PNG_"),
+                (" resources. ", "resources_"),
+                ("resources_", "resources_"),
+            ] {
+                let root = tempdir().unwrap();
+                create_export_fixture(root.path());
+                let runtime = root.path().join("game-runtime");
+                write_file(&runtime, "runtime");
+                image::RgbaImage::from_pixel(16, 16, image::Rgba([1, 2, 3, 255]))
+                    .save(root.path().join("game/icons/icon-192.png"))
+                    .unwrap();
+                let output = root.path().join("output");
+
+                export_pc_to_directory(
+                    PcExportRequest {
+                        engine_path: &root.path().join("engine"),
+                        game_path: &root.path().join("game"),
+                        template_path: Some(&root.path().join("template")),
+                        runtime_path: &runtime,
+                        output_path: &output,
+                        game_name,
+                        target_os,
+                        target_arch: "x64",
+                        window: &PcWindowConfig {
+                            width: 1280,
+                            height: 720,
+                            min_width: 800,
+                            min_height: 600,
+                            full_screen: false,
+                            resizable: true,
+                        },
+                        replace_existing: false,
+                    },
+                    |_, _| Ok(()),
+                )
+                .unwrap();
+
+                let executable_directory = if target_os == "macos" {
+                    let contents =
+                        output.join(format!("{}.app/Contents", sanitize_desktop_name(game_name)));
+                    let info = fs::read_to_string(contents.join("Info.plist")).unwrap();
+                    assert!(info.contains(&format!(
+                        "<key>CFBundleExecutable</key><string>{executable_name}</string>"
+                    )));
+                    assert!(contents.join("Resources/icon.icns").is_file());
+                    contents.join("MacOS")
+                } else {
+                    output
+                };
+                assert_eq!(
+                    fs::read_to_string(executable_directory.join(executable_name)).unwrap(),
+                    "runtime",
+                    "{target_os}: {game_name}"
+                );
+                let config: GameConfig = serde_json::from_slice(
+                    &fs::read(executable_directory.join(CONFIG_FILE)).unwrap(),
+                )
+                .unwrap();
+                assert_eq!(config.title, game_name);
+                assert_eq!(config.game_key, "demo-key");
+                assert!(executable_directory.join("resources/index.html").is_file());
+                assert!(executable_directory.join("resources/icon.png").is_file());
+            }
+        }
+    }
+
+    #[test]
+    fn exports_stable_storage_identity_from_game_key() {
+        let root = tempdir().unwrap();
         create_export_fixture(root.path());
-        for (directory, game_key, expected_port) in [
-            ("first", "demo-key", 51908),
-            ("reexport", "demo-key", 51908),
-            ("other-game", "other-key", 51288),
+        let mut identities = Vec::new();
+        for (directory, game_key) in [
+            ("first", "demo-key"),
+            ("reexport", "demo-key"),
+            ("other-game", "other-key"),
         ] {
             write_file(
                 &root.path().join("game/game/config.txt"),
@@ -2447,19 +2221,20 @@ mod tests {
             );
             let output = root.path().join(directory);
             export_pc_fixture(root.path(), "linux", "x64", &output);
-            let bundle = fs::read(output.join("resources.neu")).unwrap();
-            let config: Value =
-                serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
-                    .unwrap();
-            assert_eq!(config["port"], expected_port);
+            let config: GameConfig =
+                serde_json::from_slice(&fs::read(output.join(CONFIG_FILE)).unwrap()).unwrap();
+            assert_eq!(config.game_key, game_key);
+            identities.push(config.application_id());
         }
+        assert_eq!(identities[0], identities[1]);
+        assert_ne!(identities[0], identities[2]);
     }
 
     #[test]
     fn rejects_desktop_export_without_a_storage_identity() {
         let root = tempdir().expect("temp root should be created");
         create_export_fixture(root.path());
-        let runtime = root.path().join("neutralino-runtime");
+        let runtime = root.path().join("game-runtime");
         write_file(&runtime, "runtime");
         let output = root.path().join("output/Demo");
         for config in ["Game_name: Demo;", "Game_name: Demo;\nGame_key:   ;"] {
@@ -2497,7 +2272,7 @@ mod tests {
     fn reports_pc_export_progress_monotonically() {
         let root = tempdir().expect("temp root should be created");
         create_export_fixture(root.path());
-        let runtime = root.path().join("neutralino-runtime");
+        let runtime = root.path().join("game-runtime");
         write_file(&runtime, "runtime");
         let output = root.path().join("output/Demo/windows");
         let mut progress = Vec::new();
@@ -2533,30 +2308,20 @@ mod tests {
             .iter()
             .position(|(step, _)| step == STEP_COPYING_RUNTIME)
             .expect("runtime copy progress should be reported");
-        let packing_index = progress
+        let resources_index = progress
             .iter()
-            .position(|(step, _)| step == STEP_PACKING_RESOURCES)
-            .expect("resource packing progress should be reported");
-        assert!(runtime_index < packing_index);
+            .position(|(step, _)| step == STEP_PREPARING_RESOURCES)
+            .expect("resource preparation progress should be reported");
+        assert!(runtime_index < resources_index);
         assert!(
             progress.windows(2).all(|pair| pair[0].1 <= pair[1].1),
             "desktop export progress should not move backwards: {progress:?}",
-        );
-        let packing_percentages = progress
-            .iter()
-            .filter_map(|(step, percentage)| {
-                (step == STEP_PACKING_RESOURCES).then_some(*percentage)
-            })
-            .collect::<Vec<_>>();
-        assert!(
-            packing_percentages.windows(2).all(|pair| pair[0] < pair[1]),
-            "resource packing progress should not repeat: {packing_percentages:?}",
         );
         assert_eq!(progress.last(), Some(&(STEP_FINISHED.to_owned(), 100)));
     }
 
     #[test]
-    fn exports_linux_icon_inside_resources_archive() {
+    fn exports_linux_icon_inside_resources_directory() {
         let root = tempdir().expect("temp root should be created");
         create_export_fixture(root.path());
         let icon = image::RgbaImage::from_pixel(16, 16, image::Rgba([1, 2, 3, 255]));
@@ -2570,12 +2335,7 @@ mod tests {
             fs::read_to_string(output.join("My Game")).unwrap(),
             "runtime"
         );
-        let bundle = fs::read(output.join("resources.neu")).unwrap();
-        assert!(read_asar_file(&bundle, "icon.png").is_some());
-        let config: Value =
-            serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
-                .unwrap();
-        assert_eq!(config["modes"]["window"]["icon"], "/icon.png");
+        assert!(output.join("resources/icon.png").is_file());
         assert!(!output.join("icon.png").exists());
     }
 
@@ -2593,9 +2353,8 @@ mod tests {
 
         export_pc_fixture(root.path(), "linux", "x64", &output);
 
-        let bundle = fs::read(output.join("resources.neu")).unwrap();
         let icon = image::load_from_memory(
-            &read_asar_file(&bundle, "icon.png").expect("default icon should be packaged"),
+            &fs::read(output.join("resources/icon.png")).expect("default icon should be packaged"),
         )
         .expect("default icon should be a PNG")
         .to_rgba8();
@@ -2611,9 +2370,9 @@ mod tests {
 
         export_pc_fixture(root.path(), "linux", "x64", &square_output);
 
-        let bundle = fs::read(square_output.join("resources.neu")).unwrap();
         let icon = image::load_from_memory(
-            &read_asar_file(&bundle, "icon.png").expect("desktop icon should be packaged"),
+            &fs::read(square_output.join("resources/icon.png"))
+                .expect("desktop icon should be packaged"),
         )
         .expect("desktop icon should be a PNG")
         .to_rgba8();
@@ -2626,9 +2385,9 @@ mod tests {
         create_icon_source_fixture(root.path(), "circle");
         let circle_output = root.path().join("output/Demo/linux-circle");
         export_pc_fixture(root.path(), "linux", "x64", &circle_output);
-        let bundle = fs::read(circle_output.join("resources.neu")).unwrap();
         let icon = image::load_from_memory(
-            &read_asar_file(&bundle, "icon.png").expect("desktop icon should be packaged"),
+            &fs::read(circle_output.join("resources/icon.png"))
+                .expect("desktop icon should be packaged"),
         )
         .expect("desktop icon should be a PNG")
         .to_rgba8();
@@ -2656,17 +2415,15 @@ mod tests {
         let info = fs::read_to_string(contents.join("Info.plist")).unwrap();
         assert!(info.contains("<key>CFBundleExecutable</key><string>My Game</string>"));
         assert!(info.contains("My Game"));
-        assert!(read_asar_file(
-            &fs::read(contents.join("MacOS/resources.neu")).unwrap(),
-            "index.html"
-        )
-        .is_some());
-        let bundle = fs::read(contents.join("MacOS/resources.neu")).unwrap();
-        assert!(read_asar_file(&bundle, "icon.png").is_some());
-        let config: Value =
-            serde_json::from_slice(&read_asar_file(&bundle, "neutralino.config.json").unwrap())
+        assert!(contents.join("MacOS/resources/index.html").is_file());
+        assert!(contents.join("MacOS/resources/icon.png").is_file());
+        let config: GameConfig =
+            serde_json::from_slice(&fs::read(contents.join("MacOS").join(CONFIG_FILE)).unwrap())
                 .unwrap();
-        assert_eq!(config["modes"]["window"]["icon"], "/icon.png");
+        assert!(info.contains(&format!(
+            "<key>CFBundleIdentifier</key><string>{}</string>",
+            config.application_id()
+        )));
     }
 
     #[test]
@@ -2705,105 +2462,20 @@ mod tests {
     }
 
     #[test]
-    fn extracts_only_requested_runtime_from_archive() {
-        let bytes = Vec::new();
-        let mut archive = ZipWriter::new(std::io::Cursor::new(bytes));
-        archive
-            .start_file("neutralino-win_x64.exe", SimpleFileOptions::default())
-            .unwrap();
-        archive.write_all(b"windows").unwrap();
-        archive
-            .start_file("neutralino-mac_arm64", SimpleFileOptions::default())
-            .unwrap();
-        archive.write_all(b"macos").unwrap();
-        let bytes = archive.finish().unwrap().into_inner();
-
-        assert_eq!(
-            extract_neutralino_runtime(&bytes, "neutralino-mac_arm64").unwrap(),
-            b"macos"
-        );
-        assert!(extract_neutralino_runtime(&bytes, "neutralino-linux_x64").is_err());
-    }
-
-    #[test]
-    fn rejects_neutralino_runtime_archive_with_unexpected_digest() {
-        let error = verify_neutralino_runtime_archive(b"not the official archive")
-            .expect_err("unexpected runtime archive should be rejected");
-
-        assert!(matches!(error, AppError::Export(message) if message.contains("校验失败")));
-    }
-
-    #[test]
-    fn caches_concurrent_runtime_writes_without_temporary_files() {
-        let root = tempdir().expect("temp root should be created");
-        let runtime_path = root.path().join("neutralino-win_x64.exe");
-        let handles = (0..4)
-            .map(|_| {
-                let runtime_path = runtime_path.clone();
-                std::thread::spawn(move || cache_pc_runtime(&runtime_path, b"runtime"))
-            })
-            .collect::<Vec<_>>();
-
-        for handle in handles {
-            handle
-                .join()
-                .expect("runtime cache worker should finish")
-                .expect("runtime should be cached");
-        }
-
-        assert_eq!(fs::read(&runtime_path).unwrap(), b"runtime");
-        assert_eq!(fs::read_dir(root.path()).unwrap().count(), 1);
-    }
-
-    #[test]
-    fn maps_supported_neutralino_runtime_targets() {
-        assert_eq!(
-            neutralino_runtime_entry("windows", "x64").unwrap(),
-            "neutralino-win_x64.exe"
-        );
-        assert_eq!(
-            neutralino_runtime_entry("macos", "x64").unwrap(),
-            "neutralino-mac_x64"
-        );
-        assert_eq!(
-            neutralino_runtime_entry("macos", "arm64").unwrap(),
-            "neutralino-mac_arm64"
-        );
-        assert_eq!(
-            neutralino_runtime_entry("linux", "x64").unwrap(),
-            "neutralino-linux_x64"
-        );
-        assert!(neutralino_runtime_entry("windows", "arm64").is_err());
-    }
-
-    #[test]
-    fn resolves_neutralino_runtime_url_through_an_https_proxy_prefix() {
-        assert_eq!(
-            resolve_neutralino_runtime_url(Some("https://proxy.example/"))
-                .expect("proxy URL should be accepted"),
-            "https://proxy.example/https://github.com/neutralinojs/neutralinojs/releases/download/v6.9.0/neutralinojs-v6.9.0.zip"
-        );
-        assert_eq!(
-            resolve_neutralino_runtime_url(Some("https://proxy.example"))
-                .expect("proxy URL without a trailing slash should be accepted"),
-            "https://proxy.example/https://github.com/neutralinojs/neutralinojs/releases/download/v6.9.0/neutralinojs-v6.9.0.zip"
-        );
-        assert_eq!(
-            resolve_neutralino_runtime_url(None).unwrap(),
-            NEUTRALINO_RUNTIME_ARCHIVE_URL
-        );
-    }
-
-    #[test]
-    fn rejects_insecure_or_credentialed_neutralino_runtime_proxy_urls() {
-        for proxy in [
-            "http://proxy.example/",
-            "https://user:password@proxy.example/",
-            "https://proxy.example/?token=secret",
+    fn resolves_only_supported_bundled_runtime_targets() {
+        let root = tempdir().unwrap();
+        for (os, arch, name) in [
+            ("windows", "x64", "webgal-game-runtime-windows-x64.exe"),
+            ("macos", "x64", "webgal-game-runtime-macos-x64"),
+            ("macos", "arm64", "webgal-game-runtime-macos-arm64"),
+            ("linux", "x64", "webgal-game-runtime-linux-x64"),
         ] {
-            let error = resolve_neutralino_runtime_url(Some(proxy))
-                .expect_err("unsafe proxy URL should be rejected");
-            assert!(error.to_string().contains("HTTPS"));
+            assert_eq!(pc_runtime_entry(os, arch).unwrap(), name);
+            assert!(bundled_pc_runtime(root.path(), os, arch).is_err());
+            let path = root.path().join("game-runtimes").join(name);
+            write_file(&path, "runtime");
+            assert_eq!(bundled_pc_runtime(root.path(), os, arch).unwrap(), path);
         }
+        assert!(pc_runtime_entry("windows", "arm64").is_err());
     }
 }

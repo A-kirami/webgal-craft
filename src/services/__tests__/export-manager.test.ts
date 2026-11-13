@@ -64,7 +64,7 @@ describe('exportManager', () => {
     exportWebCommandMock.mockResolvedValue(undefined)
     exportAndroidWebZipCommandMock.mockResolvedValue(undefined)
     exportPcCommandMock.mockResolvedValue(undefined)
-    ensurePcRuntimeCommandMock.mockResolvedValue(AbsPath.from('/cache/neutralinojs-win_x64.exe'))
+    ensurePcRuntimeCommandMock.mockResolvedValue(AbsPath.from('/resources/game-runtimes/webgal-game-runtime-windows-x64.exe'))
   })
 
   it('会生成安全目录名并把当前站点三层路径传给导出命令', async () => {
@@ -143,7 +143,7 @@ describe('exportManager', () => {
       gameName: ' Demo/Game ',
       onProgress,
       outputRoot: AbsPath.from('/exports'),
-      runtimePath: AbsPath.from('/cache/neutralinojs-win_x64.exe'),
+      runtimePath: AbsPath.from('/resources/game-runtimes/webgal-game-runtime-windows-x64.exe'),
       targetArch: 'x64',
       targetOs: 'windows',
       windowConfig: {
@@ -163,14 +163,14 @@ describe('exportManager', () => {
         exportId: params.exportId,
         percentage: 80,
         platform: 'windows-x64',
-        step: 'export.progress.packingResources',
+        step: 'export.progress.preparingResources',
       },
     })
 
     await expect(pending).resolves.toBe('/exports/Demo_Game/windows-x64')
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
       platform: 'windows-x64',
-      step: 'export.progress.packingResources',
+      step: 'export.progress.preparingResources',
     }))
     expect(exportPcCommandMock).toHaveBeenCalledWith({
       enginePath: '/engines/webgal',
@@ -179,7 +179,7 @@ describe('exportManager', () => {
       gamePath: '/games/demo',
       outputPath: '/exports/Demo_Game/windows-x64',
       replaceExisting: false,
-      runtimePath: '/cache/neutralinojs-win_x64.exe',
+      runtimePath: '/resources/game-runtimes/webgal-game-runtime-windows-x64.exe',
       targetArch: 'x64',
       targetOs: 'windows',
       templatePath: '/templates/default',
@@ -195,10 +195,11 @@ describe('exportManager', () => {
     expect(unlistenMock).toHaveBeenCalledOnce()
   })
 
-  it('按目标操作系统和架构确保运行时', async () => {
-    await expect(exportManager.ensurePcRuntime('macos', 'arm64', 'https://proxy.example/')).resolves.toBe('/cache/neutralinojs-win_x64.exe')
+  it('按目标操作系统和架构准备内置运行时', async () => {
+    const runtime = AbsPath.from('/resources/game-runtimes/webgal-game-runtime-macos-arm64')
+    ensurePcRuntimeCommandMock.mockResolvedValueOnce(runtime)
+    await expect(exportManager.ensurePcRuntime('macos', 'arm64')).resolves.toBe(runtime)
     expect(ensurePcRuntimeCommandMock).toHaveBeenCalledWith({
-      proxyPrefix: 'https://proxy.example/',
       targetArch: 'arm64',
       targetOs: 'macos',
     })

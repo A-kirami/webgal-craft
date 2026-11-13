@@ -6,6 +6,7 @@ on:
     paths:
       - "src-tauri/**/*.rs"
       - "src-tauri/Cargo.toml"
+      - "src-tauri/game-runtime/**"
       - "src-tauri/Cargo.lock"
       - "src-tauri/.rustfmt.toml"
       - ".github/workflows/rust-lint.yml"
@@ -13,6 +14,7 @@ on:
     paths:
       - "src-tauri/**/*.rs"
       - "src-tauri/Cargo.toml"
+      - "src-tauri/game-runtime/**"
       - "src-tauri/Cargo.lock"
       - "src-tauri/.rustfmt.toml"
       - ".github/workflows/rust-lint.yml"
@@ -34,6 +36,10 @@ jobs:
         include:
           - name: clippy
             command: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+            needs-deps: true
+          # Tauri production features must be checked per app: Cargo otherwise unifies their asset contexts.
+          - name: game-runtime-clippy
+            command: cargo clippy --manifest-path src-tauri/Cargo.toml -p webgal-game-runtime --all-targets --all-features -- -D warnings
             needs-deps: true
           - name: format
             command: cargo fmt --manifest-path src-tauri/Cargo.toml --all --check

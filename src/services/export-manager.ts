@@ -194,8 +194,8 @@ async function exportPc(config: PcExportConfig): Promise<AbsPath> {
   }
 }
 
-async function ensurePcRuntime(targetOs: PcTargetOs, targetArch: PcTargetArch, proxyPrefix?: string): Promise<AbsPath> {
-  return exportCmds.ensurePcRuntime({ proxyPrefix, targetArch, targetOs })
+async function ensurePcRuntime(targetOs: PcTargetOs, targetArch: PcTargetArch): Promise<AbsPath> {
+  return exportCmds.ensurePcRuntime({ targetArch, targetOs })
 }
 
 export const exportManager = {

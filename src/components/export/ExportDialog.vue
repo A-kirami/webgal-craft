@@ -149,11 +149,11 @@ function progressLabel(key: ExportTask['stepKey']): string {
     case 'export.progress.precompressing': {
       return t('export.progress.precompressing')
     }
-    case 'export.progress.packingResources': {
-      return t('export.progress.packingResources')
+    case 'export.progress.preparingResources': {
+      return t('export.progress.preparingResources')
     }
-    case 'export.progress.downloadingRuntime': {
-      return t('export.progress.downloadingRuntime')
+    case 'export.progress.preparingRuntime': {
+      return t('export.progress.preparingRuntime')
     }
     case 'export.progress.copyingRuntime': {
       return t('export.progress.copyingRuntime')
