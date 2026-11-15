@@ -545,17 +545,7 @@ pub(super) fn export_pc_to_directory(
             app_root.clone()
         };
         fs::create_dir_all(&executable_directory)?;
-        let mut executable_name = if target_os == "windows" {
-            format!("{executable_stem}.exe")
-        } else {
-            executable_stem.clone()
-        };
-        if [CONFIG_FILE, RESOURCE_DIRECTORY, "icon.png"]
-            .iter()
-            .any(|name| executable_name.eq_ignore_ascii_case(name))
-        {
-            executable_name.push('_');
-        }
+        let executable_name = pc_executable_name(&executable_stem, target_os);
         let executable_path = executable_directory.join(&executable_name);
         fs::copy(runtime_path, &executable_path)?;
         #[cfg(unix)]
@@ -634,6 +624,21 @@ pub(super) fn export_pc_to_directory(
     }
 
     report(STEP_FINISHED, 100)
+}
+
+pub(super) fn pc_executable_name(executable_stem: &str, target_os: &str) -> String {
+    let mut name = if target_os == "windows" {
+        format!("{executable_stem}.exe")
+    } else {
+        executable_stem.to_owned()
+    };
+    if [CONFIG_FILE, RESOURCE_DIRECTORY, "icon.png"]
+        .iter()
+        .any(|reserved| name.eq_ignore_ascii_case(reserved))
+    {
+        name.push('_');
+    }
+    name
 }
 
 pub(super) fn sanitize_desktop_name(value: &str) -> String {
@@ -2205,12 +2210,13 @@ mod tests {
                             resizable: true,
                         },
                         replace_existing: false,
+                        packaging: &PcPackaging::Portable,
                     },
                     |_, _| Ok(()),
                 )
                 .unwrap();
 
-                let executable_directory = if target_os == "macos" {
+                let (executable_directory, data_directory) = if target_os == "macos" {
                     let contents =
                         output.join(format!("{}.app/Contents", sanitize_desktop_name(game_name)));
                     let info = fs::read_to_string(contents.join("Info.plist")).unwrap();
@@ -2218,23 +2224,22 @@ mod tests {
                         "<key>CFBundleExecutable</key><string>{executable_name}</string>"
                     )));
                     assert!(contents.join("Resources/icon.icns").is_file());
-                    contents.join("MacOS")
+                    (contents.join("MacOS"), contents.join("Resources"))
                 } else {
-                    output
+                    (output.clone(), output)
                 };
                 assert_eq!(
                     fs::read_to_string(executable_directory.join(executable_name)).unwrap(),
                     "runtime",
                     "{target_os}: {game_name}"
                 );
-                let config: GameConfig = serde_json::from_slice(
-                    &fs::read(executable_directory.join(CONFIG_FILE)).unwrap(),
-                )
-                .unwrap();
+                let config: GameConfig =
+                    serde_json::from_slice(&fs::read(data_directory.join(CONFIG_FILE)).unwrap())
+                        .unwrap();
                 assert_eq!(config.title, game_name);
                 assert_eq!(config.game_key, "demo-key");
-                assert!(executable_directory.join("resources/index.html").is_file());
-                assert!(executable_directory.join("resources/icon.png").is_file());
+                assert!(data_directory.join("resources/index.html").is_file());
+                assert!(data_directory.join("resources/icon.png").is_file());
             }
         }
     }

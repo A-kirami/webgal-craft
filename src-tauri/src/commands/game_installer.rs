@@ -182,13 +182,11 @@ fn build_in_worker(request: &BuildRequest) -> AppResult<()> {
     } else {
         portable.to_path_buf()
     };
+    let executable_name = super::export::pc_executable_name(&stem, os);
     let source_binary = if os == "macos" {
-        app.join("MacOS").join(&stem)
+        app.join("MacOS").join(&executable_name)
     } else {
-        portable.join(format!(
-            "{stem}{}",
-            if os == "windows" { ".exe" } else { "" }
-        ))
+        portable.join(&executable_name)
     };
     // Linux package/resource paths and Windows executable names must survive title changes.
     let binary_name = if os == "macos" {
