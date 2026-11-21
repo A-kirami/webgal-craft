@@ -69,7 +69,10 @@ watch(open, (isOpen) => {
 }, { immediate: true })
 
 const selectedPlatformValid = computed(() => selectedPlatform.value === 'web' || (selectedPlatform.value === 'desktop' && hasDesktopTargets.value))
-const canAdvance = computed(() => currentStep.value === 1 ? selectedPlatformValid.value : hasOutputTarget.value && (selectedPlatform.value !== 'desktop' || desktopConfigValid.value))
+const exportConfigValid = computed(() => selectedPlatformValid.value
+  && hasOutputTarget.value
+  && (selectedPlatform.value !== 'desktop' || desktopConfigValid.value))
+const canAdvance = computed(() => currentStep.value === 1 ? selectedPlatformValid.value : exportConfigValid.value)
 const hasFinishedTasks = computed(() => exportTasks.value.length > 0
   && !isBusy.value
   && exportTasks.value.every(task => task.status === 'completed' || task.status === 'failed'))
@@ -85,7 +88,7 @@ function isStepDisabled(step: number): boolean {
   if (step === 2) {
     return !selectedPlatformValid.value
   }
-  return step === 3 && !hasOutputTarget.value
+  return step === 3 && !exportConfigValid.value
 }
 
 function isStepComplete(step: number): boolean {
@@ -345,7 +348,7 @@ function progressIndicatorClass(task: ExportTask): string {
           <Button v-if="currentStep < 3" :disabled="!canAdvance || isBusy" @click="goToNextStep">
             {{ $t('export.next') }}
           </Button>
-          <Button v-else :disabled="!canStart || !selectedPlatformValid" @click="startExport(selectedPlatform)">
+          <Button v-else :disabled="!canStart || !exportConfigValid" @click="startExport(selectedPlatform)">
             <Loader2 v-if="isRunning" class="animate-spin" aria-hidden="true" />
             {{ isRunning ? $t('export.exporting') : hasFailedTasks ? $t('export.retry') : $t('export.start') }}
           </Button>

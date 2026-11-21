@@ -607,6 +607,24 @@ describe('ExportDialog', () => {
     completeExport?.()
   })
 
+  it('返回配置并切换到安装包后，须填写发行者才能从步骤条进入导出', async () => {
+    await renderExportDialog({ localizedI18n: true })
+    await page.getByRole('button', { name: '桌面端' }).click()
+    const next = page.getByRole('button', { name: '下一步' })
+    await next.click()
+    await next.click()
+    await page.getByRole('button', { name: '上一步' }).click()
+    await page.getByRole('radio', { name: '安装包', exact: true }).click()
+
+    const exportStep = page.getByRole('button', { name: '导出', exact: true })
+    await expect.element(next).toBeDisabled()
+    await expect.element(exportStep).toBeDisabled()
+
+    await page.getByRole('textbox', { name: '发行者' }).fill('Studio')
+    await exportStep.click()
+    await expect.element(page.getByRole('button', { name: '开始导出' })).toBeEnabled()
+  })
+
   it('切回便携版后恢复跨平台目标选择', async () => {
     await renderExportDialog({ localizedI18n: true })
     await page.getByRole('button', { name: '桌面端' }).click()
