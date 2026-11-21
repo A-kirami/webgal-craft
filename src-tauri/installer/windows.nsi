@@ -408,7 +408,7 @@ Section Install
     ${If} ${Errors}
     ${OrIf} $0 <> 0
     ${OrIf} ${FileExists} "$4\${MAINBINARYNAME}.exe"
-      MessageBox MB_ICONEXCLAMATION "$(unableToUninstall)"
+      MessageBox MB_ICONEXCLAMATION "$(unableToUninstall)" /SD IDOK
       Abort
     ${EndIf}
     Delete "$4\uninstall.exe"

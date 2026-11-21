@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
 import { createHash, randomUUID } from 'node:crypto'
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -101,6 +101,15 @@ try {
   const playerFile = join(installation, 'player-note.txt')
   await writeFile(playerFile, key)
   await access(join(installation, 'resources/game/scene/obsolete.txt'))
+
+  const uninstaller = join(installation, 'uninstall.exe')
+  const uninstallerBackup = join(scratch, 'uninstall.exe')
+  await rename(uninstaller, uninstallerBackup)
+  try {
+    assert.throws(() => runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS']), error => error.status === 2)
+  } finally {
+    await rename(uninstallerBackup, uninstaller)
+  }
 
   runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS'])
   const registration = execFileSync('reg.exe', ['query', registry], options)
