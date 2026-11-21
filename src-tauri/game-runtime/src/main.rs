@@ -41,7 +41,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     let root =
         if tauri::utils::platform::bundle_type() == Some(tauri::utils::config::BundleType::Deb) {
             std::path::PathBuf::from("/usr/lib")
-                .join(executable.file_stem().expect("executable has a name"))
+                .join(executable.file_name().expect("executable has a name"))
         } else {
             root.to_path_buf()
         };
