@@ -579,11 +579,11 @@ describe('ExportDialog', () => {
 
   it('安装包仅允许本机平台且校验发行信息后导出到独立目录', async () => {
     existsMock.mockResolvedValue(true)
-    let completeExport: (() => void) | undefined
-    exportPcMock.mockImplementation(config => new Promise<AbsPath>((resolve) => {
+    const pendingExport = Promise.withResolvers<AbsPath>()
+    exportPcMock.mockImplementation((config) => {
       config.onProgress({ exportId: 'installer', percentage: 85, platform: 'windows-x64', step: 'export.progress.buildingInstaller' })
-      completeExport = () => resolve(AbsPath.from('/exports/Demo Game/windows-x64-installer'))
-    }))
+      return pendingExport.promise
+    })
     await renderExportDialog({ localizedI18n: true })
     await page.getByRole('button', { name: '桌面端' }).click()
     await page.getByRole('button', { name: '下一步' }).click()
@@ -591,11 +591,21 @@ describe('ExportDialog', () => {
     await page.getByRole('radio', { name: '安装包', exact: true }).click()
     await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).not.toBeChecked()
     await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).toBeDisabled()
+    await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).toHaveAccessibleDescription('需在 macOS 上生成')
     await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
-    await page.getByRole('textbox', { name: '发行者' }).fill('Studio')
-    await page.getByRole('textbox', { name: '版本号' }).fill('1.2.3-beta')
+    const publisher = page.getByRole('textbox', { name: '发行者' })
+    const version = page.getByRole('textbox', { name: '版本号' })
+    await expect.element(publisher).toHaveAttribute('aria-invalid', 'true')
+    await expect.element(publisher).toHaveAccessibleDescription('输入发行者名称')
+    await publisher.fill('Studio')
+    await expect.element(publisher).toHaveAttribute('aria-invalid', 'false')
+    await expect.element(page.getByText('输入发行者名称')).not.toBeInTheDocument()
+    await version.fill('1.2.3-beta')
+    await expect.element(version).toHaveAccessibleDescription('使用三段数字，如 1.2.3，各段不加前导零')
     await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
-    await page.getByRole('textbox', { name: '版本号' }).fill('1.2.3')
+    await version.fill('1.2.3')
+    await expect.element(version).toHaveAttribute('aria-invalid', 'false')
+    await expect.element(page.getByText('使用三段数字，如 1.2.3，各段不加前导零')).not.toBeInTheDocument()
     await page.getByRole('button', { name: '下一步' }).click()
     await page.getByRole('button', { name: '开始导出' }).click()
     await vi.waitFor(() => expect(exportPcMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -604,7 +614,8 @@ describe('ExportDialog', () => {
     })))
     expect(confirmExportOverwriteMock).toHaveBeenCalledWith('/exports/Demo Game/windows-x64-installer', expect.any(Function))
     await expect.element(page.getByText('正在生成安装包……')).toBeInTheDocument()
-    completeExport?.()
+    pendingExport.resolve(AbsPath.from('/exports/Demo Game/windows-x64-installer'))
+    await expect.element(page.getByText('导出完成', { exact: true })).toBeInTheDocument()
   })
 
   it('返回配置并切换到安装包后，须填写发行者才能从步骤条进入导出', async () => {
@@ -625,6 +636,28 @@ describe('ExportDialog', () => {
     await expect.element(page.getByRole('button', { name: '开始导出' })).toBeEnabled()
   })
 
+  it('返回修改安装包信息后不能跳过无效配置', async () => {
+    await renderExportDialog()
+    await page.getByRole('button', { name: /export\.platformDesktop/ }).click()
+    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('radio', { name: 'export.desktopConfig.installer', exact: true }).click()
+    await page.getByRole('textbox', { name: 'export.desktopConfig.publisher' }).fill('Studio')
+    await page.getByRole('button', { name: 'export.next' }).click()
+    await page.getByRole('button', { name: 'export.previousStep' }).click()
+
+    const exportStep = page.getByRole('button', { name: /export\.steps\.export/ })
+    const version = page.getByRole('textbox', { name: 'export.desktopConfig.version' })
+    await version.fill('invalid')
+    await expect.element(page.getByRole('button', { name: 'export.next' })).toBeDisabled()
+    await expect.element(exportStep).toBeDisabled()
+
+    await version.fill('1.2.3')
+    await expect.element(exportStep).toBeEnabled()
+    await exportStep.click()
+    await expect.element(page.getByRole('button', { name: 'export.start' })).toBeEnabled()
+    expect(exportPcMock).not.toHaveBeenCalled()
+  })
+
   it('切回便携版后恢复跨平台目标选择', async () => {
     await renderExportDialog({ localizedI18n: true })
     await page.getByRole('button', { name: '桌面端' }).click()
@@ -632,6 +665,70 @@ describe('ExportDialog', () => {
     await page.getByRole('radio', { name: '安装包', exact: true }).click()
     await page.getByRole('radio', { name: '便携版' }).click()
     await expect.element(page.getByRole('checkbox', { name: 'macOS x64' })).toBeEnabled()
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeEnabled()
+    await expect.element(page.getByText('输入发行者名称')).not.toBeInTheDocument()
+    await expect.element(page.getByText('需在 macOS 上生成')).not.toBeInTheDocument()
+  })
+
+  it('清空桌面目标时显示错误并阻止继续，重新选择后恢复', async () => {
+    await renderExportDialog({ localizedI18n: true })
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    const target = page.getByRole('checkbox', { name: 'Windows x64' })
+
+    await target.click()
+    await expect.element(page.getByText('至少选择一个桌面端目标')).toHaveAttribute('role', 'status')
+    await expect.element(page.getByText('先选择导出目录以继续')).not.toBeInTheDocument()
+    await expect.element(page.getByLabelText('导出目录')).toHaveValue('/exports')
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
+    await target.click()
+    await expect.element(page.getByText('至少选择一个桌面端目标')).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeEnabled()
+  })
+
+  it.each([
+    { platform: 'windows', invalid: '65536.0.0', valid: '65535.65535.65535', message: '每段数字不能超过 65535' },
+    { platform: 'linux', invalid: '1.65536.0', valid: '0.0.0', message: '每段数字不能超过 65535' },
+    { platform: 'macos', invalid: '10000.0.0', valid: '9999.99.99', message: 'macOS 第一段不能超过 9999，后两段不能超过 99' },
+    { platform: 'macos', invalid: '1.100.0', valid: '1.99.0', message: 'macOS 第一段不能超过 9999，后两段不能超过 99' },
+    { platform: 'macos', invalid: '1.0.100', valid: '1.0.99', message: 'macOS 第一段不能超过 9999，后两段不能超过 99' },
+    { platform: 'windows', invalid: '01.2.3', valid: '1.2.3', message: '使用三段数字，如 1.2.3，各段不加前导零' },
+    { platform: 'windows', invalid: '', valid: '1.2.3', message: '使用三段数字，如 1.2.3，各段不加前导零' },
+  ])('$platform 版本号 $invalid 显示具体错误并在修正后允许继续', async ({ platform, invalid, valid, message }) => {
+    osPlatformMock.mockReturnValue(platform)
+    await renderExportDialog({ localizedI18n: true })
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('radio', { name: '安装包', exact: true }).click()
+    await page.getByRole('textbox', { name: '发行者' }).fill('Studio')
+    const version = page.getByRole('textbox', { name: '版本号' })
+
+    await version.fill(invalid)
+    await expect.element(version).toHaveAttribute('aria-invalid', 'true')
+    await expect.element(version).toHaveAccessibleDescription(message)
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
+
+    await version.fill(valid)
+    await expect.element(version).toHaveAttribute('aria-invalid', 'false')
+    await expect.element(page.getByText(message)).not.toBeInTheDocument()
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeEnabled()
+  })
+
+  it('发行者为空白或包含控制字符时显示对应错误', async () => {
+    await renderExportDialog({ localizedI18n: true })
+    await page.getByRole('button', { name: '桌面端' }).click()
+    await page.getByRole('button', { name: '下一步' }).click()
+    await page.getByRole('radio', { name: '安装包', exact: true }).click()
+    const publisher = page.getByRole('textbox', { name: '发行者' })
+
+    await publisher.fill('  ')
+    await expect.element(publisher).toHaveAccessibleDescription('输入发行者名称')
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
+    await publisher.fill('Studio\tName')
+    await expect.element(publisher).toHaveAccessibleDescription('发行者名称不能包含控制字符')
+    await expect.element(page.getByRole('button', { name: '下一步' })).toBeDisabled()
+    await publisher.fill('Studio')
+    await expect.element(publisher).toHaveAttribute('aria-invalid', 'false')
     await expect.element(page.getByRole('button', { name: '下一步' })).toBeEnabled()
   })
 

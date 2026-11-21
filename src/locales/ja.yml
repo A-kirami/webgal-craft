@@ -731,10 +731,15 @@ export:
     format: 出力形式
     portable: ポータブル版
     installer: インストーラー
-    portableHint: 出力したフォルダーから直接起動します。対応するすべてのデスクトップ環境向けに出力できます。
-    installerHint: 対応する OS 上で Windows インストーラー、macOS DMG、Linux DEB を作成します。発行者と major.minor.patch 形式のバージョン（各部 0–65535）を入力してください。macOS では先頭の上限が 9999、残り 2 部の上限が 99 です。Windows では初回にパッケージツールをダウンロードします。配布用の署名と公証は設定されていません。更新とアンインストールではプレイヤーのセーブデータを保持します。
     version: バージョン
     publisher: 発行者
+    versionFormatInvalid: 1.2.3 のように、先頭にゼロを付けずに数字を 3 つ入力します
+    versionOutOfRange: 各数値の上限は 65535 です
+    macosVersionOutOfRange: macOS では最初の数値の上限は 9999、残り 2 つは 99 です
+    publisherRequired: 発行者名を入力します
+    publisherInvalid: 発行者名に制御文字は使えません
+    installerSystemRequired: '{system} 上で作成'
+    installerTargetInvalid: 現在の OS に対応するインストーラーの対象を選択します
     steamUnsupported: デスクトップ向けエクスポートでは、Steam の初期化と実績をサポートしていません。
     title: デスクトップ対象
     notSelected: デスクトップ対象が選択されていないため、追加設定は不要です

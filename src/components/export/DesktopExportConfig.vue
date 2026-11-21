@@ -1,26 +1,29 @@
 <script setup lang="ts">
 import { Monitor, MonitorCog } from '@lucide/vue'
 
+import type { DesktopConfigErrors } from '~/features/export/useWebExportDialog'
 import type { PcPackaging, PcTarget, PcWindowConfig } from '~/services/export-manager'
 
 interface Props {
   disabled?: boolean
+  errors: DesktopConfigErrors
   installerTargets: PcTarget[]
 }
 
 defineProps<Props>()
 const { t } = useI18n()
+const id = useId()
 
 const targets = defineModel<PcTarget[]>('targets', { required: true })
 const packaging = defineModel<PcPackaging>('packaging', { required: true })
 const windowConfig = defineModel<PcWindowConfig>('windowConfig', { required: true })
 type SizeKey = 'width' | 'height' | 'minWidth' | 'minHeight'
 
-const platformOptions = computed<{ label: string, value: PcTarget }[]>(() => [
-  { label: t('export.desktopConfig.targets.windowsX64'), value: 'windows-x64' },
-  { label: t('export.desktopConfig.targets.macosX64'), value: 'macos-x64' },
-  { label: t('export.desktopConfig.targets.macosArm64'), value: 'macos-arm64' },
-  { label: t('export.desktopConfig.targets.linuxX64'), value: 'linux-x64' },
+const platformOptions = computed<{ label: string, system: string, value: PcTarget }[]>(() => [
+  { label: t('export.desktopConfig.targets.windowsX64'), system: 'Windows', value: 'windows-x64' },
+  { label: t('export.desktopConfig.targets.macosX64'), system: 'macOS', value: 'macos-x64' },
+  { label: t('export.desktopConfig.targets.macosArm64'), system: 'macOS', value: 'macos-arm64' },
+  { label: t('export.desktopConfig.targets.linuxX64'), system: 'Linux', value: 'linux-x64' },
 ])
 
 function updateTarget(target: PcTarget, selected: boolean): void {
@@ -77,18 +80,38 @@ function updateSize(key: SizeKey, value: unknown): void {
           {{ $t('export.desktopConfig.installer') }}
         </label>
       </div>
-      <p class="text-xs text-muted-foreground">
-        {{ packaging.type === 'installer' ? $t('export.desktopConfig.installerHint') : $t('export.desktopConfig.portableHint') }}
-      </p>
       <div v-if="packaging.type === 'installer'" class="gap-3 grid grid-cols-2">
-        <label class="text-xs text-muted-foreground gap-1 grid">
-          {{ $t('export.desktopConfig.version') }}
-          <Input v-model="packaging.version" :disabled="disabled" placeholder="1.0.0" />
-        </label>
-        <label class="text-xs text-muted-foreground gap-1 grid">
-          {{ $t('export.desktopConfig.publisher') }}
-          <Input v-model="packaging.publisher" :disabled="disabled" />
-        </label>
+        <div class="text-xs gap-1 grid content-start">
+          <label :for="`${id}-version`" class="text-muted-foreground">{{ $t('export.desktopConfig.version') }}</label>
+          <Input
+            :id="`${id}-version`"
+            v-model="packaging.version"
+            :disabled="disabled"
+            placeholder="1.0.0"
+            required
+            :aria-invalid="!!errors.version"
+            :aria-describedby="errors.version ? `${id}-version-error` : undefined"
+            :class="{ 'border-destructive focus-visible:ring-destructive': errors.version }"
+          />
+          <p v-if="errors.version" :id="`${id}-version-error`" class="text-destructive" aria-live="polite">
+            {{ errors.version }}
+          </p>
+        </div>
+        <div class="text-xs gap-1 grid content-start">
+          <label :for="`${id}-publisher`" class="text-muted-foreground">{{ $t('export.desktopConfig.publisher') }}</label>
+          <Input
+            :id="`${id}-publisher`"
+            v-model="packaging.publisher"
+            :disabled="disabled"
+            required
+            :aria-invalid="!!errors.publisher"
+            :aria-describedby="errors.publisher ? `${id}-publisher-error` : undefined"
+            :class="{ 'border-destructive focus-visible:ring-destructive': errors.publisher }"
+          />
+          <p v-if="errors.publisher" :id="`${id}-publisher-error`" class="text-destructive" aria-live="polite">
+            {{ errors.publisher }}
+          </p>
+        </div>
       </div>
     </div>
 
@@ -96,10 +119,12 @@ function updateSize(key: SizeKey, value: unknown): void {
       <label
         v-for="option in platformOptions"
         :key="option.value"
-        class="text-sm px-2 py-3 border rounded-md gap-2 grid grid-rows-[2rem_1.5rem] cursor-pointer transition-colors items-center justify-items-center relative has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/10 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+        class="text-sm px-2 py-3 border rounded-md flex flex-col gap-2 cursor-pointer transition-colors items-center relative has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/10 has-[:disabled]:opacity-50 has-[:disabled]:cursor-not-allowed focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
       >
         <Checkbox
           class="sr-only"
+          :aria-label="option.label"
+          :aria-describedby="packaging.type === 'installer' && !installerTargets.includes(option.value) ? `${id}-${option.value}-requirement` : undefined"
           :model-value="targets.includes(option.value)"
           :disabled="disabled || (packaging.type === 'installer' && !installerTargets.includes(option.value))"
           @update:model-value="updateTarget(option.value, $event === true)"
@@ -108,10 +133,13 @@ function updateSize(key: SizeKey, value: unknown): void {
         <span v-else-if="option.value === 'linux-x64'" class="i-simple-icons-linux text-foreground size-7" aria-hidden="true" />
         <span v-else class="i-simple-icons-apple text-foreground size-7" aria-hidden="true" />
         <span class="text-13px leading-tight text-center flex items-start justify-center">{{ option.label }}</span>
+        <span v-if="packaging.type === 'installer' && !installerTargets.includes(option.value)" :id="`${id}-${option.value}-requirement`" class="text-xs text-muted-foreground text-center">
+          {{ $t('export.desktopConfig.installerSystemRequired', { system: option.system }) }}
+        </span>
       </label>
     </div>
-    <p v-if="targets.length === 0" class="text-xs text-destructive">
-      {{ $t('export.desktopConfig.targetRequired') }}
+    <p v-if="errors.targets" class="text-xs text-destructive" role="status">
+      {{ errors.targets }}
     </p>
 
     <p class="text-xs text-muted-foreground">

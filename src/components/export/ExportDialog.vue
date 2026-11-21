@@ -30,6 +30,7 @@ const selectedPlatform = shallowRef<ExportType>()
 
 const {
   canStart,
+  desktopConfigErrors,
   desktopConfigValid,
   desktopOutputPreview,
   elapsedMs,
@@ -263,6 +264,7 @@ function progressIndicatorClass(task: ExportTask): string {
             v-model:packaging="packaging"
             v-model:window-config="windowConfig"
             :installer-targets="installerTargets"
+            :errors="desktopConfigErrors"
             :disabled="isBusy"
           />
           <p v-else class="text-sm text-muted-foreground">

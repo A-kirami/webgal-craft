@@ -23,6 +23,12 @@ import type { ExportPlatform, ExportProgress, PcPackaging, PcTarget, PcTargetArc
 export type WebExportStatus = 'idle' | 'running' | 'completed' | 'failed'
 export type ExportType = 'web' | 'desktop'
 
+export interface DesktopConfigErrors {
+  publisher?: string
+  targets?: string
+  version?: string
+}
+
 interface UseWebExportDialogOptions {
   android?: boolean
   confirmOverwrite: (outputPath: AbsPath) => Promise<boolean>
@@ -81,17 +87,34 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
   const selectedDesktopTargets = ref<PcTarget[]>(currentDevicePcTarget())
   const packaging = ref<PcPackaging>({ type: 'portable' })
   const installerTargets: PcTarget[] = platform() === 'macos' ? ['macos-x64', 'macos-arm64'] : currentDevicePcTarget()
-  const desktopConfigValid = computed(() => {
+  const desktopConfigErrors = computed<DesktopConfigErrors>(() => {
+    const errors: DesktopConfigErrors = {}
+    if (selectedDesktopTargets.value.length === 0) {
+      errors.targets = options.t('export.desktopConfig.targetRequired')
+    }
     const value = packaging.value
     if (value.type === 'portable') {
-      return true
+      return errors
     }
-    return selectedDesktopTargets.value.every(target => installerTargets.includes(target))
-      && /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)
-      && value.version.split('.').every(part => Number(part) <= 6_5535)
-      && (platform() !== 'macos' || value.version.split('.').every((part, index) => Number(part) <= (index === 0 ? 9999 : 99)))
-      && value.publisher.trim().length > 0 && !/\p{Cc}/u.test(value.publisher)
+    if (selectedDesktopTargets.value.some(target => !installerTargets.includes(target))) {
+      errors.targets = options.t('export.desktopConfig.installerTargetInvalid')
+    }
+    const versionParts = value.version.split('.')
+    if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)) {
+      errors.version = options.t('export.desktopConfig.versionFormatInvalid')
+    } else if (versionParts.some(part => Number(part) > 6_5535)) {
+      errors.version = options.t('export.desktopConfig.versionOutOfRange')
+    } else if (platform() === 'macos' && versionParts.some((part, index) => Number(part) > (index === 0 ? 9999 : 99))) {
+      errors.version = options.t('export.desktopConfig.macosVersionOutOfRange')
+    }
+    if (!value.publisher.trim()) {
+      errors.publisher = options.t('export.desktopConfig.publisherRequired')
+    } else if (/\p{Cc}/u.test(value.publisher)) {
+      errors.publisher = options.t('export.desktopConfig.publisherInvalid')
+    }
+    return errors
   })
+  const desktopConfigValid = computed(() => Object.keys(desktopConfigErrors.value).length === 0)
   watch(() => packaging.value.type, (format) => {
     if (format === 'installer') {
       const supported = selectedDesktopTargets.value.filter(target => installerTargets.includes(target))
@@ -221,10 +244,6 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     }
   }
 
-  function desktopOutputPath(root: AbsPath, name: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath {
-    return resolvePcExportOutputPath(root, name, targetOs, targetArch, packaging.value.type)!
-  }
-
   function parsePcTarget(target: PcTarget): [PcTargetOs, PcTargetArch] {
     switch (target) {
       case 'windows-x64': {
@@ -262,7 +281,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
     const platforms = failedPlatforms.length > 0
       ? failedPlatforms
       : selectedPlatforms(selectedPlatform)
-    if (selectedPlatform === 'desktop' && (!hasDesktopTargets.value || !desktopConfigValid.value)) {
+    if (selectedPlatform === 'desktop' && !desktopConfigValid.value) {
       return
     }
 
@@ -318,13 +337,18 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
       completeTask(platform, outputPath)
     }
     const runWithOverwrite = async (platform: ExportPlatform): Promise<boolean> => {
-      const target = platform === 'web' ? undefined : parsePcTarget(platform)
-      const targetPath = selectedOutputRoot && !android
-        ? (platform === 'web' ? resolveWebExportOutputPath(selectedOutputRoot, selectedGameName) : desktopOutputPath(selectedOutputRoot, selectedGameName, target![0], target![1]))
-        : undefined
-      const existingDesktopOutput = platform !== 'web' && targetPath && await exists(targetPath)
+      let targetPath: AbsPath | undefined
+      if (selectedOutputRoot && !android) {
+        if (platform === 'web') {
+          targetPath = resolveWebExportOutputPath(selectedOutputRoot, selectedGameName)
+        } else {
+          const [targetOs, targetArch] = parsePcTarget(platform)
+          targetPath = resolvePcExportOutputPath(selectedOutputRoot, selectedGameName, targetOs, targetArch, packaging.value.type)
+        }
+      }
+      let replaceExisting = false
       try {
-        if (existingDesktopOutput) {
+        if (platform !== 'web' && targetPath && await exists(targetPath)) {
           pendingOverwriteConfirmations.value++
           let confirmed: boolean
           try {
@@ -335,8 +359,9 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
           if (!confirmed) {
             return false
           }
+          replaceExisting = true
         }
-        await runOne(platform, Boolean(existingDesktopOutput))
+        await runOne(platform, replaceExisting)
         return true
       } catch (error) {
         if (!(error instanceof AppError) || error.code !== 'TARGET_CONFLICT' || !targetPath) {
@@ -411,6 +436,7 @@ export function useWebExportDialog(options: UseWebExportDialogOptions) {
 
   return {
     canStart,
+    desktopConfigErrors,
     desktopConfigValid,
     desktopOutputPreview,
     elapsedMs,
