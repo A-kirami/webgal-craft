@@ -75,7 +75,7 @@ jobs:
             args: -t x86_64-unknown-linux-gnu
             mobile: ""
             rustTargets: ""
-          - os: macos-latest
+          - os: macos-26-intel
             platform: macos-x64
             releaseLabel: macos-intel
             args: -t x86_64-apple-darwin

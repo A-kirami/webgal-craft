@@ -1,0 +1,15 @@
+name: Setup APT
+description: 为 CI 的 APT 请求设置有限重试和超时，索引下载失败时停止执行
+
+runs:
+  using: composite
+  steps:
+    - name: Configure APT network requests
+      shell: bash
+      run: |
+        sudo tee /etc/apt/apt.conf.d/80-ci-network > /dev/null <<'EOF'
+        Acquire::Retries "3";
+        Acquire::http::Timeout "30";
+        Acquire::https::Timeout "30";
+        APT::Update::Error-Mode "any";
+        EOF

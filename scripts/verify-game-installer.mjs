@@ -43,11 +43,11 @@ async function launch() {
   const { port } = server.address()
   await new Promise(resolve => server.close(resolve))
   child = spawn(join(installation, `${identity}.exe`), [], {
-    cwd: installation, windowsHide: true, stdio: 'ignore',
+    cwd: installation, windowsHide: true, stdio: 'inherit',
     env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` },
   })
   for (let attempt = 0; attempt < 100; attempt++) {
-    assert.ok(child.exitCode === null, 'Installed game exited during startup')
+    assert.ok(child.exitCode === null, `Installed game exited during startup with code ${child.exitCode}`)
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`)
       const pages = response.ok ? await response.json() : []
@@ -64,7 +64,7 @@ async function launch() {
     }
     await delay(100)
   }
-  throw new Error('Installed game did not expose a WebView2 page')
+  throw new Error(`Installed game did not expose a WebView2 page at http://127.0.0.1:${port}/json/list`)
 }
 
 async function closeGame(page) {

@@ -18,7 +18,7 @@ jobs:
             platform: windows-x64
             arch: x64
             target: x86_64-pc-windows-msvc
-          - os: macos-latest
+          - os: macos-26-intel
             platform: macos-x64
             arch: x64
             target: x86_64-apple-darwin
@@ -72,7 +72,7 @@ jobs:
             hdiutil attach "$WEBGAL_INSTALLER_SMOKE_DIR/first/game.dmg" -nobrowse -mountpoint "$mount_point"
             trap 'hdiutil detach "$mount_point"' EXIT
             test -x "$mount_point/Installer smoke.app/Contents/MacOS/Installer smoke"
-            lipo -verify_arch "${{ matrix.arch == 'arm64' && 'arm64' || 'x86_64' }}" "$mount_point/Installer smoke.app/Contents/MacOS/Installer smoke"
+            lipo "$mount_point/Installer smoke.app/Contents/MacOS/Installer smoke" -verify_arch "${{ matrix.arch == 'arm64' && 'arm64' || 'x86_64' }}"
             test -f "$mount_point/Installer smoke.app/Contents/Resources/webgal-runtime.json"
             test -f "$mount_point/Installer smoke.app/Contents/Resources/resources/index.html"
           fi
