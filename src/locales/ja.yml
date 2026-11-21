@@ -728,6 +728,13 @@ export:
   browse: 参照
   finalOutputPath: 最終出力先
   desktopConfig:
+    format: 出力形式
+    portable: ポータブル版
+    installer: インストーラー
+    portableHint: 出力したフォルダーから直接起動します。対応するすべてのデスクトップ環境向けに出力できます。
+    installerHint: 対応する OS 上で Windows インストーラー、macOS DMG、Linux DEB を作成します。発行者と major.minor.patch 形式のバージョン（各部 0–65535）を入力してください。macOS では先頭の上限が 9999、残り 2 部の上限が 99 です。Windows では初回にパッケージツールをダウンロードします。配布用の署名と公証は設定されていません。更新とアンインストールではプレイヤーのセーブデータを保持します。
+    version: バージョン
+    publisher: 発行者
     steamUnsupported: デスクトップ向けエクスポートでは、Steam の初期化と実績をサポートしていません。
     title: デスクトップ対象
     notSelected: デスクトップ対象が選択されていないため、追加設定は不要です
@@ -764,6 +771,7 @@ export:
     description: 上書きすると、{path} の既存内容がすべて置き換えられます。既存ファイルは新しい書き出しに統合されません。
     confirm: 上書きする
   progress:
+    buildingInstaller: インストーラーを作成中…
     ready: 書き出しの準備ができました
     preparingRuntime: デスクトップランタイムを準備中…
     preparing: 書き出しを準備しています…

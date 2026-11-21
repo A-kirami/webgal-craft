@@ -29,6 +29,10 @@ outputs:
 runs:
   using: composite
   steps:
+    - name: Configure APT
+      if: inputs.platform == 'linux-x64'
+      uses: ./.github/actions/setup-apt
+
     # 两个工作流共用同一份工具链安装逻辑；任一平台调整只改这里，避免只改一边造成漂移。
     - name: Install system dependencies (Ubuntu)
       if: inputs.platform == 'linux-x64'

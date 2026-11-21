@@ -35,6 +35,16 @@ fn is_game_resource_url(url: &tauri::Url) -> bool {
 fn run() -> Result<(), Box<dyn Error>> {
     let executable = std::env::current_exe()?;
     let root = executable.parent().expect("executable has a parent");
+    #[cfg(target_os = "macos")]
+    let root = root.join("../Resources");
+    #[cfg(target_os = "linux")]
+    let root =
+        if tauri::utils::platform::bundle_type() == Some(tauri::utils::config::BundleType::Deb) {
+            std::path::PathBuf::from("/usr/lib")
+                .join(executable.file_name().expect("executable has a name"))
+        } else {
+            root.to_path_buf()
+        };
     let config: GameConfig = serde_json::from_slice(&fs::read(root.join(CONFIG_FILE))?)?;
     config.validate()?;
     let resources = root.join(RESOURCE_DIRECTORY).canonicalize()?;

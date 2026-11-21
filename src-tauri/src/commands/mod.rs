@@ -9,6 +9,8 @@ pub mod fs;
 pub mod game;
 pub mod game_assets;
 #[cfg(desktop)]
+pub(crate) mod game_installer;
+#[cfg(desktop)]
 pub mod preview_fullscreen;
 pub mod project_config;
 pub mod resource_import;

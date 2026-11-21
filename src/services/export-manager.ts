@@ -6,10 +6,10 @@ import { AbsPath } from '~/domain/path'
 import { gameManager } from '~/services/game-manager'
 import { AppError } from '~/types/errors'
 
-import type { PcWindowConfig } from '~/commands/export'
+import type { PcPackaging, PcWindowConfig } from '~/commands/export'
 import type { Game } from '~/database/model'
 
-export type { PcWindowConfig } from '~/commands/export'
+export type { PcPackaging, PcWindowConfig } from '~/commands/export'
 
 export interface ExportProgress {
   exportId: string
@@ -39,6 +39,7 @@ export interface AndroidWebExportConfig {
 }
 
 export interface PcExportConfig {
+  packaging: PcPackaging
   game: Pick<Game, 'engineId' | 'path'>
   gameName: string
   onProgress?: (progress: ExportProgress) => void
@@ -60,12 +61,13 @@ export function pcTargetKey(targetOs: PcTargetOs, targetArch: PcTargetArch): PcT
   return target as PcTarget
 }
 
-export function resolvePcExportOutputPath(outputRoot: AbsPath, gameName: string, targetOs: PcTargetOs, targetArch: PcTargetArch): AbsPath | undefined {
+export function resolvePcExportOutputPath(outputRoot: AbsPath, gameName: string, targetOs: PcTargetOs, targetArch: PcTargetArch, format: PcPackaging['type']): AbsPath | undefined {
   const directoryName = createExportDirectoryName(gameName)
   if (!directoryName) {
     return
   }
-  return AbsPath.append(AbsPath.append(outputRoot, directoryName), pcTargetKey(targetOs, targetArch))
+  const target = pcTargetKey(targetOs, targetArch)
+  return AbsPath.append(AbsPath.append(outputRoot, directoryName), format === 'installer' ? `${target}-installer` : target)
 }
 
 function createExportDirectoryName(gameName: string): string {
@@ -164,7 +166,7 @@ async function exportPc(config: PcExportConfig): Promise<AbsPath> {
   if (!gameName || !directoryName) {
     throw new AppError('INVALID_CONFIG', '游戏名称不能生成有效的导出目录')
   }
-  const outputPath = resolvePcExportOutputPath(config.outputRoot, gameName, config.targetOs, config.targetArch)!
+  const outputPath = resolvePcExportOutputPath(config.outputRoot, gameName, config.targetOs, config.targetArch, config.packaging.type)!
   const site = await gameManager.resolvePreviewSite(config.game)
   const exportId = crypto.randomUUID()
   const unlisten = await listen<ExportProgress>('export-progress', (event) => {
@@ -176,6 +178,7 @@ async function exportPc(config: PcExportConfig): Promise<AbsPath> {
   })
   try {
     await exportCmds.exportPc({
+      packaging: config.packaging,
       enginePath: site.enginePath,
       exportId,
       gameName,

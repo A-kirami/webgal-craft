@@ -7,6 +7,7 @@ jobs:
   build:
     name: Runtime ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     permissions:
       contents: read
     strategy:
@@ -15,15 +16,19 @@ jobs:
         include:
           - os: windows-latest
             platform: windows-x64
+            arch: x64
             target: x86_64-pc-windows-msvc
-          - os: macos-latest
+          - os: macos-26-intel
             platform: macos-x64
+            arch: x64
             target: x86_64-apple-darwin
           - os: macos-latest
             platform: macos-arm64
+            arch: arm64
             target: aarch64-apple-darwin
           - os: ubuntu-22.04
             platform: linux-x64
+            arch: x64
             target: x86_64-unknown-linux-gnu
     steps:
       - name: Checkout repository
@@ -35,6 +40,42 @@ jobs:
           rust-targets: ${{ matrix.target }}
       - name: Build game runtime
         run: bun run build:game-runtime --target ${{ matrix.target }} --release
+      - name: Verify Windows installer lifecycle
+        if: matrix.platform == 'windows-x64'
+        run: node scripts/verify-game-installer.mjs src-tauri/resources/game-runtimes/webgal-game-runtime-windows-x64.exe
+      - name: Verify Unix installer artifacts
+        if: matrix.platform != 'windows-x64'
+        shell: bash
+        env:
+          WEBGAL_INSTALLER_SMOKE_RUNTIME: ${{ github.workspace }}/src-tauri/resources/game-runtimes/webgal-game-runtime-${{ matrix.platform }}
+          WEBGAL_INSTALLER_SMOKE_ARCH: ${{ matrix.arch }}
+          WEBGAL_INSTALLER_SMOKE_DIR: ${{ runner.temp }}/game-installer-smoke
+          WEBGAL_INSTALLER_SMOKE_KEY: installer-smoke-${{ github.run_id }}-${{ matrix.platform }}
+          WEBGAL_INSTALLER_SMOKE_PACKAGER: ${{ github.workspace }}/src-tauri/target/debug/webgal-craft
+        run: |
+          cargo build --locked --manifest-path src-tauri/Cargo.toml --bin webgal-craft
+          cargo test --locked --manifest-path src-tauri/Cargo.toml --lib commands::export::tests::builds_native_installers_for_smoke_test -- --ignored --exact --nocapture
+          if [ "${{ matrix.platform }}" = "linux-x64" ]; then
+            dpkg-deb --info "$WEBGAL_INSTALLER_SMOKE_DIR/first/game.deb"
+            dpkg-deb --info "$WEBGAL_INSTALLER_SMOKE_DIR/upgrade/game.deb"
+            test "$(dpkg-deb --field "$WEBGAL_INSTALLER_SMOKE_DIR/first/game.deb" Architecture)" = amd64
+            dpkg-deb --extract "$WEBGAL_INSTALLER_SMOKE_DIR/first/game.deb" "$WEBGAL_INSTALLER_SMOKE_DIR/extracted"
+            smoke_id="$(bun -e 'import { createHash } from "node:crypto"; process.stdout.write("com.webgalcraft.game." + createHash("sha256").update(process.env.WEBGAL_INSTALLER_SMOKE_KEY).digest("hex"))')"
+            test -x "$WEBGAL_INSTALLER_SMOKE_DIR/extracted/usr/bin/$smoke_id"
+            test -f "$WEBGAL_INSTALLER_SMOKE_DIR/extracted/usr/lib/$smoke_id/webgal-runtime.json"
+            test -f "$WEBGAL_INSTALLER_SMOKE_DIR/extracted/usr/lib/$smoke_id/resources/index.html"
+          else
+            hdiutil imageinfo "$WEBGAL_INSTALLER_SMOKE_DIR/first/game.dmg"
+            hdiutil imageinfo "$WEBGAL_INSTALLER_SMOKE_DIR/upgrade/game.dmg"
+            mount_point="$WEBGAL_INSTALLER_SMOKE_DIR/mounted"
+            mkdir "$mount_point"
+            hdiutil attach "$WEBGAL_INSTALLER_SMOKE_DIR/first/game.dmg" -nobrowse -mountpoint "$mount_point"
+            trap 'hdiutil detach "$mount_point"' EXIT
+            test -x "$mount_point/Installer smoke.app/Contents/MacOS/Installer smoke"
+            lipo "$mount_point/Installer smoke.app/Contents/MacOS/Installer smoke" -verify_arch "${{ matrix.arch == 'arm64' && 'arm64' || 'x86_64' }}"
+            test -f "$mount_point/Installer smoke.app/Contents/Resources/webgal-runtime.json"
+            test -f "$mount_point/Installer smoke.app/Contents/Resources/resources/index.html"
+          fi
       - name: Upload game runtime
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

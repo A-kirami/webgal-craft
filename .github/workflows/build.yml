@@ -17,6 +17,7 @@ on:
       - ".github/workflows/build.yml"
       - ".github/workflows/game-runtimes.yml"
       - "scripts/build-game-runtime.mjs"
+      - "scripts/verify-game-installer.mjs"
       - ".github/actions/**"
   pull_request:
     paths:
@@ -33,6 +34,7 @@ on:
       - ".github/workflows/build.yml"
       - ".github/workflows/game-runtimes.yml"
       - "scripts/build-game-runtime.mjs"
+      - "scripts/verify-game-installer.mjs"
       - ".github/actions/**"
   workflow_dispatch:
 
@@ -61,7 +63,7 @@ jobs:
             args: -t x86_64-unknown-linux-gnu -b appimage
             mobile: ""
             rustTargets: ""
-          - os: macos-latest
+          - os: macos-26-intel
             platform: macos-x64
             args: -t x86_64-apple-darwin -b dmg
             mobile: ""

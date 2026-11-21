@@ -728,6 +728,13 @@ export:
   browse: 浏览
   finalOutputPath: 最终输出位置
   desktopConfig:
+    format: 导出格式
+    portable: 便携版
+    installer: 安装包
+    portableHint: 从导出的文件夹直接运行，可导出到任一受支持的桌面平台。
+    installerHint: 在对应操作系统上生成 Windows 安装程序、macOS DMG 或 Linux DEB。请填写发行者和 major.minor.patch 格式的版本号（每段 0–65535）。macOS 第一段最大为 9999，后两段最大为 99。Windows 首次使用需要下载打包工具。未配置发行签名或公证，升级和卸载均保留玩家存档。
+    version: 版本号
+    publisher: 发行者
     steamUnsupported: 桌面端导出不支持 Steam 初始化和成就功能。
     title: 桌面端目标
     notSelected: 未选择桌面端，无需额外配置
@@ -764,6 +771,7 @@ export:
     description: 覆盖导出将完整替换 {path} 中的现有内容。原有文件不会与新导出合并。
     confirm: 覆盖导出
   progress:
+    buildingInstaller: 正在生成安装包……
     ready: 等待开始导出
     preparingRuntime: 正在准备桌面运行时……
     preparing: 正在准备导出……

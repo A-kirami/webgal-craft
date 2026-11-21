@@ -31,6 +31,7 @@ export interface PcWindowConfig {
 }
 
 export interface PcExportParams {
+  packaging: PcPackaging
   enginePath: AbsPath
   exportId: string
   gameName: string
@@ -43,6 +44,18 @@ export interface PcExportParams {
   templatePath?: AbsPath
   windowConfig: PcWindowConfig
 }
+
+interface PortablePackaging {
+  type: 'portable'
+}
+
+interface InstallerPackaging {
+  type: 'installer'
+  version: string
+  publisher: string
+}
+
+export type PcPackaging = PortablePackaging | InstallerPackaging
 
 export interface EnsurePcRuntimeParams {
   targetArch: 'x64' | 'arm64'

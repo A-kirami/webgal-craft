@@ -728,6 +728,13 @@ export:
   browse: Browse
   finalOutputPath: Final output
   desktopConfig:
+    format: Export format
+    portable: Portable
+    installer: Installer
+    portableHint: Run directly from the exported folder. Export for any supported desktop platform.
+    installerHint: Creates a Windows installer, macOS DMG, or Linux DEB on the matching operating system. Enter a publisher and a version in major.minor.patch format (0–65535 per part). macOS limits the first part to 9999 and the last two to 99. Windows downloads packaging tools on first use. No distribution signing or notarization is configured; player saves are preserved during upgrades and uninstallation.
+    version: Version
+    publisher: Publisher
     steamUnsupported: Desktop exports do not support Steam initialization or achievements.
     title: Desktop targets
     notSelected: No desktop-specific configuration is needed
@@ -764,6 +771,7 @@ export:
     description: Overwriting will completely replace the existing contents of {path}. Existing files will not be merged into the new export.
     confirm: Overwrite export
   progress:
+    buildingInstaller: Building installer…
     ready: Ready to export
     preparingRuntime: Preparing desktop runtime…
     preparing: Preparing export…
