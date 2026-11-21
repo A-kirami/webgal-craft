@@ -18,6 +18,7 @@ const packager = resolve(process.argv[3] ?? 'src-tauri/target/debug/webgal-craft
 const scratch = await mkdtemp(join(tmpdir(), 'webgal-installer-smoke-'))
 const key = randomUUID()
 const identity = `com.webgalcraft.game.${createHash('sha256').update(key).digest('hex')}`
+const upgradeInstaller = join(scratch, 'upgrade/setup.exe')
 const installation = join(scratch, 'installed game')
 const profile = resolve(process.env.LOCALAPPDATA, identity)
 const registry = `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${identity}`
@@ -100,24 +101,40 @@ try {
   await closeGame(first)
   const playerFile = join(installation, 'player-note.txt')
   await writeFile(playerFile, key)
-  await access(join(installation, 'resources/game/scene/obsolete.txt'))
+  const obsoleteAsset = join(installation, 'resources/game/scene/obsolete.txt')
+  await access(obsoleteAsset)
 
   const uninstaller = join(installation, 'uninstall.exe')
   const uninstallerBackup = join(scratch, 'uninstall.exe')
   await rename(uninstaller, uninstallerBackup)
   try {
-    assert.throws(() => runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS']), error => error.status === 2)
+    assert.throws(() => runInstaller(upgradeInstaller, ['/S', '/NS']), error => error.status === 2)
   } finally {
     await rename(uninstallerBackup, uninstaller)
   }
 
-  runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS'])
+  assert.throws(() => execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `
+    $ErrorActionPreference = 'Stop'
+    $file = [IO.File]::Open($env:OBSOLETE_ASSET, 'Open', 'Read', 'Read')
+    try {
+      $setup = Start-Process -FilePath $env:UPGRADE_INSTALLER -ArgumentList '/S /NS' -WindowStyle Hidden -Wait -PassThru
+    } finally {
+      $file.Dispose()
+    }
+    exit $setup.ExitCode
+  `], {
+    ...options, env: { ...process.env, OBSOLETE_ASSET: obsoleteAsset, UPGRADE_INSTALLER: upgradeInstaller },
+  }), error => error.status === 2)
+  await access(uninstaller)
+  assert.match(execFileSync('reg.exe', ['query', registry, '/v', 'DisplayVersion'], options), /1\.0\.0/)
+
+  runInstaller(upgradeInstaller, ['/S', '/NS'])
   const registration = execFileSync('reg.exe', ['query', registry], options)
   assert.match(registration, /Installer smoke renamed/)
   assert.match(registration, /1\.1\.0/)
   assert.match(registration, /Studio B/)
   await access(join(installation, `${identity}.exe`))
-  await assert.rejects(access(join(installation, 'resources/game/scene/obsolete.txt')), { code: 'ENOENT' })
+  await assert.rejects(access(obsoleteAsset), { code: 'ENOENT' })
   assert.equal(await readFile(playerFile, 'utf8'), key)
   const upgraded = await launch()
   assert.equal(await upgraded.evaluate(() => localStorage.getItem('installer-save')), 'preserved')
@@ -125,12 +142,12 @@ try {
   // NSIS returns 2 when .onInit aborts installation.
   assert.throws(() => runInstaller(join(scratch, 'first/setup.exe'), ['/S', '/NS']), error => error.status === 2)
   assert.match(execFileSync('reg.exe', ['query', registry, '/v', 'DisplayVersion'], options), /1\.1\.0/)
-  runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS', '/UPDATE'])
+  runInstaller(upgradeInstaller, ['/S', '/NS', '/UPDATE'])
   assert.equal(await readFile(playerFile, 'utf8'), key)
   uninstall()
   await assert.rejects(access(join(installation, `${identity}.exe`)), { code: 'ENOENT' })
   assert.equal(await readFile(playerFile, 'utf8'), key)
-  runInstaller(join(scratch, 'upgrade/setup.exe'), ['/S', '/NS', `/D=${installation}`])
+  runInstaller(upgradeInstaller, ['/S', '/NS', `/D=${installation}`])
   installed = true
   const reinstalled = await launch()
   assert.equal(await reinstalled.evaluate(() => localStorage.getItem('installer-save')), 'preserved')

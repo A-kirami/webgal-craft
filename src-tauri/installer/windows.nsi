@@ -550,7 +550,7 @@ Section Uninstall
   !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
 
   ; Remove only files registered by this installer.
-  ; Delete main executable
+  ClearErrors
   Delete "$INSTDIR\${MAINBINARYNAME}.exe"
 
   ; Delete resources
@@ -562,6 +562,11 @@ Section Uninstall
   {{#each binaries}}
     Delete "$INSTDIR\\{{this}}"
   {{/each}}
+
+  ${If} ${Errors}
+    ; Keep the uninstaller and registration so locked files can be retried.
+    Abort
+  ${EndIf}
 
   ; Delete app associations
   {{#each file_associations as |association| ~}}
