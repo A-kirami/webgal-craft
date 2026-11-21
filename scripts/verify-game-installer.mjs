@@ -104,6 +104,20 @@ try {
   const obsoleteAsset = join(installation, 'resources/game/scene/obsolete.txt')
   await access(obsoleteAsset)
 
+  assert.throws(() => execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `
+    $ErrorActionPreference = 'Stop'
+    $mutex = [Threading.Mutex]::new($false, $env:INSTALL_MUTEX)
+    try {
+      $setup = Start-Process -FilePath $env:UPGRADE_INSTALLER -ArgumentList '/S /NS' -WindowStyle Hidden -Wait -PassThru
+    } finally {
+      $mutex.Dispose()
+    }
+    exit $setup.ExitCode
+  `], {
+    ...options, env: { ...process.env, INSTALL_MUTEX: String.raw`Global\WebGALCraft.Install.${identity}`, UPGRADE_INSTALLER: upgradeInstaller },
+  }), error => error.status === 2)
+  assert.match(execFileSync('reg.exe', ['query', registry, '/v', 'DisplayVersion'], options), /1\.0\.0/)
+
   const uninstaller = join(installation, 'uninstall.exe')
   const uninstallerBackup = join(scratch, 'uninstall.exe')
   await rename(uninstaller, uninstallerBackup)

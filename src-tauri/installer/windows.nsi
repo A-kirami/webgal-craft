@@ -234,6 +234,11 @@ FunctionEnd
   !include "{{this}}"
 {{/each}}
 
+LangString gameInstallerBusy ${LANG_ENGLISH} "Could not start installation. Close any other installer for this game and try again."
+LangString gameInstallerBusy ${LANG_SIMPCHINESE} "无法启动安装。关闭此游戏的其他安装程序后重试。"
+LangString gameInstallerBusy ${LANG_TRADCHINESE} "無法啟動安裝。關閉此遊戲的其他安裝程式後再試一次。"
+LangString gameInstallerBusy ${LANG_JAPANESE} "インストールを開始できません。別のインストーラーが開いている場合は、閉じてから再試行してください。"
+
 Function .onInit
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
@@ -253,6 +258,15 @@ Function .onInit
   !if "${DISPLAYLANGUAGESELECTOR}" == "true"
     !insertmacro MUI_LANGDLL_DISPLAY
   !endif
+
+  ; Hold the handle until exit so no other installer can change the registered version after .onInit.
+  System::Call 'kernel32::CreateMutexW(p 0, i 0, w "Global\WebGALCraft.Install.${BUNDLEID}") p.r0 ?e'
+  Pop $1
+  ${If} $0 == 0
+  ${OrIf} $1 = 183 ; ERROR_ALREADY_EXISTS
+    MessageBox MB_ICONSTOP "$(gameInstallerBusy)" /SD IDOK
+    Abort
+  ${EndIf}
 
   !insertmacro SetContext
 
