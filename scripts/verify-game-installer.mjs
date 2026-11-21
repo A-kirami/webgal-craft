@@ -43,10 +43,29 @@ async function launch() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   const { port } = server.address()
   await new Promise(resolve => server.close(resolve))
-  child = spawn(join(installation, `${identity}.exe`), [], {
-    cwd: installation, windowsHide: true, stdio: 'inherit',
-    env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port}` },
-  })
+  const executable = `${identity}.exe`
+  const browserArguments = `--remote-debugging-port=${port}`
+  const env = { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: browserArguments }
+  const useMachinePolicy = process.env.RUNNER_ENVIRONMENT === 'github-hosted'
+  // Hosted Windows runners run elevated; WebView2 requires machine policy for debugging there.
+  const policy = String.raw`HKLM\SOFTWARE\Policies\Microsoft\Edge\WebView2\AdditionalBrowserArguments`
+  if (useMachinePolicy) {
+    delete env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+    execFileSync('reg.exe', ['add', policy, '/v', executable, '/t', 'REG_SZ', '/d', browserArguments, '/f', '/reg:64'], options)
+  }
+  try {
+    child = spawn(join(installation, executable), [], {
+      cwd: installation, windowsHide: true, stdio: 'inherit', env,
+    })
+    return await waitForGamePage(port)
+  } finally {
+    if (useMachinePolicy) {
+      execFileSync('reg.exe', ['delete', policy, '/v', executable, '/f', '/reg:64'], options)
+    }
+  }
+}
+
+async function waitForGamePage(port) {
   for (let attempt = 0; attempt < 100; attempt++) {
     assert.ok(child.exitCode === null, `Installed game exited during startup with code ${child.exitCode}`)
     try {
