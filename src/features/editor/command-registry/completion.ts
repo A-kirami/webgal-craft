@@ -44,11 +44,6 @@ interface CompletionOnlyArgument {
   simplified?: boolean
 }
 
-const WHEN: CompletionOnlyArgument = {
-  key: 'when',
-  label: t => t('edit.completion.arguments.when'),
-}
-
 const completionOnlyArguments = new Map<commandType, CompletionOnlyArgument[]>([
   [commandType.say, [
     { key: 'left', label: t => t('edit.completion.arguments.left'), simplified: true },
@@ -73,14 +68,6 @@ export function buildArgumentCompletionInfo(
   }
 
   const result: ArgumentCompletionInfo[] = []
-  if (command !== commandType.callScene) {
-    result.push({
-      key: WHEN.key,
-      detail: resolveI18n(WHEN.label, t),
-      simplified: false,
-      hasValueCompletions: false,
-    })
-  }
 
   for (const item of completionOnlyArguments.get(command) ?? []) {
     result.push({

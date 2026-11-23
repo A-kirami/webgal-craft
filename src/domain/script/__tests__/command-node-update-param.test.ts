@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
+import { hasCommandNodeParam, readCommandNodeParamValue } from '~/domain/script/params'
 import { serializeSentence } from '~/domain/script/serialize'
 import { updateCommandNodeParam } from '~/domain/script/update'
 import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
@@ -9,6 +10,22 @@ import { UNSPECIFIED } from '~/features/editor/command-registry/schema'
 import { makeParamDef, mustParse } from './utils'
 
 describe('命令节点参数更新器', () => {
+  it.each([
+    { raw: 'end: -when=false -custom=value;', condition: 'false', otherArg: { key: 'custom', value: 'value' } },
+    { raw: 'callScene:battle.txt -when=0 -enemy=slime;', condition: '0', otherArg: { key: 'enemy', value: 'slime' } },
+  ])('读写并清除执行条件，保留其他参数：$raw', ({ raw, condition, otherArg }) => {
+    const node = parseCommandNode(mustParse(raw))
+    const param = makeParamDef('when', 'text')
+    expect(readCommandNodeParamValue(node, param)).toBe(condition)
+    expect(hasCommandNodeParam(node, param.key)).toBe(true)
+
+    const updated = updateCommandNodeParam(node, param, 'hp >= 10')!
+    expect(serializeCommandNode(updated).args).toEqual([{ key: 'when', value: 'hp >= 10' }, otherArg])
+
+    const cleared = updateCommandNodeParam(updated, param, '')!
+    expect(serializeCommandNode(cleared).args).toEqual([otherArg])
+  })
+
   it('输入为空时可清除 setTransform duration', () => {
     const sentence = mustParse('setTransform: {"alpha":1} -duration=500 -next -x=1;')
     const node = parseCommandNode(sentence)

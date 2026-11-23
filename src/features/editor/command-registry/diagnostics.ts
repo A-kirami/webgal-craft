@@ -311,7 +311,7 @@ export function findUnsupportedSceneSemanticReferences(
   }
 
   return sentence.args
-    .filter(item => item.key !== 'next' && item.key !== 'continue')
+    .filter(item => item.key !== 'next' && item.key !== 'continue' && item.key !== 'when')
     .map(item => ({
       code: 'unsupported-call-scene-argument' as const,
       source: { kind: 'argument', key: item.key },

@@ -20,12 +20,6 @@ type FieldKind = 'string' | 'number' | 'boolean'
 
 // ─── 从注册表派生字段元信息 ─────────────────────────
 
-interface ResolvedFieldMeta {
-  kind: FieldKind
-  /** typed node 上的属性名（json-object 子字段 alias，如 id → figureId） */
-  field?: string
-}
-
 function fieldTypeToKind(type: string): FieldKind {
   switch (type) {
     case 'number':
@@ -42,8 +36,8 @@ function fieldTypeToKind(type: string): FieldKind {
 }
 
 interface RegistryIndex {
-  /** argKey → 字段存储元信息 */
-  meta: Map<string, ResolvedFieldMeta>
+  /** argKey → 参数的存储类型 */
+  kinds: Map<string, FieldKind>
   /** 分组开关 key → 声明 visibleWhen.value === true 的参数 storage key */
   dependents: Map<string, string[]>
 }
@@ -57,7 +51,7 @@ function getRegistryIndex(type: commandType): RegistryIndex {
     return cached
   }
 
-  const meta = new Map<string, ResolvedFieldMeta>()
+  const kinds = new Map<string, FieldKind>()
   const dependents = new Map<string, string[]>()
 
   for (const af of readAllArgFields(getCommandConfig(type))) {
@@ -77,27 +71,23 @@ function getRegistryIndex(type: commandType): RegistryIndex {
     // 存储元信息与展示能力无关：hiddenWhenCapability 隐藏的字段仍是已知参数，
     // 否则隐藏会改变参数顺序与未知参数判定
     if (af.jsonMeta) {
-      // json-object 子字段不注册到 meta：
+      // json-object 子字段不进入字段类型索引：
       // 原始 arg（如 blink）通过 findExtraArgValue 读取，
       // 子字段（如 blinkInterval）由 statement-editor 层的 readJsonFieldValue 处理
     } else if (af.field.type === 'choice' && isFlagChoiceField(af.field)) {
-      // flag choice 字段由特殊路径处理，不注册到 meta
+      // flag choice 字段由其专用路径处理，不进入字段类型索引
     } else {
-      meta.set(af.field.key, { kind: fieldTypeToKind(af.field.type) })
+      kinds.set(af.field.key, fieldTypeToKind(af.field.type))
     }
   }
 
-  cached = { meta, dependents }
+  cached = { kinds, dependents }
   registryIndexCache.set(type, cached)
   return cached
 }
 
-/** 供 update.ts 使用：获取注册表中某命令的字段元信息 */
-export function resolveRegistryFieldMeta(
-  type: commandType,
-  key: string,
-): { kind: FieldKind, field?: string } | undefined {
-  return getRegistryIndex(type).meta.get(key)
+export function resolveRegistryFieldKind(type: commandType, key: string): FieldKind | undefined {
+  return getRegistryIndex(type).kinds.get(key)
 }
 
 /**
@@ -111,10 +101,9 @@ export function getRegistryDependentKeys(type: commandType, key: string): readon
 
 /** 供 update.ts 使用：获取注册表中某命令的所有已知 arg key */
 export function getRegistryKnownKeys(type: commandType): Set<string> {
-  const meta = getRegistryIndex(type).meta
-  const keys = new Set(meta.keys())
+  const keys = new Set(getRegistryIndex(type).kinds.keys())
   // 图片立绘命令的位置是 flag-choice 的选项值而非独立参数 key，
-  // 不在注册表 meta 中，但在 args 数组中以 { key: 'left', value: true } 形式存在，
+  // 不在字段类型索引中，但在 args 数组中以 { key: 'left', value: true } 形式存在，
   // 需要手动补充以确保 upsertArgValue 能正确判断已知/未知参数的插入位置
   if (FIGURE_POSITION_FLAG_COMMANDS.includes(type)) {
     for (const flag of CHANGE_FIGURE_POSITION_FLAGS) {
@@ -174,42 +163,40 @@ function readFromFieldTable(
     }
   }
 
-  const meta = getRegistryIndex(node.type).meta.get(key)
-  if (!meta) {
+  let effectiveKind = resolveRegistryFieldKind(node.type, key)
+  if (!effectiveKind) {
     return NOT_HANDLED
   }
 
-  let effectiveKind: FieldKind = meta.kind
   if (overrideType === 'number') {
     effectiveKind = 'number'
   } else if (overrideType === 'switch') {
     effectiveKind = 'boolean'
   }
 
-  const fieldName = meta.field ?? key
-  if (isGenericNode(node)) {
-    const found = node.args.find(item => item.key === key)
-    if (!found) {
-      return undefined
-    }
-    if (effectiveKind === 'boolean') {
-      return found.value === true ? true : undefined
-    }
-    // WebGAL 解析器中 arg.value === true 表示该参数是无值 flag（如 -next），
-    // 对于 string/number 类型字段，flag 形式无法提供有效值，返回 undefined
-    if (effectiveKind === 'number') {
-      if (found.value === true) {
-        return undefined
-      }
-      const numberValue = Number(found.value)
-      return Number.isFinite(numberValue) ? numberValue : undefined
-    }
-    if (found.value === true) {
-      return undefined
-    }
-    return String(found.value)
+  const genericNode = isGenericNode(node)
+  // 执行条件在类型化节点中也保存在参数列表，不映射为节点属性。
+  if (!genericNode && key !== 'when') {
+    return (node as unknown as Record<string, unknown>)[key] as ParamValue
   }
-  return (node as unknown as Record<string, unknown>)[fieldName] as ParamValue
+
+  const args = genericNode ? node.args : node.extraArgs
+  const found = args.find(item => item.key === key)
+  if (!found) {
+    return undefined
+  }
+  if (effectiveKind === 'boolean') {
+    return found.value === true ? true : undefined
+  }
+  // arg.value === true 表示无值 flag（如 -next），不是文本或数值参数。
+  if (found.value === true) {
+    return undefined
+  }
+  if (effectiveKind === 'number') {
+    const numberValue = Number(found.value)
+    return Number.isFinite(numberValue) ? numberValue : undefined
+  }
+  return String(found.value)
 }
 
 function hasFromFieldTable(

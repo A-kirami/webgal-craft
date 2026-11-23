@@ -879,7 +879,6 @@ edit:
     saveChangesDescription: Some tabs have unsaved changes. Save them before closing?
   completion:
     arguments:
-      when: Conditional execution
       left: Left position
       left14: Left 1/4 position
       left13: Left 1/3 position
@@ -1294,6 +1293,7 @@ edit:
       scope: Variable Scope
       global: Global Variable
       writeReturnTo: Return Value Variable
+      when: Execution condition
       parameterKey: Parameter name
       parameterValue: Parameter value
       addParameter: Add scene parameter

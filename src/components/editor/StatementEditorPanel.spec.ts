@@ -145,7 +145,6 @@ function createEditorReturn(overrides: Record<string, unknown> = {}) {
     })),
     config: {
       icon: 'i-lucide-message-circle',
-      locked: false,
     },
     theme: {
       bg: 'bg-blue-50',

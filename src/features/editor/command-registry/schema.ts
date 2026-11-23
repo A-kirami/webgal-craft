@@ -494,7 +494,6 @@ export interface CommandEntry {
   hasAnimationEditor?: boolean
   /** 动画内容引用 game/animation 下的文件，由引用动画抽屉就地编辑（内容字段仍需保留） */
   hasAnimationFileEditor?: boolean
-  locked?: boolean
   requiredCapability?: EngineRuntimeCapability
 }
 
