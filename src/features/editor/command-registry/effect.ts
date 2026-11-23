@@ -138,6 +138,5 @@ export const effectEntries: CommandEntry[] = [
     icon: 'i-lucide-eraser',
     category: 'effect',
     fields: [],
-    locked: true,
   },
 ]

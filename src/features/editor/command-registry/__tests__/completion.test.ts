@@ -43,13 +43,21 @@ describe('buildArgumentCompletionInfo', () => {
   })
 
   it('保留只属于文本语法的既有补全', () => {
-    expect(keysFor(commandType.say)).toEqual(expect.arrayContaining(['when', 'left', 'right', 'center']))
+    expect(keysFor(commandType.say)).toEqual(expect.arrayContaining(['left', 'right', 'center']))
+  })
+
+  it('执行条件在可编辑语句的参数末尾补全，注释不补全', () => {
+    expect(keysFor(commandType.say).at(-1)).toBe('when')
+    expect(keysFor(commandType.end)).toEqual(['when'])
+    expect(keysFor(commandType.comment)).not.toContain('when')
+    expect(buildArgumentCompletionInfo(commandType.callScene, t, BASELINE_ENGINE_RUNTIME_CAPABILITIES)).toEqual([
+      { key: 'when', detail: 'edit.visualEditor.params.when', simplified: false, hasValueCompletions: false },
+    ])
   })
 
   it('补全 WebGAL 4.6.3 场景语义参数与命令', () => {
     expect(keysFor(commandType.setVar)).toContain('local')
     expect(keysFor(commandType.callScene)).toContain('writeReturnTo')
-    expect(keysFor(commandType.callScene)).not.toContain('when')
     expect(buildCommandCompletionInfo(t).map(item => item.commandRaw)).toContain('return')
   })
 

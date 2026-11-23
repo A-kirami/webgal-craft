@@ -2,13 +2,11 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { cloneArgs } from '~/domain/script/codec'
 import { parseChooseContent, parseSetVarContent, parseStyleRuleContent } from '~/domain/script/content'
-import { CommandParamDescriptor, getRegistryDependentKeys, getRegistryKnownKeys, resolveRegistryFieldMeta } from '~/domain/script/params'
+import { CommandParamDescriptor, getRegistryDependentKeys, getRegistryKnownKeys, resolveRegistryFieldKind } from '~/domain/script/params'
 import { updateSayFigureTargetId } from '~/domain/script/say-figure'
-import { CHANGE_FIGURE_POSITION_FLAGS, CommandNode, FIGURE_POSITION_FLAG_COMMANDS, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
+import { CallSceneCommandNode, CHANGE_FIGURE_POSITION_FLAGS, CommandNode, FIGURE_POSITION_FLAG_COMMANDS, GenericCommandNode, isGenericNode, TypedCommandNode } from '~/domain/script/types'
 
 import type { arg } from 'webgal-parser/src/interface/sceneInterface'
-
-const NOT_HANDLED = Symbol('command-param-not-handled')
 
 type ControlFlagKey = 'next' | 'continue' | 'keep'
 
@@ -175,7 +173,11 @@ export function updateTypedCommandNodeExtraArgs(
   }
 }
 
-const CALL_SCENE_RESERVED_KEYS = new Set(['next', 'continue', 'writeReturnTo'])
+const CALL_SCENE_MANAGED_ARG_KEYS = new Set(['next', 'continue', 'writeReturnTo', 'when'])
+
+export function isCallSceneManagedArgKey(key: string): boolean {
+  return CALL_SCENE_MANAGED_ARG_KEYS.has(key)
+}
 
 export function readCallSceneCustomArgs(node: CommandNode): arg[] {
   if (node.type !== commandType.callScene) {
@@ -184,21 +186,17 @@ export function readCallSceneCustomArgs(node: CommandNode): arg[] {
 
   // callScene 参数表将裸参数视为未填写值。
   return node.extraArgs
-    .filter(item => !CALL_SCENE_RESERVED_KEYS.has(item.key))
+    .filter(item => !isCallSceneManagedArgKey(item.key))
     .map(item => ({ ...item, value: item.value === true ? '' : item.value }))
 }
 
 export function updateCallSceneCustomArgs(
-  node: CommandNode,
+  node: CallSceneCommandNode,
   customArgs: arg[],
-): CommandNode | undefined {
-  if (node.type !== commandType.callScene) {
-    return
-  }
-
-  const preservedArgs = node.extraArgs.filter(item => CALL_SCENE_RESERVED_KEYS.has(item.key))
+): CallSceneCommandNode {
+  const preservedArgs = node.extraArgs.filter(item => isCallSceneManagedArgKey(item.key))
   const editableArgs = customArgs
-    .filter(item => item.key.trim() !== '' && !CALL_SCENE_RESERVED_KEYS.has(item.key))
+    .filter(item => item.key.trim() !== '' && !isCallSceneManagedArgKey(item.key))
     .map(item => ({ ...item, value: item.value === '' ? true : item.value }))
   return {
     ...node,
@@ -206,22 +204,24 @@ export function updateCallSceneCustomArgs(
   }
 }
 
-function updateFromFieldTable(
+export function updateCommandNodeParam(
   node: CommandNode,
   paramDef: CommandParamDescriptor,
   newValue: ParamUpdateValue,
-): CommandNode | typeof NOT_HANDLED {
-  if (node.type === commandType.say && paramDef.key === 'figureId') {
+): CommandNode | undefined {
+  const { key } = paramDef
+
+  if (node.type === commandType.say && key === 'figureId') {
     return updateSayFigureTargetId(node, String(newValue))
   }
 
-  if (isGenericNode(node) && FIGURE_POSITION_FLAG_COMMANDS.includes(node.type) && paramDef.key === 'position') {
+  if (isGenericNode(node) && FIGURE_POSITION_FLAG_COMMANDS.includes(node.type) && key === 'position') {
     return updateChangeFigurePosition(node, newValue)
   }
 
   if (
     node.type === commandType.setVar
-    && paramDef.key === 'scope'
+    && key === 'scope'
     && paramDef.type === 'select'
   ) {
     const scope = String(newValue)
@@ -234,110 +234,64 @@ function updateFromFieldTable(
 
   if (
     node.type === commandType.setVar
-    && (paramDef.key === 'global' || paramDef.key === 'local')
+    && (key === 'global' || key === 'local')
     && paramDef.type === 'switch'
   ) {
     const enabled = newValue === true
-    const conflictingKey = paramDef.key === 'global' ? 'local' : 'global'
+    const conflictingKey = key === 'global' ? 'local' : 'global'
     return {
       ...node,
-      [paramDef.key]: enabled,
+      [key]: enabled,
       ...(enabled && { [conflictingKey]: false }),
     }
   }
 
-  const meta = resolveRegistryFieldMeta(node.type, paramDef.key)
-  if (!meta) {
-    return NOT_HANDLED
+  let storageKind = resolveRegistryFieldKind(node.type, key)
+  if (!storageKind) {
+    return
   }
 
   // paramDef.type 是调用方声明的存储类型，优先于注册表的 kind
   // （如 delayTime 在注册表中是 choice 但存储为 number）
-  let storageKind: string = meta.kind
   if (paramDef.type === 'number') {
     storageKind = 'number'
   } else if (paramDef.type === 'switch') {
     storageKind = 'boolean'
   }
 
-  if (isGenericNode(node)) {
-    const nextArgs = cloneArgs(node.args)
-    const knownKeys = getRegistryKnownKeys(node.type)
-
-    switch (storageKind) {
-      case 'boolean': {
-        removeArgByKey(nextArgs, paramDef.key)
-        if (newValue === true) {
-          for (const conflictingKey of getConflictingControlFlags(paramDef.key)) {
-            if (knownKeys.has(conflictingKey)) {
-              removeArgByKey(nextArgs, conflictingKey)
-            }
-          }
-          upsertArgValue(nextArgs, paramDef.key, true, knownKeys)
-        } else {
-          // 分组开关关闭后依赖它的参数不再可见。引擎只按图片参数是否存在决定口型 / 眨眼启停，
-          // 残留参数会让已经关闭的开关继续生效，因此在这里一并清除。
-          for (const dependentKey of getRegistryDependentKeys(node.type, paramDef.key)) {
-            removeArgByKey(nextArgs, dependentKey)
-          }
-        }
-        return { ...node, args: nextArgs }
-      }
-      case 'number': {
-        const numberValue = isUnsetValue(paramDef, newValue) ? undefined : toOptionalNumber(newValue)
-        if (numberValue === undefined) {
-          removeArgByKey(nextArgs, paramDef.key)
-        } else {
-          upsertArgValue(nextArgs, paramDef.key, numberValue, knownKeys)
-        }
-        return { ...node, args: nextArgs }
-      }
-      case 'string': {
-        if (isUnsetValue(paramDef, newValue)) {
-          removeArgByKey(nextArgs, paramDef.key)
-          return { ...node, args: nextArgs }
-        }
-        upsertArgValue(nextArgs, paramDef.key, String(newValue), knownKeys)
-        return { ...node, args: nextArgs }
-      }
-      default: {
-        return NOT_HANDLED
-      }
-    }
+  let value: string | number | true | undefined
+  if (storageKind === 'boolean') {
+    value = newValue === true ? true : undefined
+  } else if (!isUnsetValue(paramDef, newValue)) {
+    value = storageKind === 'number' ? toOptionalNumber(newValue) : String(newValue)
   }
 
-  const fieldName = meta.field ?? paramDef.key
-  let resolvedValue: unknown
-
-  switch (storageKind) {
-    case 'boolean': {
-      resolvedValue = newValue === true
-      break
-    }
-    case 'number': {
-      resolvedValue = isUnsetValue(paramDef, newValue) ? undefined : toOptionalNumber(newValue)
-      break
-    }
-    case 'string': {
-      resolvedValue = isUnsetValue(paramDef, newValue) ? undefined : String(newValue)
-      break
-    }
-    default: {
-      return NOT_HANDLED
-    }
+  const genericNode = isGenericNode(node)
+  if (!genericNode && key !== 'when') {
+    return { ...node, [key]: storageKind === 'boolean' ? value === true : value } as CommandNode
   }
 
-  return { ...node, [fieldName]: resolvedValue } as CommandNode
-}
-
-export function updateCommandNodeParam(
-  node: CommandNode,
-  paramDef: CommandParamDescriptor,
-  newValue: ParamUpdateValue,
-): CommandNode | undefined {
-  const result = updateFromFieldTable(node, paramDef, newValue)
-  if (result === NOT_HANDLED) {
-    return undefined
+  const args = cloneArgs(genericNode ? node.args : node.extraArgs)
+  const knownKeys = getRegistryKnownKeys(node.type)
+  if (storageKind === 'boolean') {
+    removeArgByKey(args, key)
+    if (value === true) {
+      for (const conflictingKey of getConflictingControlFlags(key)) {
+        if (knownKeys.has(conflictingKey)) {
+          removeArgByKey(args, conflictingKey)
+        }
+      }
+      upsertArgValue(args, key, true, knownKeys)
+    } else {
+      // 引擎按参数是否存在启停口型 / 眨眼，关闭分组开关时同时清除依赖参数。
+      for (const dependentKey of getRegistryDependentKeys(node.type, key)) {
+        removeArgByKey(args, dependentKey)
+      }
+    }
+  } else if (value === undefined) {
+    removeArgByKey(args, key)
+  } else {
+    upsertArgValue(args, key, value, knownKeys)
   }
-  return result
+  return genericNode ? { ...node, args } : { ...node, extraArgs: args }
 }

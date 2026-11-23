@@ -7,11 +7,11 @@ import { displayEntries } from './display'
 import { effectEntries } from './effect'
 import { performEntries } from './perform'
 import { sceneEntries } from './scene'
-import { resolveI18n } from './schema'
+import { arg, resolveI18n } from './schema'
 import { systemEntries } from './system'
 
 import type { CommandCategory, CommandEntry, FieldDef, I18nT } from './schema'
-import type { arg, ISentence } from 'webgal-parser/src/interface/sceneInterface'
+import type { ISentence } from 'webgal-parser/src/interface/sceneInterface'
 
 export const categoryTheme: Record<CommandCategory, {
   gradient: string
@@ -55,13 +55,15 @@ export function getCategoryLabel(category: CommandPanelCategory, t: I18nT): stri
   return labelMap[category] ?? labelMap.all
 }
 
+const whenField = arg({ key: 'when', label: t => t('edit.visualEditor.params.when'), type: 'text' })
+
 export const commandEntries: readonly CommandEntry[] = [
   ...performEntries,
   ...effectEntries,
   ...displayEntries,
   ...sceneEntries,
   ...systemEntries,
-]
+].map(entry => entry.type === commandType.comment ? entry : { ...entry, fields: [...entry.fields, whenField] })
 
 const entryMap = new Map<commandType, CommandEntry>(
   commandEntries.map(e => [e.type, e]),
@@ -116,12 +118,6 @@ function buildFactoryContent(entry: CommandEntry): string {
   return ''
 }
 
-// 工厂默认语句使用最简形式，不输出任何参数。
-// defaultValue 仅用于 UI 控件的初始显示值，不写入脚本。
-function buildFactoryArgs(_entry: CommandEntry): arg[] {
-  return []
-}
-
 function buildFactorySentence(type: commandType): ISentence {
   const entry = getCommandConfig(type)
   const commandRawField = entry.fields.find(item => item.storage === 'commandRaw')?.field as FieldDef | undefined
@@ -138,7 +134,8 @@ function buildFactorySentence(type: commandType): ISentence {
     command: type,
     commandRaw,
     content: buildFactoryContent(entry),
-    args: buildFactoryArgs(entry),
+    // 参数默认值只用于显示，不写入工厂默认语句。
+    args: [],
     sentenceAssets: [],
     subScene: [],
     inlineComment: '',

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { assert, describe, expect, it } from 'vitest'
+import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { readCallSceneCustomArgs, readTypedCommandNodeExtraArgs, updateCallSceneCustomArgs, updateTypedCommandNodeExtraArgs } from '~/domain/script/update'
@@ -30,18 +31,17 @@ describe('类型化命令节点额外参数更新', () => {
 
   it('更新 callScene 动态参数时保留受管参数', () => {
     const node = parseCommandNode(mustParse('callScene:battle.txt -when=hp>0 -writeReturnTo=result -enemy=slime;'))
+    assert(node.type === commandType.callScene)
     const updated = updateCallSceneCustomArgs(node, [
-      { key: 'when', value: 'hp>0' },
+      { key: 'when', value: 'discarded' },
       { key: 'difficulty', value: 'hard' },
       { key: '', value: 'discarded' },
     ])
 
-    expect(updated).toBeDefined()
-    expect(readCallSceneCustomArgs(updated!)).toEqual([
-      { key: 'when', value: 'hp>0' },
+    expect(readCallSceneCustomArgs(updated)).toEqual([
       { key: 'difficulty', value: 'hard' },
     ])
-    expect(serializeCommandNode(updated!).args).toEqual([
+    expect(serializeCommandNode(updated).args).toEqual([
       { key: 'writeReturnTo', value: 'result' },
       { key: 'when', value: 'hp>0' },
       { key: 'difficulty', value: 'hard' },

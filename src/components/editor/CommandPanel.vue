@@ -272,7 +272,7 @@ useShortcutContext({
               @click="emit('insertCommand', entry.type)"
             >
               <template #actions>
-                <Tooltip v-if="!entry.locked">
+                <Tooltip>
                   <TooltipTrigger as-child>
                     <Button
                       variant="ghost"

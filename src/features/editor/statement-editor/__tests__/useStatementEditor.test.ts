@@ -45,19 +45,24 @@ beforeEach(() => {
 })
 
 describe('useStatementEditor', () => {
-  it('callScene 编辑器读写动态参数并保留返回值目标', () => {
-    const { editor, updates } = createHarness('callScene:battle.txt -when=hp>0 -writeReturnTo=result -enemy=slime;')
+  it('callScene 动态参数的提交与草稿都不会覆盖执行条件', () => {
+    const { editor, updates } = createHarness('callScene:battle.txt -writeReturnTo=result -when=hp>0 -enemy=slime;')
+    expect(editor.params.callSceneParameters.value).toEqual([{ key: 'enemy', value: 'slime' }])
 
-    expect(editor.params.callSceneParameters.value).toEqual([
-      { key: 'when', value: 'hp>0' },
-      { key: 'enemy', value: 'slime' },
-    ])
     editor.params.handleCallSceneParametersChange([
+      { key: 'when', value: 'discarded' },
+      { key: 'difficulty', value: 'hard' },
+      { key: '', value: '' },
+    ])
+
+    const update = updates.at(-1)
+    expect(update?.rawText).toBe('callScene:battle.txt -writeReturnTo=result -when=hp>0 -difficulty=hard;')
+    expect(update?.draftParsed?.args).toEqual([
+      { key: 'writeReturnTo', value: 'result' },
       { key: 'when', value: 'hp>0' },
       { key: 'difficulty', value: 'hard' },
+      { key: '', value: '' },
     ])
-
-    expect(updates.at(-1)?.rawText).toBe('callScene:battle.txt -writeReturnTo=result -when=hp>0 -difficulty=hard;')
   })
 
   it('callScene 只填写键的参数重新打开后仍保持空值', () => {

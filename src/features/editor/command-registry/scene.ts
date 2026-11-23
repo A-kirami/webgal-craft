@@ -73,6 +73,5 @@ export const sceneEntries: CommandEntry[] = [
     icon: 'i-lucide-log-out',
     category: 'scene',
     fields: [],
-    locked: true,
   },
 ]

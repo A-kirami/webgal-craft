@@ -85,7 +85,7 @@ function handleCardClick() {
 }
 
 function handleCardDblClick() {
-  if (!props.readonly && !config.value.locked) {
+  if (!props.readonly) {
     collapsed = !collapsed
   }
 }
@@ -169,14 +169,9 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
           </div>
           <span class="text-sm font-semibold text-nowrap">{{ commandLabel }}</span>
 
-          <!-- 锁定语句：行内注释速览 -->
-          <span v-if="config.locked && parsed?.inlineComment" class="text-xs text-muted-foreground truncate">
-            {{ parsed.inlineComment }}
-          </span>
-
           <!-- 折叠参数速览 -->
           <div
-            v-if="(collapsed || readonly) && !config.locked"
+            v-if="(collapsed || readonly) && previewParams.length > 0"
             class="text-xs text-muted-foreground px-1 flex gap-2 items-center overflow-hidden"
             un-after="h-full w-3 right-0 absolute from-card to-transparent bg-gradient-to-l content-empty"
           >
@@ -209,6 +204,9 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
               <span v-else-if="param.value" class="px-1.5 py-0.5" :class="param.truncate && 'max-w-40 truncate'">{{ param.value }}</span>
             </span>
           </div>
+          <span v-else-if="(collapsed || readonly) && parsed?.inlineComment" class="text-xs text-muted-foreground truncate">
+            {{ parsed.inlineComment }}
+          </span>
         </div>
 
         <!-- 操作按钮组 -->
@@ -249,7 +247,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
             </Tooltip>
 
             <Button
-              v-if="!readonly && !config.locked"
+              v-if="!readonly"
               variant="ghost"
               size="icon-xs"
               class="opacity-60 transition-all hover:opacity-100"
@@ -265,7 +263,7 @@ function paramBadgeClass(param: StatementCardPreviewParam): string {
       </div>
 
       <!-- 展开态：内联编辑器 -->
-      <Collapsible v-if="!readonly && !config.locked" :open="!collapsed">
+      <Collapsible v-if="!readonly" :open="!collapsed">
         <CollapsibleContent>
           <Separator class="my-1.5" />
           <StatementEditorInline

@@ -89,7 +89,6 @@ function createStatementMeta() {
     parsed: computed(() => createStatementEntry(7, 'changeBg:bg.jpg').parsed),
     config: computed(() => ({
       icon: 'i-lucide-image',
-      locked: false,
     })),
     contentField: computed(() => undefined),
     argFields: computed(() => []),

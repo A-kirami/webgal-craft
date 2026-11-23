@@ -2,10 +2,10 @@ import { commandType } from 'webgal-parser/src/interface/sceneInterface'
 
 import { LATEST_ENGINE_RUNTIME_CAPABILITIES } from '~/domain/engine/runtime-capabilities'
 import { AbsPath, RelPath } from '~/domain/path'
-import { parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
+import { cloneArgs, parseCommandNode, serializeCommandNode } from '~/domain/script/codec'
 import { createEmptySentence, ensureParsed, StatementEntry } from '~/domain/script/sentence'
 import { serializeSentence } from '~/domain/script/serialize'
-import { readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
+import { isCallSceneManagedArgKey, readCallSceneCustomArgs, updateCallSceneCustomArgs, updateCommandNodeInlineComment } from '~/domain/script/update'
 import { ANIMATION_FILE_SUFFIX, resolveAnimationReference } from '~/features/editor/animation/animation-reference'
 import { resolveStatementSpecialContentMode } from '~/features/editor/command-registry/schema'
 import { EMPTY_SCENE_AUTOCOMPLETE_OPTIONS } from '~/features/editor/statement-editor/scene-autocomplete'
@@ -155,10 +155,6 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     return structuredClone(sentence)
   }
 
-  function cloneArgs(args: arg[]): arg[] {
-    return args.map(item => ({ ...item }))
-  }
-
   function readEditableArgs(): arg[] {
     return parsed.value ? cloneArgs(parsed.value.args) : []
   }
@@ -182,12 +178,8 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     options.emitUpdate(update)
   }
 
-  function emitSentenceUpdate(nextSentence: ISentence, draftParsed?: ISentence) {
-    dispatchUpdate(
-      serializeSentence(nextSentence),
-      nextSentence,
-      draftParsed ?? buildCallSceneDraftParsed(nextSentence),
-    )
+  function emitSentenceUpdate(sentence: ISentence) {
+    dispatchUpdate(serializeSentence(sentence), sentence, buildCallSceneDraftParsed(sentence))
   }
 
   // ─── 说话人 / 旁白 ───
@@ -404,15 +396,16 @@ export function useStatementEditor(options: UseStatementEditorOptions) {
     }
     callSceneParameterDrafts.value = cloneArgs(parameters)
     const updatedNode = updateCallSceneCustomArgs(commandNode.value, parameters)
-    if (updatedNode) {
-      const nextSentence = serializeCommandNode(updatedNode)
-      emitSentenceUpdate(nextSentence)
-    }
+    emitSentenceUpdate(serializeCommandNode(updatedNode))
   }
 
   function buildCallSceneDraftParsed(sentence: ISentence): ISentence | undefined {
-    const parameters = callSceneParameterDrafts.value
-    if (sentence.command !== commandType.callScene || !parameters?.some(parameter => parameter.key.trim() === '')) {
+    if (sentence.command !== commandType.callScene) {
+      return
+    }
+
+    const parameters = callSceneParameterDrafts.value?.filter(parameter => !isCallSceneManagedArgKey(parameter.key))
+    if (!parameters?.some(parameter => parameter.key.trim() === '')) {
       return
     }
 

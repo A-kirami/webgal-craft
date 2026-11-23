@@ -36,7 +36,6 @@ export const systemEntries: CommandEntry[] = [
     icon: 'i-lucide-eye',
     category: 'system',
     fields: [],
-    locked: true,
   },
   {
     type: commandType.getUserInput,

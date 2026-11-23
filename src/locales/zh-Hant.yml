@@ -879,7 +879,6 @@ edit:
     saveChangesDescription: 部分標籤頁有未儲存的變更。關閉前要儲存嗎？
   completion:
     arguments:
-      when: 執行條件
       left: 左側位置
       left14: 左側 1/4 位置
       left13: 左側 1/3 位置
@@ -1294,6 +1293,7 @@ edit:
       scope: 變數作用域
       global: 全域變數
       writeReturnTo: 回傳值變數
+      when: 執行條件
       parameterKey: 參數名稱
       parameterValue: 參數值
       addParameter: 新增場景參數

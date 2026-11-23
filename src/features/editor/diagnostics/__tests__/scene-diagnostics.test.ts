@@ -398,7 +398,6 @@ describe('diagnoseScene', () => {
     })).toEqual([
       expect.objectContaining({ code: 'unsupported-local-variable', statementIndex: 1, field: { kind: 'argument', key: 'local' } }),
       expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'enemy' } }),
-      expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'when' } }),
       expect.objectContaining({ code: 'unsupported-call-scene-argument', statementIndex: 2, field: { kind: 'argument', key: 'writeReturnTo' } }),
     ])
   })
